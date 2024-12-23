@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import bcrypt from "bcrypt";
 import { User } from "../models/user.model";
 
+// API to get all users
 export const getUsers = async(req: Request, res: Response): Promise<void> => {
     try{
         const users = await User.find();
@@ -11,6 +12,7 @@ export const getUsers = async(req: Request, res: Response): Promise<void> => {
     }
 };
 
+// API to get a user based on his Id
 export const getUserById = async (req: Request, res: Response): Promise<void> => {
     try{
         const id = req.params.id;
@@ -24,6 +26,7 @@ export const getUserById = async (req: Request, res: Response): Promise<void> =>
     }
 };
 
+// API to create user
 export const createUser = async (req: Request, res: Response): Promise<void> => {
     try{
         const data = req.body;
@@ -68,7 +71,7 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
             return;
         }
 
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const hashedPassword = await bcrypt.hash(password, 10); // A salt of 10 rounds is reasonable
 
         const user = await User.create({...data, password: hashedPassword});
 
@@ -76,4 +79,4 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
     }catch(error){
         res.status(500).json({message: "An error occurred while adding the user.", error});
     }
-}
+};
