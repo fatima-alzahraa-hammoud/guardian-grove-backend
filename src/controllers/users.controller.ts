@@ -10,15 +10,15 @@ export const getUsers = async(req: Request, res: Response): Promise<void> => {
     }
 };
 
-export const getUserById = async (req: Request, res: Response): Promise<Response> => {
+export const getUserById = async (req: Request, res: Response): Promise<void> => {
     try{
         const id = req.params.id;
         const user = await User.findById({id});
         if (user){
-            return res.status(200).json(user);
+            res.status(200).json(user);
         }
-        return res.status(404).json({ message: 'User not found' });
+        res.status(404).json({ message: 'User not found' });
     }catch(error){
-        return res.status(500).json({message: "Error retrieving user", error});
+        res.status(500).json({message: "Error retrieving user", error});
     }
 };
