@@ -84,7 +84,6 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
 };
 
 // API to get user's star
-
 export const getUserStars = async(req:Request, res: Response): Promise<void> => {
     try{
         const id = req.params.id;
@@ -100,6 +99,37 @@ export const getUserStars = async(req:Request, res: Response): Promise<void> => 
         }
         res.status(404).json({ message: 'User not found' });
         return;
+    }catch(error){
+        res.status(500).json({message: "Error retrieving user", error});
+    }
+} 
+
+// API to update user's star
+export const updateUserStars = async(req:Request, res: Response): Promise<void> => {
+    try{
+        const id = req.params.id;
+        const {stars} = req.body;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            res.status(400).json({ message: "Invalid user ID format" });
+            return;
+        }
+
+        if (stars === undefined || typeof stars !== "number"){
+            res.status(400).json({ message: "Stars must be a valid number." });
+            return;
+        }
+
+        const user = await User.findById(id);
+        if (!user){
+            res.status(404).json({ message: "User not found" });
+            return;
+        }
+
+        user.stars = stars;
+        await user.save();
+
+        res.status(200).json({ message: "User stars updated successfully", user });
     }catch(error){
         res.status(500).json({message: "Error retrieving user", error});
     }
