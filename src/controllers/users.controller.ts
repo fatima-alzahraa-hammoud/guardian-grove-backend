@@ -108,7 +108,7 @@ export const getUserStars = async(req:Request, res: Response): Promise<void> => 
 export const updateUserStars = async(req:Request, res: Response): Promise<void> => {
     try{
         const id = req.params.id;
-        const {stars} = req.body;
+        const { stars }: { stars: number } = req.body;
 
         if (!mongoose.Types.ObjectId.isValid(id)) {
             res.status(400).json({ message: "Invalid user ID format" });
@@ -160,7 +160,7 @@ export const getUserCoins = async(req:Request, res: Response): Promise<void> => 
 export const updateUserCoins = async(req:Request, res: Response): Promise<void> => {
     try{
         const id = req.params.id;
-        const {coins} = req.body;
+        const { coins }: { coins: number } = req.body;
 
         if (!mongoose.Types.ObjectId.isValid(id)) {
             res.status(400).json({ message: "Invalid user ID format" });
@@ -182,6 +182,28 @@ export const updateUserCoins = async(req:Request, res: Response): Promise<void> 
         await user.save();
 
         res.status(200).json({ message: "User Coins updated successfully", user });
+    }catch(error){
+        res.status(500).json({message: "Error retrieving user", error});
+    }
+} 
+
+
+// API to get user's location
+export const getUserLocation = async(req:Request, res: Response): Promise<void> => {
+    try{
+        const id = req.params.id;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            res.status(400).json({ message: "Invalid user ID format" });
+            return;
+        }
+
+        const user = await User.findById(id);
+        if (user){
+            res.status(200).json({location: user.currentLocation});
+        }
+        res.status(404).json({ message: 'User not found' });
+        return;
     }catch(error){
         res.status(500).json({message: "Error retrieving user", error});
     }
