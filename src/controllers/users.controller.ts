@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import bcrypt from "bcrypt";
 import { User } from "../models/user.model";
+import path from 'path';
 
 // API to get all users
 export const getUsers = async(req: Request, res: Response): Promise<void> => {
@@ -80,3 +81,19 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
         res.status(500).json({message: "An error occurred while adding the user.", error});
     }
 };
+
+// API to get user's star
+
+export const getUserStars = async(req:Request, res: Response): Promise<void> => {
+    try{
+        const id = req.params.id;
+        const user = await User.findById({id});
+        if (user){
+            res.status(200).json({stars: user.stars});
+        }
+        res.status(404).json({ message: 'User not found' });
+        return;
+    }catch(error){
+        res.status(500).json({message: "Error retrieving user", error});
+    }
+} 
