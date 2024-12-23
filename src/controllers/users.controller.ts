@@ -189,7 +189,7 @@ export const updateUserCoins = async(req:Request, res: Response): Promise<void> 
 
 
 // API to get user's location
-export const getUserLocation = async(req:Request, res: Response): Promise<void> => {
+export const getUserCurrentLocation = async(req:Request, res: Response): Promise<void> => {
     try{
         const id = req.params.id;
 

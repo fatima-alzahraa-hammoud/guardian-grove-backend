@@ -48,7 +48,8 @@ const userSchema = new Schema<IUser>({
     },
     currentLocation:{
         type: String,
-        required: false,
+        required: true,
+        default: "not specified",
     },
     stars: {
         type: Number,
