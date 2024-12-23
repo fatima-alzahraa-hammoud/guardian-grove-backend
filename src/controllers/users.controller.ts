@@ -83,7 +83,7 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
     } 
 };
 
-// API to get user's star
+// API to get user's stars
 export const getUserStars = async(req:Request, res: Response): Promise<void> => {
     try{
         const id = req.params.id;
@@ -104,7 +104,7 @@ export const getUserStars = async(req:Request, res: Response): Promise<void> => 
     }
 } 
 
-// API to update user's star
+// API to update user's stars
 export const updateUserStars = async(req:Request, res: Response): Promise<void> => {
     try{
         const id = req.params.id;
@@ -130,6 +130,27 @@ export const updateUserStars = async(req:Request, res: Response): Promise<void> 
         await user.save();
 
         res.status(200).json({ message: "User stars updated successfully", user });
+    }catch(error){
+        res.status(500).json({message: "Error retrieving user", error});
+    }
+} 
+
+// API to get user's coins
+export const getUserCoins = async(req:Request, res: Response): Promise<void> => {
+    try{
+        const id = req.params.id;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            res.status(400).json({ message: "Invalid user ID format" });
+            return;
+        }
+
+        const user = await User.findById(id);
+        if (user){
+            res.status(200).json({coins: user.coins});
+        }
+        res.status(404).json({ message: 'User not found' });
+        return;
     }catch(error){
         res.status(500).json({message: "Error retrieving user", error});
     }
