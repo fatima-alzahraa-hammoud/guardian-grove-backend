@@ -67,4 +67,6 @@ const userSchema = new Schema<IUser>({
     },
 });
 
-export const User = model("User", userSchema);
+userSchema.index({ name: 1, email: 1 }, { unique: true });
+
+export const User = model<IUser>("User", userSchema);

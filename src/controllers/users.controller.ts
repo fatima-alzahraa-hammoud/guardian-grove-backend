@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import bcrypt from "bcrypt";
 import { User } from "../models/user.model";
 
 export const getUsers = async(req: Request, res: Response): Promise<void> => {
@@ -26,7 +27,50 @@ export const getUserById = async (req: Request, res: Response): Promise<void> =>
 export const createUser = async (req: Request, res: Response): Promise<void> => {
     try{
         const data = req.body;
-        const user = await User.create({...data});
+
+        const { name, email, password, birthday, gender, role, avatar } = data;
+
+        // verify all fields are filled
+        if (!name || !email || !password || !birthday || !gender || !role || !avatar) {
+            res.status(400).json({ message: "All required fields must be filled." });
+            return;
+        }
+
+        // Email Validation
+        const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
+        if (!emailRegex.test(email)) {
+            res.status(400).json({ message: "Invalid email format." });
+            return;
+        }
+
+        // Gender Validation
+        const validGenders = ['male', 'female'];
+        if (!validGenders.includes(gender)) {
+            res.status(400).json({ message: "Gender must be either 'male' or 'female'." });
+            return;
+        }
+
+        // Role validation
+        const validRoles = ['user', 'father', 'mother', 'child', 'grandfather', 'grandmother', 'admin'];
+        if (!validRoles.includes(role)) {
+            res.status(400).json({ message: "Invalid role." });
+            return;
+        }
+
+        // Check for duplicate username with the same email
+        const existingUser = await User.findOne({
+            name: name,                  // Match by name
+            email: email.toLowerCase()   // Match by email (case-insensitive)
+        });
+
+        if (existingUser) {
+            res.status(409).json({ message: "This username is already taken for this email." });
+            return;
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const user = await User.create({...data, password: hashedPassword});
 
         res.status(201).json(user);
     }catch(error){
