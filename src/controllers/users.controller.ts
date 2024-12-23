@@ -6,6 +6,19 @@ export const getUsers = async(req: Request, res: Response): Promise<Response> =>
         const users = await User.find();
         return res.status(200).json(users);
     }catch(error){
-        return res.status(500).json({ message: 'Error retrieving users', error });
+        return res.status(500).json({ message: "Error retrieving users", error });
     }
-}
+};
+
+export const getUserById = async (req: Request, res: Response): Promise<Response> => {
+    try{
+        const id = req.params.id;
+        const user = await User.findById({id});
+        if (user){
+            return res.status(200).json(user);
+        }
+        return res.status(404).json({ message: 'User not found' });
+    }catch(error){
+        return res.status(500).json({message: "Error retrieving user", error});
+    }
+};
