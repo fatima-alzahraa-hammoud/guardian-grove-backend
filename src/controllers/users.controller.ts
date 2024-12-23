@@ -208,3 +208,34 @@ export const getUserCurrentLocation = async(req:Request, res: Response): Promise
         res.status(500).json({message: "Error retrieving user", error});
     }
 } 
+
+// API to update user's current location
+export const updateUserCurrentLocation = async(req:Request, res: Response): Promise<void> => {
+    try{
+        const id = req.params.id;
+        const { currentLocation }: { currentLocation: String } = req.body;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            res.status(400).json({ message: "Invalid user ID format" });
+            return;
+        }
+
+        if (currentLocation === undefined || typeof currentLocation !== "string"){
+            res.status(400).json({ message: "Location must be a valid string." });
+            return;
+        }
+
+        const user = await User.findById(id);
+        if (!user){
+            res.status(404).json({ message: "User not found" });
+            return;
+        }
+
+        user.currentLocation = currentLocation;
+        await user.save();
+
+        res.status(200).json({ message: "User current location updated successfully", user });
+    }catch(error){
+        res.status(500).json({message: "Error retrieving user", error});
+    }
+} 
