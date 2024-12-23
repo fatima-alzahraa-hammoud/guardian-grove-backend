@@ -1,5 +1,6 @@
 import express, {Express} from "express";
 import dotenv from "dotenv";
+import connectToDatabase from "./db/connection";
 
 dotenv.config();
 
@@ -10,4 +11,6 @@ app.use(express.json());
 
 app.listen(port, () =>{
     console.log("server is running on port 8080");
+
+    connectToDatabase();
 });
