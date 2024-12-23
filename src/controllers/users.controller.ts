@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import bcrypt from "bcrypt";
 import { User } from "../models/user.model";
 import path from 'path';
+import mongoose from 'mongoose';
 
 // API to get all users
 export const getUsers = async(req: Request, res: Response): Promise<void> => {
@@ -17,7 +18,7 @@ export const getUsers = async(req: Request, res: Response): Promise<void> => {
 export const getUserById = async (req: Request, res: Response): Promise<void> => {
     try{
         const id = req.params.id;
-        const user = await User.findById({id});
+        const user = await User.findById(id);
         if (user){
             res.status(200).json(user);
         }
@@ -79,7 +80,7 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
         res.status(201).json(user);
     }catch(error){
         res.status(500).json({message: "An error occurred while adding the user.", error});
-    }
+    } 
 };
 
 // API to get user's star
@@ -87,7 +88,13 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
 export const getUserStars = async(req:Request, res: Response): Promise<void> => {
     try{
         const id = req.params.id;
-        const user = await User.findById({id});
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            res.status(400).json({ message: "Invalid user ID format" });
+            return;
+        }
+
+        const user = await User.findById(id);
         if (user){
             res.status(200).json({stars: user.stars});
         }
