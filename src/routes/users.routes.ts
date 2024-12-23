@@ -1,5 +1,5 @@
 import express from "express";
-import {getUsers, getUserById, createUser, getUserStars, updateUserStars, getUserCoins} from "../controllers/users.controller";
+import {getUsers, getUserById, createUser, getUserStars, updateUserStars, getUserCoins, updateUserCoins} from "../controllers/users.controller";
 
 const router =  express.Router();
 
@@ -13,5 +13,6 @@ router.put("/:id/stars", updateUserStars);
 
 // routes for user's coins
 router.get("/:id/coins", getUserCoins);
+router.put("/:id/coins", updateUserCoins);
 
 export default router;
