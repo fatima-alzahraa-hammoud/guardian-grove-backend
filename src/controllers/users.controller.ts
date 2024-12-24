@@ -239,3 +239,25 @@ export const updateLocation = async(req:Request, res: Response): Promise<void> =
         res.status(500).json({message: "Error retrieving user", error});
     }
 } 
+
+
+// API to get user's rank
+export const getUserRank = async(req:Request, res: Response): Promise<void> => {
+    try{
+        const id = req.params.id;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            res.status(400).json({ message: "Invalid user ID format" });
+            return;
+        }
+
+        const user = await User.findById(id);
+        if (user){
+            res.status(200).json({Rank: user.rankInFamily});
+        }
+        res.status(404).json({ message: 'User not found' });
+        return;
+    }catch(error){
+        res.status(500).json({message: "Error retrieving user", error});
+    }
+} 
