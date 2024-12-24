@@ -13,6 +13,7 @@ export const authMiddleware = async (req: CustomRequest, res: Response, next: Ne
 
     if(!authHeader) {
         throwError({message: "Unauthorized", res, status: 401});
+        return;
     }
 
     const splitted = authHeader?.split(" ");

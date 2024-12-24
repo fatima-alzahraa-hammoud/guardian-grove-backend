@@ -42,6 +42,15 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
             return;
         }
 
+        const existingUser = await User.findOne({
+            name: name,
+            email: email   
+        });
+        if (existingUser) {
+            throwError({ message: "This username is already taken for this email.", res, status: 409});
+            return;
+        }
+
         if (!Array.isArray(interests)) {
             throwError({ message: "Interests must be an array.", res, status: 400 });
             return;

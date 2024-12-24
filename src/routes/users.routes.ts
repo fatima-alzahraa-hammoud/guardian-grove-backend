@@ -1,26 +1,33 @@
 import express from "express";
-import {getUsers, getUserById, createUser, getUserStars, updateUserStars, getUserCoins, updateUserCoins, getLocation, updateLocation, getUserRank, updateUserRank} from "../controllers/users.controller";
+import { 
+  getUsers, getUserById, createUser, getUserStars, 
+  updateUserStars, getUserCoins, updateUserCoins, 
+  getLocation, updateLocation, getUserRank, updateUserRank
+} from "../controllers/users.controller";
+import { authMiddleware } from "../middlewares/auth.middleware";
+import { adminMiddleware } from "../middlewares/adminMiddleware";
+import { parentsMiddleware } from "../middlewares/parentsMiddleware";
 
-const router =  express.Router();
+const router = express.Router();
 
-router.get("/", getUsers);
-router.get("/:id", getUserById);
-router.post("/", createUser);
+router.get("/", authMiddleware, adminMiddleware, getUsers); 
+router.get("/:id", authMiddleware, getUserById); 
+router.post("/", authMiddleware, parentsMiddleware, createUser); 
 
-// routes for user's stars
-router.get("/:id/stars", getUserStars);
-router.put("/:id/stars", updateUserStars);
+// Routes for managing user's stars
+router.get("/:id/stars", authMiddleware, getUserStars); 
+router.put("/:id/stars", authMiddleware, updateUserStars); 
 
-// routes for user's coins
-router.get("/:id/coins", getUserCoins);
-router.put("/:id/coins", updateUserCoins);
+// Routes for managing user's coins
+router.get("/:id/coins", authMiddleware, getUserCoins); 
+router.put("/:id/coins", authMiddleware, updateUserCoins); 
 
-// routes for user's location
-router.get("/:id/location", getLocation);
-router.put("/:id/location", updateLocation);
+// Routes for managing user's location
+router.get("/:id/location", authMiddleware, getLocation); 
+router.put("/:id/location", authMiddleware, updateLocation); 
 
-// routes for user's rank
-router.get("/:id/rank", getUserRank);
-router.put("/:id/rank", updateUserRank);
+// Routes for managing user's rank 
+router.get("/:id/rank", getUserRank); 
+router.put("/:id/rank", authMiddleware, updateUserRank); 
 
 export default router;

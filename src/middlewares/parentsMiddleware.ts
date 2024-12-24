@@ -1,13 +1,13 @@
 import { Response, NextFunction } from "express";
 import { CustomRequest } from "../interfaces/customRequest";
+import { throwError } from "../utils/error";
 
-export const parentsMiddleware = async (req: CustomRequest, res: Response, next: NextFunction) => {
+export const parentsMiddleware = async (req: CustomRequest, res: Response, next: NextFunction):Promise<void> => {
     if (req.user?.role === "father" || req.user?.role === "mother") {
       next();
     } else {
-      return res.status(401).send({
-        message: "Unauthorized",
-      });
+      throwError({message: "Unauthorized", res, status:401});
+      return;
     }
   };
   
