@@ -64,16 +64,60 @@ export const register = async (req: Request, res: Response) : Promise<void> => {
             return;
         }
 
-        const user = await User.findOne({
+        const existingUser = await User.findOne({
             email: email, 
         });
 
-        if(user){
+        if(existingUser){
             throwError({ message: "Family with this email exists", res, status: 400 });
             return;
         }
         
-        const newUser = await createUser(req, res);
+        if (!Array.isArray(interests)) {
+            throwError({ message: "Interests must be an array.", res, status: 400 });
+            return;
+        }
+
+        // Email Validation
+        const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
+        if (!emailRegex.test(email)) {
+            throwError({ message: "Invalid email format.", res, status: 400});
+            return;
+        }
+
+        // Gender Validation
+        const validGenders = ['male', 'female'];
+        if (!validGenders.includes(gender)) {
+            throwError({ message: "Gender must be either 'male' or 'female'.", res, status: 400});
+            return;
+        }
+
+        // Role validation
+        const validRoles = ['user', 'father', 'mother', 'child', 'grandfather', 'grandmother', 'admin'];
+        if (!validRoles.includes(role)) {
+            throwError({ message: "Invalid role.", res, status: 400});
+            return;
+        }
+
+        // Birthday Validation
+        if (isNaN(new Date(birthday).getTime())) {
+            throwError({ message: "Invalid birthday format.", res, status: 400 });
+            return;
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const newUser = await User.create({...data, password: hashedPassword});
+        
+
+        if (!JWT_SECRET_KEY) {
+            throwError({ message: "JWT_SECRET_KEY is not defined", res, status: 500 });
+            return;
+        }
+
+        const token = await jwt.sign({ userId: newUser.id }, JWT_SECRET_KEY);
+
+        res.status(200).send({newUser, token});
 
     }catch(error){
         throwError({ message: "Something went wrong while registering.", res, status: 500});
