@@ -1,5 +1,5 @@
 import express from "express";
-import {getUsers, getUserById, createUser, getUserStars, updateUserStars, getUserCoins, updateUserCoins, getLocation, updateLocation} from "../controllers/users.controller";
+import {getUsers, getUserById, createUser, getUserStars, updateUserStars, getUserCoins, updateUserCoins, getLocation, updateLocation, getUserRank} from "../controllers/users.controller";
 
 const router =  express.Router();
 
@@ -18,5 +18,8 @@ router.put("/:id/coins", updateUserCoins);
 // routes for user's location
 router.get("/:id/location", getLocation);
 router.put("/:id/location", updateLocation);
+
+// routes for user's rank
+router.get("/:id/rank", getUserRank);
 
 export default router;
