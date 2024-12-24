@@ -100,7 +100,7 @@ export const getUserStars = async(req:Request, res: Response): Promise<void> => 
         res.status(404).json({ message: 'User not found' });
         return;
     }catch(error){
-        res.status(500).json({message: "Error retrieving user", error});
+        res.status(500).json({message: "Error retrieving user stars", error});
     }
 } 
 
@@ -131,7 +131,7 @@ export const updateUserStars = async(req:Request, res: Response): Promise<void> 
 
         res.status(200).json({ message: "User stars updated successfully", user });
     }catch(error){
-        res.status(500).json({message: "Error retrieving user", error});
+        res.status(500).json({message: "Error updating user stars", error});
     }
 } 
 
@@ -152,7 +152,7 @@ export const getUserCoins = async(req:Request, res: Response): Promise<void> => 
         res.status(404).json({ message: 'User not found' });
         return;
     }catch(error){
-        res.status(500).json({message: "Error retrieving user", error});
+        res.status(500).json({message: "Error retrieving user coins", error});
     }
 } 
 
@@ -183,7 +183,7 @@ export const updateUserCoins = async(req:Request, res: Response): Promise<void> 
 
         res.status(200).json({ message: "User Coins updated successfully", user });
     }catch(error){
-        res.status(500).json({message: "Error retrieving user", error});
+        res.status(500).json({message: "Error updating user coins", error});
     }
 } 
 
@@ -205,7 +205,7 @@ export const getLocation = async(req:Request, res: Response): Promise<void> => {
         res.status(404).json({ message: 'User not found' });
         return;
     }catch(error){
-        res.status(500).json({message: "Error retrieving user", error});
+        res.status(500).json({message: "Error retrieving user location", error});
     }
 } 
 
@@ -236,10 +236,9 @@ export const updateLocation = async(req:Request, res: Response): Promise<void> =
 
         res.status(200).json({ message: "User current location updated successfully", user });
     }catch(error){
-        res.status(500).json({message: "Error retrieving user", error});
+        res.status(500).json({message: "Error updating user location", error});
     }
 } 
-
 
 // API to get user's rank
 export const getUserRank = async(req:Request, res: Response): Promise<void> => {
@@ -258,6 +257,37 @@ export const getUserRank = async(req:Request, res: Response): Promise<void> => {
         res.status(404).json({ message: 'User not found' });
         return;
     }catch(error){
-        res.status(500).json({message: "Error retrieving user", error});
+        res.status(500).json({message: "Error retrieving user rank", error});
     }
-} 
+};
+
+// API to update user's rank
+export const updateUserRank = async(req:Request, res: Response): Promise<void> => {
+    try{
+        const id = req.params.id;
+        const { rank }: { rank: number } = req.body;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            res.status(400).json({ message: "Invalid user ID format" });
+            return;
+        }
+
+        const user = await User.findById(id);
+        if (!user){
+            res.status(404).json({ message: "User not found" });
+            return;
+        }
+
+        if (rank === undefined || typeof rank !== "number"){
+            res.status(400).json({ message: "Rank must be a valid number." });
+            return;
+        }
+
+        user.rankInFamily = rank;
+        await user.save();
+
+        res.status(200).json({ message: "User rank updated successfully", user });
+    }catch(error){
+        res.status(500).json({message: "Error updating user rank", error});
+    }
+};
