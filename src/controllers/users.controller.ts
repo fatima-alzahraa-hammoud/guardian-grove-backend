@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import { User } from "../models/user.model";
 import path from 'path';
 import mongoose from 'mongoose';
+import { throwError } from '../utils/error';
 
 // API to get all users
 export const getUsers = async(req: Request, res: Response): Promise<void> => {
@@ -10,7 +11,7 @@ export const getUsers = async(req: Request, res: Response): Promise<void> => {
         const users = await User.find();
         res.status(200).json(users);
     }catch(error){
-        res.status(500).json({ message: "Error retrieving users", error });
+        throwError({ message: "Error retrieving users", res, status: 500});
     }
 };
 
@@ -22,9 +23,9 @@ export const getUserById = async (req: Request, res: Response): Promise<void> =>
         if (user){
             res.status(200).json(user);
         }
-        res.status(404).json({ message: 'User not found' });
+        throwError({ message: "User not found", res, status: 404});
     }catch(error){
-        res.status(500).json({message: "Error retrieving user", error});
+        throwError({ message: "Error retrieving users", res, status: 500});
     }
 };
 
@@ -37,28 +38,28 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
 
         // verify all fields are filled
         if (!name || !email || !password || !birthday || !gender || !role || !avatar) {
-            res.status(400).json({ message: "All required fields must be filled." });
+            throwError({ message: "All required fields must be filled.", res, status: 400});
             return;
         }
 
         // Email Validation
         const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
         if (!emailRegex.test(email)) {
-            res.status(400).json({ message: "Invalid email format." });
+            throwError({ message: "Invalid email format.", res, status: 400});
             return;
         }
 
         // Gender Validation
         const validGenders = ['male', 'female'];
         if (!validGenders.includes(gender)) {
-            res.status(400).json({ message: "Gender must be either 'male' or 'female'." });
+            throwError({ message: "Gender must be either 'male' or 'female'.", res, status: 400});
             return;
         }
 
         // Role validation
         const validRoles = ['user', 'father', 'mother', 'child', 'grandfather', 'grandmother', 'admin'];
         if (!validRoles.includes(role)) {
-            res.status(400).json({ message: "Invalid role." });
+            throwError({ message: "Invalid role.", res, status: 400});
             return;
         }
 
@@ -69,7 +70,7 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
         });
 
         if (existingUser) {
-            res.status(409).json({ message: "This username is already taken for this email." });
+            throwError({ message: "This username is already taken for this email.", res, status: 409});
             return;
         }
 
@@ -79,7 +80,7 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
 
         res.status(201).json(user);
     }catch(error){
-        res.status(500).json({message: "An error occurred while adding the user.", error});
+        throwError({ message: "An error occurred while adding the user.", res, status: 500});
     } 
 };
 
@@ -89,7 +90,7 @@ export const getUserStars = async(req:Request, res: Response): Promise<void> => 
         const id = req.params.id;
 
         if (!mongoose.Types.ObjectId.isValid(id)) {
-            res.status(400).json({ message: "Invalid user ID format" });
+            throwError({ message: "Invalid user ID format", res, status: 400});
             return;
         }
 
@@ -97,10 +98,10 @@ export const getUserStars = async(req:Request, res: Response): Promise<void> => 
         if (user){
             res.status(200).json({stars: user.stars});
         }
-        res.status(404).json({ message: 'User not found' });
+        throwError({ message: "User not found", res, status: 404});
         return;
     }catch(error){
-        res.status(500).json({message: "Error retrieving user stars", error});
+        throwError({ message: "Error retrieving user stars", res, status: 500});
     }
 } 
 
@@ -111,18 +112,18 @@ export const updateUserStars = async(req:Request, res: Response): Promise<void> 
         const { stars }: { stars: number } = req.body;
 
         if (!mongoose.Types.ObjectId.isValid(id)) {
-            res.status(400).json({ message: "Invalid user ID format" });
+            throwError({ message: "Invalid user ID format", res, status: 400});
             return;
         }
 
         const user = await User.findById(id);
         if (!user){
-            res.status(404).json({ message: "User not found" });
+            throwError({ message: "User not found", res, status: 404});
             return;
         }
 
         if (stars === undefined || typeof stars !== "number"){
-            res.status(400).json({ message: "Stars must be a valid number." });
+            throwError({ message: "Stars must be a valid number.", res, status: 400});
             return;
         }
 
@@ -131,7 +132,7 @@ export const updateUserStars = async(req:Request, res: Response): Promise<void> 
 
         res.status(200).json({ message: "User stars updated successfully", user });
     }catch(error){
-        res.status(500).json({message: "Error updating user stars", error});
+        throwError({ message: "Error updating user stars", res, status: 500});
     }
 } 
 
@@ -141,7 +142,7 @@ export const getUserCoins = async(req:Request, res: Response): Promise<void> => 
         const id = req.params.id;
 
         if (!mongoose.Types.ObjectId.isValid(id)) {
-            res.status(400).json({ message: "Invalid user ID format" });
+            throwError({ message: "Invalid user ID format", res, status: 400});
             return;
         }
 
@@ -149,10 +150,10 @@ export const getUserCoins = async(req:Request, res: Response): Promise<void> => 
         if (user){
             res.status(200).json({coins: user.coins});
         }
-        res.status(404).json({ message: 'User not found' });
+        throwError({ message: "User not found", res, status: 404});
         return;
     }catch(error){
-        res.status(500).json({message: "Error retrieving user coins", error});
+        throwError({ message: "Error retrieving user coins", res, status: 500});
     }
 } 
 
@@ -163,18 +164,18 @@ export const updateUserCoins = async(req:Request, res: Response): Promise<void> 
         const { coins }: { coins: number } = req.body;
 
         if (!mongoose.Types.ObjectId.isValid(id)) {
-            res.status(400).json({ message: "Invalid user ID format" });
+            throwError({ message: "Invalid user ID format", res, status: 400});
             return;
         }
 
         const user = await User.findById(id);
         if (!user){
-            res.status(404).json({ message: "User not found" });
+            throwError({ message: "User not found", res, status: 404});
             return;
         }
 
         if (coins === undefined || typeof coins !== "number"){
-            res.status(400).json({ message: "Coins must be a valid number." });
+            throwError({ message: "Coins must be a valid number.", res, status: 400});
             return;
         }
 
@@ -183,7 +184,7 @@ export const updateUserCoins = async(req:Request, res: Response): Promise<void> 
 
         res.status(200).json({ message: "User Coins updated successfully", user });
     }catch(error){
-        res.status(500).json({message: "Error updating user coins", error});
+        throwError({ message: "Error updating user coins", res, status: 500});
     }
 } 
 
@@ -194,7 +195,7 @@ export const getLocation = async(req:Request, res: Response): Promise<void> => {
         const id = req.params.id;
 
         if (!mongoose.Types.ObjectId.isValid(id)) {
-            res.status(400).json({ message: "Invalid user ID format" });
+            throwError({ message: "Invalid user ID format", res, status: 400});
             return;
         }
 
@@ -202,10 +203,10 @@ export const getLocation = async(req:Request, res: Response): Promise<void> => {
         if (user){
             res.status(200).json({location: user.currentLocation});
         }
-        res.status(404).json({ message: 'User not found' });
+        throwError({ message: "User not found", res, status: 404});
         return;
     }catch(error){
-        res.status(500).json({message: "Error retrieving user location", error});
+        throwError({ message: "Error retrieving user location", res, status: 500});
     }
 } 
 
@@ -216,18 +217,18 @@ export const updateLocation = async(req:Request, res: Response): Promise<void> =
         const { currentLocation }: { currentLocation: string } = req.body;
 
         if (!mongoose.Types.ObjectId.isValid(id)) {
-            res.status(400).json({ message: "Invalid user ID format" });
+            throwError({ message: "Invalid user ID format", res, status: 400});
             return;
         }
 
         const user = await User.findById(id);
         if (!user) {
-            res.status(404).json({ message: "User not found." });
+            throwError({ message: "User not found", res, status: 404});
             return;
         }
 
         if (typeof currentLocation !== "string" || currentLocation.trim() === ""){
-            res.status(400).json({ message: "Location must be a valid string." });
+            throwError({ message: "Location must be valid.", res, status: 400});
             return;
         }
 
@@ -236,7 +237,7 @@ export const updateLocation = async(req:Request, res: Response): Promise<void> =
 
         res.status(200).json({ message: "User current location updated successfully", user });
     }catch(error){
-        res.status(500).json({message: "Error updating user location", error});
+        throwError({ message: "Error updating user location", res, status: 500});
     }
 } 
 
@@ -246,7 +247,7 @@ export const getUserRank = async(req:Request, res: Response): Promise<void> => {
         const id = req.params.id;
 
         if (!mongoose.Types.ObjectId.isValid(id)) {
-            res.status(400).json({ message: "Invalid user ID format" });
+            throwError({ message: "Invalid user ID format", res, status: 400});
             return;
         }
 
@@ -254,10 +255,10 @@ export const getUserRank = async(req:Request, res: Response): Promise<void> => {
         if (user){
             res.status(200).json({Rank: user.rankInFamily});
         }
-        res.status(404).json({ message: 'User not found' });
+        throwError({ message: "User not found", res, status: 404});
         return;
     }catch(error){
-        res.status(500).json({message: "Error retrieving user rank", error});
+        throwError({ message: "Error retrieving user rank", res, status: 500});
     }
 };
 
@@ -268,18 +269,18 @@ export const updateUserRank = async(req:Request, res: Response): Promise<void> =
         const { rank }: { rank: number } = req.body;
 
         if (!mongoose.Types.ObjectId.isValid(id)) {
-            res.status(400).json({ message: "Invalid user ID format" });
+            throwError({ message: "Invalid user ID format", res, status: 400});
             return;
         }
 
         const user = await User.findById(id);
         if (!user){
-            res.status(404).json({ message: "User not found" });
+            throwError({ message: "User not found", res, status: 404});
             return;
         }
 
         if (rank === undefined || typeof rank !== "number"){
-            res.status(400).json({ message: "Rank must be a valid number." });
+            throwError({ message: "Rank must be a valid number.", res, status: 400});
             return;
         }
 
@@ -288,6 +289,6 @@ export const updateUserRank = async(req:Request, res: Response): Promise<void> =
 
         res.status(200).json({ message: "User rank updated successfully", user });
     }catch(error){
-        res.status(500).json({message: "Error updating user rank", error});
+        throwError({ message: "Error updating user rank", res, status: 500});
     }
 };
