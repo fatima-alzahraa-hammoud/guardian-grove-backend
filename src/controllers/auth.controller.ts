@@ -3,6 +3,13 @@ import bcrypt from "bcrypt";
 import { throwError } from "../utils/error";
 import { User } from "../models/user.model";
 import { createUser } from "./users.controller";
+import dotenv from "dotenv";
+import jwt from "jsonwebtoken";
+
+dotenv.config();
+
+const JWT_SECRET_KEY = process.env.JWT_SECRET;
+
 
 // login
 export const login = async ( req: Request, res: Response) : Promise<void> => {
@@ -32,7 +39,14 @@ export const login = async ( req: Request, res: Response) : Promise<void> => {
             return;
         }
 
-        res.status(200).send(user);
+        if (!JWT_SECRET_KEY) {
+            throwError({ message: "JWT_SECRET_KEY is not defined", res, status: 500 });
+            return;
+        }
+
+        const token = await jwt.sign({ userId: user.id }, JWT_SECRET_KEY);
+
+        res.status(200).send({user, token});
     }catch(error){
         throwError({ message: "Something went wrong while logging in.", res, status: 500});
     }

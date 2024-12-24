@@ -33,7 +33,7 @@ export const authMiddleware = async (req: CustomRequest, res: Response, next: Ne
     if (!JWT_SECRET_KEY) {
         throwError({ message: "JWT_SECRET_KEY is not defined", res, status: 500 });
         return;
-     }
+    }
 
     try{
         const payload = await jwt.verify(token, JWT_SECRET_KEY) as JwtPayload;
