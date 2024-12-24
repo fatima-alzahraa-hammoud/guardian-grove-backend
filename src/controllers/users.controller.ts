@@ -115,14 +115,14 @@ export const updateUserStars = async(req:Request, res: Response): Promise<void> 
             return;
         }
 
-        if (stars === undefined || typeof stars !== "number"){
-            res.status(400).json({ message: "Stars must be a valid number." });
-            return;
-        }
-
         const user = await User.findById(id);
         if (!user){
             res.status(404).json({ message: "User not found" });
+            return;
+        }
+
+        if (stars === undefined || typeof stars !== "number"){
+            res.status(400).json({ message: "Stars must be a valid number." });
             return;
         }
 
@@ -167,14 +167,14 @@ export const updateUserCoins = async(req:Request, res: Response): Promise<void> 
             return;
         }
 
-        if (coins === undefined || typeof coins !== "number"){
-            res.status(400).json({ message: "Coins must be a valid number." });
-            return;
-        }
-
         const user = await User.findById(id);
         if (!user){
             res.status(404).json({ message: "User not found" });
+            return;
+        }
+
+        if (coins === undefined || typeof coins !== "number"){
+            res.status(400).json({ message: "Coins must be a valid number." });
             return;
         }
 
@@ -189,7 +189,7 @@ export const updateUserCoins = async(req:Request, res: Response): Promise<void> 
 
 
 // API to get user's location
-export const getUserCurrentLocation = async(req:Request, res: Response): Promise<void> => {
+export const getLocation = async(req:Request, res: Response): Promise<void> => {
     try{
         const id = req.params.id;
 
@@ -210,24 +210,24 @@ export const getUserCurrentLocation = async(req:Request, res: Response): Promise
 } 
 
 // API to update user's current location
-export const updateUserCurrentLocation = async(req:Request, res: Response): Promise<void> => {
+export const updateLocation = async(req:Request, res: Response): Promise<void> => {
     try{
         const id = req.params.id;
-        const { currentLocation }: { currentLocation: String } = req.body;
+        const { currentLocation }: { currentLocation: string } = req.body;
 
         if (!mongoose.Types.ObjectId.isValid(id)) {
             res.status(400).json({ message: "Invalid user ID format" });
             return;
         }
 
-        if (currentLocation === undefined || typeof currentLocation !== "string"){
-            res.status(400).json({ message: "Location must be a valid string." });
+        const user = await User.findById(id);
+        if (!user) {
+            res.status(404).json({ message: "User not found." });
             return;
         }
 
-        const user = await User.findById(id);
-        if (!user){
-            res.status(404).json({ message: "User not found" });
+        if (typeof currentLocation !== "string" || currentLocation.trim() === ""){
+            res.status(400).json({ message: "Location must be a valid string." });
             return;
         }
 
