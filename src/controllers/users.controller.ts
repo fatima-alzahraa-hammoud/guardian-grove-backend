@@ -34,11 +34,16 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
     try{
         const data = req.body;
 
-        const { name, email, password, birthday, gender, role, avatar } = data;
+        const { name, email, password, birthday, gender, role, avatar, interests } = data;
 
         // verify all fields are filled
-        if (!name || !email || !password || !birthday || !gender || !role || !avatar) {
+        if (!name || !email || !password || !birthday || !gender || !role || !avatar || !interests) {
             throwError({ message: "All required fields must be filled.", res, status: 400});
+            return;
+        }
+
+        if (!Array.isArray(interests)) {
+            throwError({ message: "Interests must be an array.", res, status: 400 });
             return;
         }
 
@@ -63,24 +68,32 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
             return;
         }
 
-        // Check for duplicate username with the same email
-        const existingUser = await User.findOne({
-            name: name,                  // Match by name
-            email: email.toLowerCase()   // Match by email (case-insensitive)
-        });
-
-        if (existingUser) {
-            throwError({ message: "This username is already taken for this email.", res, status: 409});
+        // Birthday Validation
+        if (isNaN(new Date(birthday).getTime())) {
+            throwError({ message: "Invalid birthday format.", res, status: 400 });
             return;
         }
 
-        const hashedPassword = await bcrypt.hash(password, 10); // A salt of 10 rounds is reasonable
+        const hashedPassword = await bcrypt.hash(password, 10);
 
         const user = await User.create({...data, password: hashedPassword});
 
         res.status(201).json(user);
     }catch(error){
-        throwError({ message: "An error occurred while adding the user.", res, status: 500});
+        if (error instanceof Error) {
+            // Handle MongoDB duplicate key error (11000)
+            if ((error as any).code === 11000) {
+                throwError({ 
+                    message: "A user with this name and email already exists.", 
+                    res, 
+                    status: 409 
+                });
+            } else {
+                throwError({ message: error.message, res, status: 500 });
+            }
+        } else {
+            throwError({ message: "An unknown error occurred.", res, status: 500 });
+        }    
     } 
 };
 
