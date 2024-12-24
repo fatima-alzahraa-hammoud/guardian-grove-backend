@@ -1,19 +1,13 @@
-import { Response, Request, NextFunction } from "express";
+import { Response, NextFunction } from "express";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import dotenv from "dotenv";
 import { User } from "../models/user.model";
 import { throwError } from "../utils/error";
-import { IUser } from "../interfaces/IUser";
+import { CustomRequest } from "../interfaces/customRequest";
 
 dotenv.config();
 
 const JWT_SECRET_KEY = process.env.JWT_SECRET;
-
-interface CustomRequest extends Request {
-    user?: IUser;
-}
-  
-
 export const authMiddleware = async (req: CustomRequest, res: Response, next: NextFunction):Promise<void> => {
     const authHeader = req.headers.authorization;
 
