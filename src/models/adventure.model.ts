@@ -1,4 +1,4 @@
-import { Schema } from "mongoose";
+import { model, Schema } from "mongoose";
 import { IChallenge } from "../interfaces/IChallenge";
 import { IAdventure } from "../interfaces/IAdventure";
 
@@ -15,16 +15,15 @@ const adventureSchema = new Schema<IAdventure>({
     description: { type: String, required: true },
     starsReward: { type: Number, required: true, default: 10 },
     coinsReward: { type: Number, required: true, default: 5 },
-    createdAt: { type: Date, default: Date.now },
-
+    startDate: { type: Date, default: Date.now },
     // Automatically calculate due date (24 hours after creation)
-    dueDate: { 
+    endDate: { 
         type: Date,
         required: true,
         default: () => new Date(Date.now() + 24 * 60 * 60 * 1000)
     },
-
+    status: { type: String, enum: ['in-progress', 'completed', 'pending'], default: 'pending' },
     challenges: { type: [challengeSchema], required: true, default: [] },
 });
 
-export { adventureSchema };
+export const Adventure = model<IAdventure>("Adventure", adventureSchema);

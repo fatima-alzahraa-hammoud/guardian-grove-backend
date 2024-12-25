@@ -1,6 +1,5 @@
 import { model, Schema } from "mongoose";
 import { IUser } from "../interfaces/IUser";
-import { adventureSchema } from "./adventure";
 
 const userSchema = new Schema<IUser>({
     name: {type: String, required: true },
@@ -16,7 +15,6 @@ const userSchema = new Schema<IUser>({
     stars: {type: Number, required: true, default: 0},
     coins: {type: Number, required: true, default: 0},
     rankInFamily: {type: Number, required: true, default: 0},
-    adventures: { type: [adventureSchema], default: [] },
 });
 
 userSchema.index({ name: 1, email: 1 }, { unique: true });

@@ -8,7 +8,8 @@ export interface IAdventure extends Document{
     starsReward: number;
     coinsReward: number;
     iscompleted: boolean;
-    createdAt : Date;
-    dueDate : Date;
+    startDate : Date;
+    endDate : Date;
     challenges: IChallenge[];
+    status: string;
 }
