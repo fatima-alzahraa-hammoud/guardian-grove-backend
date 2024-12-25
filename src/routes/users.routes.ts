@@ -11,11 +11,11 @@ import { parentsMiddleware } from "../middlewares/parentsMiddleware";
 const router = express.Router();
 
 router.get("/", authMiddleware, adminMiddleware, getUsers); 
-router.get("/:id", authMiddleware, getUserById); 
+router.get("/user/:id", authMiddleware, getUserById); 
 router.post("/", authMiddleware, parentsMiddleware, createUser); 
 
 // Routes for managing user's stars
-router.get("/:id/stars", authMiddleware, getUserStars); 
+router.get("/stars", authMiddleware, getUserStars); 
 router.put("/:id/stars", authMiddleware, updateUserStars); 
 
 // Routes for managing user's coins
