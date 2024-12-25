@@ -1,7 +1,7 @@
 import express from "express";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { createAdventure, deleteAdventure, getAdventureById, getAllAdventures, updateAdventure } from "../controllers/adventure.controller";
-import { createChallenge } from "../controllers/challenge.controller";
+import { createChallenge, getAllChallenges } from "../controllers/challenge.controller";
 
 const router =  express.Router();
 
@@ -11,6 +11,8 @@ router.get("/adventure", authMiddleware, getAdventureById);
 router.put("/", authMiddleware, updateAdventure);
 router.delete("/", authMiddleware, deleteAdventure);
 
-router.post("/adventure/challenge", authMiddleware, createChallenge);
+router.post("/adventure/challenges", authMiddleware, createChallenge);
+router.get("/adventure/challenges", authMiddleware, getAllChallenges);
+
 
 export default router;
