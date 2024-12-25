@@ -109,6 +109,48 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
     } 
 };
 
+// API to edit user profile
+export const editUserProfile = async(req: CustomRequest, res: Response):Promise<void> => {
+    try{
+        const {userProfileId, name, birthday, gender, avatar, role, email} = req.body;
+        
+        if (!req.user) {
+            throwError({ message: "Unauthorized", res, status: 401 });
+            return;
+        }
+
+        if (req.user._id.toString() !== userProfileId && req.user.role !== "admin" && req.user.role !== "owner"  && req.user.role !== "parent") {
+            throwError({ message: "Forbidden", res, status: 403 });
+            return;
+        }
+
+        if ((role || email) && req.user.role !== "admin"&& req.user.role !== "owner"  && req.user.role !== "parent") {
+            throwError({ message: "Forbidden: You cannot change role nor email", res, status: 403 });
+            return;
+        }
+
+        const user = await User.findById(userProfileId);
+
+        if (!user){
+            throwError({ message: "User not found", res, status: 404});
+            return;
+        }
+
+        if (name) user.name = name;
+        if (birthday) user.birthday = birthday;
+        if (gender) user.gender = gender;
+        if (avatar) user.avatar = avatar;
+        if (role) user.role = role; 
+        if (email) user.email = email; 
+
+        await user.save();
+
+        res.status(200).send({message: "User profile updated successfully", user});
+    }catch(error){
+        throwError({ message: "Failed to update. An unknown error occurred.", res, status: 500 });
+    }
+}
+
 // API to get user's stars
 export const getUserStars = async(req:CustomRequest, res: Response): Promise<void> => {
     try{

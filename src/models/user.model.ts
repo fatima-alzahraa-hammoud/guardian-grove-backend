@@ -29,7 +29,7 @@ const userSchema = new Schema<IUser>({
     },
     role: {
         type: String,
-        enum: ['user', 'father', 'mother', 'child', 'grandfather', 'grandmother', 'admin'],
+        enum: ['user', 'owner', 'parent', 'child', 'grandfather', 'grandmother', 'admin'],
         required: true,
     },
     avatar: {
