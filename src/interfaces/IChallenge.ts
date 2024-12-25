@@ -6,5 +6,5 @@ export interface IChallenge extends Document{
     content: string;
     starsReward: number;
     coinsReward: number;
-    iscompleted: boolean;
+    isCompleted: boolean;
 }
