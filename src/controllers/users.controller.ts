@@ -113,7 +113,7 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
 export const getUserStars = async(req:CustomRequest, res: Response): Promise<void> => {
     try{
         if (!req.user) {
-            res.status(401).json({ message: "Unauthorized" });
+            throwError({ message: "Unauthorized", res, status: 401});
             return;
         }
 
@@ -130,7 +130,7 @@ export const updateUserStars = async(req:CustomRequest, res: Response): Promise<
         const { stars }: { stars: number } = req.body;
 
         if (!req.user) {
-            res.status(401).json({ message: "Unauthorized" });
+            throwError({ message: "Unauthorized", res, status: 401});
             return;
         }
 
@@ -152,7 +152,7 @@ export const updateUserStars = async(req:CustomRequest, res: Response): Promise<
 export const getUserCoins = async(req:CustomRequest, res: Response): Promise<void> => {
     try{
         if (!req.user) {
-            res.status(401).json({ message: "Unauthorized" });
+            throwError({ message: "Unauthorized", res, status: 401});
             return;
         }
 
@@ -168,7 +168,7 @@ export const updateUserCoins = async(req:CustomRequest, res: Response): Promise<
         const { coins }: { coins: number } = req.body;
 
         if (!req.user) {
-            res.status(401).json({ message: "Unauthorized" });
+            throwError({ message: "Unauthorized", res, status: 401});
             return;
         }
 
@@ -191,7 +191,7 @@ export const updateUserCoins = async(req:CustomRequest, res: Response): Promise<
 export const getLocation = async(req:CustomRequest, res: Response): Promise<void> => {
     try{
         if (!req.user) {
-            res.status(401).json({ message: "Unauthorized" });
+            throwError({ message: "Unauthorized", res, status: 401});
             return;
         }
 
@@ -209,7 +209,7 @@ export const updateLocation = async(req:CustomRequest, res: Response): Promise<v
         const { currentLocation }: { currentLocation: string } = req.body;
 
         if (!req.user) {
-            res.status(401).json({ message: "Unauthorized" });
+            throwError({ message: "Unauthorized", res, status: 401});
             return;
         }
 
@@ -228,22 +228,14 @@ export const updateLocation = async(req:CustomRequest, res: Response): Promise<v
 } 
 
 // API to get user's rank
-export const getUserRank = async(req:Request, res: Response): Promise<void> => {
+export const getUserRank = async(req:CustomRequest, res: Response): Promise<void> => {
     try{
-        const id = req.params.id;
-
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            throwError({ message: "Invalid user ID format", res, status: 400});
+        if (!req.user) {
+            throwError({ message: "Unauthorized", res, status: 401});
             return;
         }
 
-        const user = await User.findById(id);
-        if (user){
-            res.status(200).send({Rank: user.rankInFamily});
-            return;
-        }
-        throwError({ message: "User not found", res, status: 404});
-        return;
+        res.status(200).send({Rank: req.user.rankInFamily});
     }catch(error){
         throwError({ message: "Error retrieving user rank", res, status: 500});
     }
