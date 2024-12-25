@@ -56,10 +56,10 @@ export const login = async ( req: Request, res: Response) : Promise<void> => {
 export const register = async (req: Request, res: Response) : Promise<void> => {
     try{
         const data = req.body;
-        const { name, email, password, birthday, gender, role, avatar, interests } = data;
+        const { name, email, password, confirmPassword, birthday, gender, role, avatar, interests } = data;
         
         // verify all fields are filled
-        if (!name || !email || !password || !birthday || !gender || !role || !avatar || !interests) {
+        if (!name || !email || !password || !confirmPassword || !birthday || !gender || !role || !avatar || !interests) {
             throwError({ message: "All required fields must be filled.", res, status: 400});
             return;
         }
@@ -72,9 +72,9 @@ export const register = async (req: Request, res: Response) : Promise<void> => {
             throwError({ message: "Family with this email exists", res, status: 400 });
             return;
         }
-        
-        if (!Array.isArray(interests)) {
-            throwError({ message: "Interests must be an array.", res, status: 400 });
+
+        if (password !== confirmPassword){
+            throwError({ message: "Passwords do not match", res, status: 400 });
             return;
         }
 
@@ -85,17 +85,26 @@ export const register = async (req: Request, res: Response) : Promise<void> => {
             return;
         }
 
+        // Role validation
+        const validRoles = ['parent', 'grandparent', 'admin'];
+        if (!validRoles.includes(role)) {
+            if (role === "child"){
+                throwError({ message: "Children must be added by a parent.", res, status: 400});
+                return;
+            }
+            throwError({ message: "Invalid role.", res, status: 400});
+            return;
+        }
+        
+        if (!Array.isArray(interests)) {
+            throwError({ message: "Interests must be an array.", res, status: 400 });
+            return;
+        }
+
         // Gender Validation
         const validGenders = ['male', 'female'];
         if (!validGenders.includes(gender)) {
             throwError({ message: "Gender must be either 'male' or 'female'.", res, status: 400});
-            return;
-        }
-
-        // Role validation
-        const validRoles = ['user', 'father', 'parent', 'owner', 'grandfather', 'grandmother', 'admin'];
-        if (!validRoles.includes(role)) {
-            throwError({ message: "Invalid role.", res, status: 400});
             return;
         }
 
