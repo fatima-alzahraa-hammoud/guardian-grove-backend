@@ -4,7 +4,7 @@ import {
   updateUserStars, getUserCoins, updateUserCoins, 
   getLocation, updateLocation, getUserRank, updateUserRank,
   editUserProfile, deleteUser,
-  getUserInterests
+  getUserInterests, updatePassword
 } from "../controllers/users.controller";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { adminMiddleware } from "../middlewares/adminMiddleware";
@@ -17,6 +17,7 @@ router.get("/user", authMiddleware, getUserById);
 router.post("/", authMiddleware, parentsMiddleware, createUser); 
 router.put("/", authMiddleware, editUserProfile);
 router.delete("/", authMiddleware, deleteUser);
+router.put("/updatePassword", authMiddleware, updatePassword);
 
 // Routes for managing user's stars
 router.get("/stars", authMiddleware, getUserStars); 
