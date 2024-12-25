@@ -3,7 +3,8 @@ import {
   getUsers, getUserById, createUser, getUserStars, 
   updateUserStars, getUserCoins, updateUserCoins, 
   getLocation, updateLocation, getUserRank, updateUserRank,
-  editUserProfile, deleteUser
+  editUserProfile, deleteUser,
+  getUserInterests
 } from "../controllers/users.controller";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { adminMiddleware } from "../middlewares/adminMiddleware";
@@ -32,5 +33,8 @@ router.put("/location", authMiddleware, updateLocation);
 // Routes for managing user's rank 
 router.get("/rank", authMiddleware, getUserRank); 
 router.put("/rank", authMiddleware, updateUserRank); 
+
+// Routes for user's interests 
+router.get("/interests", authMiddleware, getUserInterests); 
 
 export default router;
