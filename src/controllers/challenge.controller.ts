@@ -36,6 +36,7 @@ export const createChallenge = async(req: Request, res: Response) => {
     }
 };
 
+// API to get all challenges
 export const getAllChallenges = async(req: Request, res: Response) => {
     try{
         const { adventureId } = req.body;
@@ -52,6 +53,7 @@ export const getAllChallenges = async(req: Request, res: Response) => {
     }
 }
 
+// API to get challenges by id
 export const getChallengeById = async(req: Request, res: Response) => {
     try{
         const { adventureId, challengeId } = req.body;
@@ -74,6 +76,7 @@ export const getChallengeById = async(req: Request, res: Response) => {
     }
 }
 
+// API to update challenges
 export const updateChallege = async(req: Request, res: Response) => {
     try{
         const { adventureId, challengeId } = req.body;
@@ -103,5 +106,36 @@ export const updateChallege = async(req: Request, res: Response) => {
         res.status(200).json(challenge);
     }catch(error){
         return throwError({ message: "An unknown error occurred while getting all challenges.", res, status: 500 });
+    }
+};
+
+// API to delete challenge
+export const deleteChallenge = async(req:Request, res: Response) => {
+    try {
+
+        const {adventureId, challengeId} = req.body;
+
+        if(!checkId({id: adventureId, res})) return;
+        if(!checkId({id: challengeId, res})) return;
+
+
+        const adventure = await Adventure.findById(adventureId);
+        if (!adventure) 
+            return throwError({ message: "Adventure not found", res, status: 404});
+
+        const challengeIndex = adventure.challenges.findIndex(chal => chal._id.toString() === challengeId);
+        if (challengeIndex === -1) 
+            return throwError({ message: "Challenge not found", res, status: 404 });
+
+        // Remove the challenge from the array
+        adventure.challenges.splice(challengeIndex, 1);
+
+        // Save the modified adventure
+        await adventure.save();
+
+        // Return success response
+        res.status(200).json({ message: "Challenge deleted successfully", adventure });
+    } catch (error) {
+        return throwError({ message: "Failed to delete. An unknown error occurred.", res, status: 500 });
     }
 }

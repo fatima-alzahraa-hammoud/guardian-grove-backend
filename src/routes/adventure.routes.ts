@@ -1,7 +1,7 @@
 import express from "express";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { createAdventure, deleteAdventure, getAdventureById, getAllAdventures, updateAdventure } from "../controllers/adventure.controller";
-import { createChallenge, getAllChallenges, getChallengeById, updateChallege } from "../controllers/challenge.controller";
+import { createChallenge, deleteChallenge, getAllChallenges, getChallengeById, updateChallege } from "../controllers/challenge.controller";
 
 const router =  express.Router();
 
