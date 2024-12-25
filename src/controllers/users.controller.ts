@@ -343,3 +343,17 @@ export const updateUserRank = async(req:CustomRequest, res: Response): Promise<v
         throwError({ message: "Error updating user rank", res, status: 500});
     }
 };
+
+// API to get user's interesets
+export const getUserInterests = async(req:CustomRequest, res: Response): Promise<void> => {
+    try{
+        if (!req.user) {
+            throwError({ message: "Unauthorized", res, status: 401});
+            return;
+        }
+
+        res.status(200).send({Interests: req.user.interests});
+    }catch(error){
+        throwError({ message: "Error retrieving user interests", res, status: 500});
+    }
+};
