@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import bcrypt from "bcrypt";
 import { User } from "../models/user.model";
-import path from 'path';
 import mongoose from 'mongoose';
 import { throwError } from '../utils/error';
 import { CustomRequest } from '../interfaces/customRequest';
