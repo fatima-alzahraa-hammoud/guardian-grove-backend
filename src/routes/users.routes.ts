@@ -2,7 +2,8 @@ import express from "express";
 import { 
   getUsers, getUserById, createUser, getUserStars, 
   updateUserStars, getUserCoins, updateUserCoins, 
-  getLocation, updateLocation, getUserRank, updateUserRank
+  getLocation, updateLocation, getUserRank, updateUserRank,
+  editUserProfile
 } from "../controllers/users.controller";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { adminMiddleware } from "../middlewares/adminMiddleware";
@@ -13,6 +14,7 @@ const router = express.Router();
 router.get("/", authMiddleware, adminMiddleware, getUsers); 
 router.get("/user/:id", authMiddleware, getUserById); 
 router.post("/", authMiddleware, parentsMiddleware, createUser); 
+router.put("/", authMiddleware, editUserProfile);
 
 // Routes for managing user's stars
 router.get("/stars", authMiddleware, getUserStars); 

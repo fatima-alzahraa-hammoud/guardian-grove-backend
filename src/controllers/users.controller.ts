@@ -112,14 +112,14 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
 // API to edit user profile
 export const editUserProfile = async(req: CustomRequest, res: Response):Promise<void> => {
     try{
-        const {userProfileId, name, birthday, gender, avatar, role, email} = req.body;
-        
+        const {userProfileId, name, birthday, gender, avatar, role, email, interests} = req.body;
+
         if (!req.user) {
             throwError({ message: "Unauthorized", res, status: 401 });
             return;
         }
 
-        if (req.user._id.toString() !== userProfileId && req.user.role !== "admin" && req.user.role !== "owner"  && req.user.role !== "parent") {
+        if (userProfileId && req.user._id.toString() !== userProfileId && req.user.role !== "admin" && req.user.role !== "owner"  && req.user.role !== "parent") {
             throwError({ message: "Forbidden", res, status: 403 });
             return;
         }
@@ -128,8 +128,13 @@ export const editUserProfile = async(req: CustomRequest, res: Response):Promise<
             throwError({ message: "Forbidden: You cannot change role nor email", res, status: 403 });
             return;
         }
+        
+        let user;
 
-        const user = await User.findById(userProfileId);
+        if(userProfileId)
+            user = await User.findById(userProfileId);
+        else
+            user = req.user;
 
         if (!user){
             throwError({ message: "User not found", res, status: 404});
@@ -142,6 +147,7 @@ export const editUserProfile = async(req: CustomRequest, res: Response):Promise<
         if (avatar) user.avatar = avatar;
         if (role) user.role = role; 
         if (email) user.email = email; 
+        if (interests) user.interests = interests;
 
         await user.save();
 
