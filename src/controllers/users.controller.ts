@@ -4,6 +4,7 @@ import { User } from "../models/user.model";
 import mongoose from 'mongoose';
 import { throwError } from '../utils/error';
 import { CustomRequest } from '../interfaces/customRequest';
+import { checkId } from '../utils/checkId';
 
 
 // API to get all users
@@ -23,10 +24,8 @@ export const getUserById = async (req: CustomRequest, res: Response): Promise<vo
         // if there is id in the body so it is trying to get its data, while if no he need his data
         const {id} = req.body;
 
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            throwError({ message: "Invalid user ID format", res, status: 400});
-            return;
-        }
+        if(!checkId({id: id, res})) return;
+        
 
         if (!req.user) {
             throwError({ message: "Unauthorized", res, status: 401 });

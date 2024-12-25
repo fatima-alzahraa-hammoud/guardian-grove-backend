@@ -4,6 +4,7 @@ import { IAdventure } from '../interfaces/IAdventure';
 import { throwError } from '../utils/error';
 import { CustomRequest } from '../interfaces/customRequest';
 import mongoose from 'mongoose';
+import { checkId } from '../utils/checkId';
 
 // API to create new adventure
 export const createAdventure = async (req: Request, res: Response) => {
@@ -52,13 +53,7 @@ export const getAdventureById = async (req: Request, res: Response) => {
     try {
         const {adventureId} = req.body;
 
-        if(!adventureId){
-            return throwError({ message: "Id is required", res, status: 400}); 
-        }
-
-        if (!mongoose.Types.ObjectId.isValid(adventureId)) {
-            return throwError({ message: "Invalid user ID format", res, status: 400});
-        }
+        if(!checkId({id: adventureId, res})) return;
 
         const adventure = await Adventure.findById(adventureId);
         if (!adventure) 
@@ -74,13 +69,7 @@ export const updateAdventure = async (req: Request, res: Response) => {
 
         const {adventureId} = req.body;
 
-        if(!adventureId){
-            return throwError({ message: "Id is required", res, status: 400}); 
-        }
-
-        if (!mongoose.Types.ObjectId.isValid(adventureId)) {
-            return throwError({ message: "Invalid user ID format", res, status: 400});
-        }
+        if(!checkId({id: adventureId, res})) return;
 
         const updateData = { ...req.body };
         delete updateData.adventureId; // Remove adventureId from the body for comparison
@@ -107,13 +96,7 @@ export const deleteAdventure = async(req:Request, res: Response) => {
 
         const {adventureId} = req.body;
 
-        if(!adventureId){
-            return throwError({ message: "Id is required", res, status: 400}); 
-        }
-
-        if (!mongoose.Types.ObjectId.isValid(adventureId)) {
-            return throwError({ message: "Invalid user ID format", res, status: 400});
-        }
+        if(!checkId({id: adventureId, res})) return;
 
         const adventure = await Adventure.findByIdAndDelete(adventureId);
         if (!adventure) 
