@@ -228,6 +228,61 @@ export const deleteUser = async(req: CustomRequest, res:Response):Promise<void> 
     }
 } 
 
+// API to update password
+export const updatePassword = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+        const { oldPassword, newPassword, confirmPassword } = req.body;
+        const userId = req.user?.id;
+
+        if (!userId) {
+            res.status(401).json({ message: "Unauthorized" });
+            return;
+        }
+
+        if (!req.user) {
+            throwError({ message: "Unauthorized", res, status: 401 });
+            return;
+        }
+
+        // Validate required fields
+        if (!oldPassword || !newPassword || !confirmPassword) {
+            throwError({ message: "All fields are required.", res, status: 400 });
+            return;
+        }
+
+        if (newPassword !== confirmPassword) {
+            throwError({ message: "Passwords do not match.", res, status: 400 });
+            return;
+        }
+
+        // Verify old password
+        const isMatch = await bcrypt.compare(oldPassword, req.user.password);
+        if (!isMatch) {
+            throwError({ message: "Old password is incorrect.", res, status: 400 });
+            return;
+        }
+
+        // Check if the new password is different from the old one
+        const isSamePassword = await bcrypt.compare(newPassword, req.user.password);
+        if (isSamePassword) {
+            throwError({ message: "New password cannot be the same as the old password.", res, status: 400 });
+            return;
+        }
+
+        // Hash new password
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        req.user.password = hashedPassword;
+        await req.user.save();
+
+        // Return success response
+        res.status(200).json({ message: "Password updated successfully." });
+
+    } catch (error) {
+        console.error("Error updating password: ", error);
+        throwError({ message: "Failed to update password.", res, status: 500 });
+    }
+};
+
 // API to get user's stars
 export const getUserStars = async(req:CustomRequest, res: Response): Promise<void> => {
     try{
