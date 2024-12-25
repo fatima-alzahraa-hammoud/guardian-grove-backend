@@ -205,7 +205,6 @@ export const getLocation = async(req:CustomRequest, res: Response): Promise<void
 // API to update user's current location
 export const updateLocation = async(req:CustomRequest, res: Response): Promise<void> => {
     try{
-        const id = req.params.id;
         const { currentLocation }: { currentLocation: string } = req.body;
 
         if (!req.user) {
@@ -242,19 +241,12 @@ export const getUserRank = async(req:CustomRequest, res: Response): Promise<void
 };
 
 // API to update user's rank
-export const updateUserRank = async(req:Request, res: Response): Promise<void> => {
+export const updateUserRank = async(req:CustomRequest, res: Response): Promise<void> => {
     try{
-        const id = req.params.id;
         const { rank }: { rank: number } = req.body;
 
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            throwError({ message: "Invalid user ID format", res, status: 400});
-            return;
-        }
-
-        const user = await User.findById(id);
-        if (!user){
-            throwError({ message: "User not found", res, status: 404});
+        if (!req.user) {
+            throwError({ message: "Unauthorized", res, status: 401});
             return;
         }
 
@@ -263,10 +255,10 @@ export const updateUserRank = async(req:Request, res: Response): Promise<void> =
             return;
         }
 
-        user.rankInFamily = rank;
-        await user.save();
+        req.user.rankInFamily = rank;
+        await req.user.save();
 
-        res.status(200).send({ message: "User rank updated successfully", user });
+        res.status(200).send({ message: "User rank updated successfully", user: req.user });
     }catch(error){
         throwError({ message: "Error updating user rank", res, status: 500});
     }

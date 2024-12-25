@@ -28,6 +28,6 @@ router.put("/location", authMiddleware, updateLocation);
 
 // Routes for managing user's rank 
 router.get("/rank", authMiddleware, getUserRank); 
-router.put("/:id/rank", authMiddleware, updateUserRank); 
+router.put("/rank", authMiddleware, updateUserRank); 
 
 export default router;
