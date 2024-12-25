@@ -9,7 +9,7 @@ import { throwError } from '../utils/error';
 export const getUsers = async(req: Request, res: Response): Promise<void> => {
     try{
         const users = await User.find();
-        res.status(200).json(users);
+        res.status(200).send(users);
     }catch(error){
         throwError({ message: "Error retrieving users", res, status: 500});
     }
@@ -21,7 +21,8 @@ export const getUserById = async (req: Request, res: Response): Promise<void> =>
         const id = req.params.id;
         const user = await User.findById(id);
         if (user){
-            res.status(200).json(user);
+            res.status(200).send(user);
+            return;
         }
         throwError({ message: "User not found", res, status: 404});
     }catch(error){
@@ -87,7 +88,7 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
 
         const user = await User.create({...data, password: hashedPassword});
 
-        res.status(201).json(user);
+        res.status(201).send(user);
     }catch(error){
         if (error instanceof Error) {
             // Handle MongoDB duplicate key error (11000)
@@ -118,7 +119,8 @@ export const getUserStars = async(req:Request, res: Response): Promise<void> => 
 
         const user = await User.findById(id);
         if (user){
-            res.status(200).json({stars: user.stars});
+            res.status(200).send({stars: user.stars});
+            return;
         }
         throwError({ message: "User not found", res, status: 404});
         return;
@@ -152,7 +154,7 @@ export const updateUserStars = async(req:Request, res: Response): Promise<void> 
         user.stars = stars;
         await user.save();
 
-        res.status(200).json({ message: "User stars updated successfully", user });
+        res.status(200).send({ message: "User stars updated successfully", user });
     }catch(error){
         throwError({ message: "Error updating user stars", res, status: 500});
     }
@@ -170,7 +172,8 @@ export const getUserCoins = async(req:Request, res: Response): Promise<void> => 
 
         const user = await User.findById(id);
         if (user){
-            res.status(200).json({coins: user.coins});
+            res.status(200).send({coins: user.coins});
+            return;
         }
         throwError({ message: "User not found", res, status: 404});
         return;
@@ -204,7 +207,7 @@ export const updateUserCoins = async(req:Request, res: Response): Promise<void> 
         user.coins = coins;
         await user.save();
 
-        res.status(200).json({ message: "User Coins updated successfully", user });
+        res.status(200).send({ message: "User Coins updated successfully", user });
     }catch(error){
         throwError({ message: "Error updating user coins", res, status: 500});
     }
@@ -223,7 +226,8 @@ export const getLocation = async(req:Request, res: Response): Promise<void> => {
 
         const user = await User.findById(id);
         if (user){
-            res.status(200).json({location: user.currentLocation});
+            res.status(200).send({location: user.currentLocation});
+            return;
         }
         throwError({ message: "User not found", res, status: 404});
         return;
@@ -257,7 +261,7 @@ export const updateLocation = async(req:Request, res: Response): Promise<void> =
         user.currentLocation = currentLocation;
         await user.save();
 
-        res.status(200).json({ message: "User current location updated successfully", user });
+        res.status(200).send({ message: "User current location updated successfully", user });
     }catch(error){
         throwError({ message: "Error updating user location", res, status: 500});
     }
@@ -275,7 +279,8 @@ export const getUserRank = async(req:Request, res: Response): Promise<void> => {
 
         const user = await User.findById(id);
         if (user){
-            res.status(200).json({Rank: user.rankInFamily});
+            res.status(200).send({Rank: user.rankInFamily});
+            return;
         }
         throwError({ message: "User not found", res, status: 404});
         return;
@@ -309,7 +314,7 @@ export const updateUserRank = async(req:Request, res: Response): Promise<void> =
         user.rankInFamily = rank;
         await user.save();
 
-        res.status(200).json({ message: "User rank updated successfully", user });
+        res.status(200).send({ message: "User rank updated successfully", user });
     }catch(error){
         throwError({ message: "Error updating user rank", res, status: 500});
     }
