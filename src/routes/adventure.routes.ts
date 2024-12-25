@@ -11,5 +11,6 @@ router.get("/adventure", authMiddleware, getAdventureById);
 router.put("/", authMiddleware, updateAdventure);
 router.delete("/", authMiddleware, deleteAdventure);
 
+router.post("/adventure/challenge", authMiddleware, createChallenge);
 
 export default router;
