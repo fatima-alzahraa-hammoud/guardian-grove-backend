@@ -23,8 +23,8 @@ router.get("/coins", authMiddleware, getUserCoins);
 router.put("/coins", authMiddleware, updateUserCoins); 
 
 // Routes for managing user's location
-router.get("/:id/location", authMiddleware, getLocation); 
-router.put("/:id/location", authMiddleware, updateLocation); 
+router.get("/location", authMiddleware, getLocation); 
+router.put("/location", authMiddleware, updateLocation); 
 
 // Routes for managing user's rank 
 router.get("/:id/rank", getUserRank); 

@@ -188,22 +188,15 @@ export const updateUserCoins = async(req:CustomRequest, res: Response): Promise<
 
 
 // API to get user's location
-export const getLocation = async(req:Request, res: Response): Promise<void> => {
+export const getLocation = async(req:CustomRequest, res: Response): Promise<void> => {
     try{
-        const id = req.params.id;
-
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            throwError({ message: "Invalid user ID format", res, status: 400});
+        if (!req.user) {
+            res.status(401).json({ message: "Unauthorized" });
             return;
         }
 
-        const user = await User.findById(id);
-        if (user){
-            res.status(200).send({location: user.currentLocation});
-            return;
-        }
-        throwError({ message: "User not found", res, status: 404});
-        return;
+        res.status(200).send({location: req.user.currentLocation});
+
     }catch(error){
         throwError({ message: "Error retrieving user location", res, status: 500});
     }
