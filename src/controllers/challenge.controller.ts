@@ -34,4 +34,20 @@ export const createChallenge = async(req: Request, res: Response) => {
     }catch(error) {
         return throwError({ message: "An unknown error occurred while creating.", res, status: 500 });
     }
+};
+
+export const getAllChallenges = async(req: Request, res: Response) => {
+    try{
+        const { adventureId } = req.body;
+        if(!checkId({id: adventureId, res})) return;
+
+        const adventure = await Adventure.findById(adventureId);
+    
+        if (!adventure) 
+            return throwError({ message: "Adventure not found", res, status: 404});
+    
+        res.status(200).json(adventure.challenges);    
+    }catch(error){
+        return throwError({ message: "An unknown error occurred while getting all challenges.", res, status: 500 });
+    }
 }
