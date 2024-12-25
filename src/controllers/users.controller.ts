@@ -169,6 +169,11 @@ export const editUserProfile = async(req: CustomRequest, res: Response):Promise<
             return;
         }
 
+        if (userProfileId && (req.user.role === "parent" || req.user.role === "owner") && user.email !== req.user.email){
+            throwError({ message: "Forbidden", res, status: 403 });
+            return;
+        }
+
         if (name) user.name = name;
         if (birthday) user.birthday = birthday;
         if (gender) user.gender = gender;
@@ -209,6 +214,12 @@ export const deleteUser = async(req: CustomRequest, res:Response):Promise<void> 
 
         if (!deleted) {
             throwError({ message: "User not found", res, status: 404});
+            return;
+        }
+
+        if (userDeleteId && (req.user.role === "parent" || req.user.role === "owner") && deleted.email !== req.user.email){
+            throwError({ message: "Forbidden", res, status: 403 });
+            return;
         }
       
         res.status(200).send({message: "User deleted successfully", deleted});
