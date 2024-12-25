@@ -73,3 +73,35 @@ export const getChallengeById = async(req: Request, res: Response) => {
         return throwError({ message: "An unknown error occurred while getting all challenges.", res, status: 500 });
     }
 }
+
+export const updateChallege = async(req: Request, res: Response) => {
+    try{
+        const { adventureId, challengeId } = req.body;
+        if(!checkId({id: adventureId, res})) return;
+        if(!checkId({id: challengeId, res})) return;
+
+        const updateData = { ...req.body };
+        delete updateData.adventureId;
+        delete updateData.challengeId;
+
+        if (Object.keys(updateData).length === 0) {
+            return throwError({ message: "No other data provided to update", res, status: 400 });
+        }
+
+        const adventure = await Adventure.findById(adventureId);
+        if (!adventure) 
+            return throwError({ message: "Adventure not found", res, status: 404});
+    
+        const challenge = adventure.challenges.find(chal => chal._id.toString() === challengeId);
+        if (!challenge) {
+            return throwError({ message: "Challenge not found", res, status: 404 });
+        }
+
+        Object.assign(challenge, updateData);
+
+        await adventure.save();
+        res.status(200).json(challenge);
+    }catch(error){
+        return throwError({ message: "An unknown error occurred while getting all challenges.", res, status: 500 });
+    }
+}
