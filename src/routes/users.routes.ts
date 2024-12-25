@@ -19,7 +19,7 @@ router.get("/stars", authMiddleware, getUserStars);
 router.put("/stars", authMiddleware, updateUserStars); 
 
 // Routes for managing user's coins
-router.get("/:id/coins", authMiddleware, getUserCoins); 
+router.get("/coins", authMiddleware, getUserCoins); 
 router.put("/:id/coins", authMiddleware, updateUserCoins); 
 
 // Routes for managing user's location

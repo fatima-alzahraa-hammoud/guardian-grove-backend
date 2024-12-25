@@ -149,22 +149,14 @@ export const updateUserStars = async(req:CustomRequest, res: Response): Promise<
 } 
 
 // API to get user's coins
-export const getUserCoins = async(req:Request, res: Response): Promise<void> => {
+export const getUserCoins = async(req:CustomRequest, res: Response): Promise<void> => {
     try{
-        const id = req.params.id;
-
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            throwError({ message: "Invalid user ID format", res, status: 400});
+        if (!req.user) {
+            res.status(401).json({ message: "Unauthorized" });
             return;
         }
 
-        const user = await User.findById(id);
-        if (user){
-            res.status(200).send({coins: user.coins});
-            return;
-        }
-        throwError({ message: "User not found", res, status: 404});
-        return;
+        res.status(200).send({coins: req.user.coins});
     }catch(error){
         throwError({ message: "Error retrieving user coins", res, status: 500});
     }
