@@ -1,6 +1,19 @@
 import { model, Schema } from "mongoose";
 import { IUser } from "../interfaces/IUser";
 
+const challengeProgressSchema = new Schema({
+    challengeId: { type: Schema.Types.ObjectId, required: true },
+    isCompleted: { type: Boolean, default: false },
+    completedAt: { type: Date }
+});
+
+const adventureProgressSchema = new Schema({
+    adventureId: { type: Schema.Types.ObjectId, ref: 'Adventure', required: true },
+    challenges: { type: [challengeProgressSchema], default: [] },
+    isAdventureCompleted: { type: Boolean, default: false },
+    progress: { type: Number, default: 0 },
+});
+
 const userSchema = new Schema<IUser>({
     name: {type: String, required: true },
     email: {type: String, required: [true, "Email is required"],  match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, "Email is invalid",]},
@@ -15,6 +28,7 @@ const userSchema = new Schema<IUser>({
     stars: {type: Number, required: true, default: 0},
     coins: {type: Number, required: true, default: 0},
     rankInFamily: {type: Number, required: true, default: 0},
+    adventures: { type: [adventureProgressSchema], default: [] },
 });
 
 userSchema.index({ name: 1, email: 1 }, { unique: true });
