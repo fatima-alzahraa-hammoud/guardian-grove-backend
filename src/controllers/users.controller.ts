@@ -203,19 +203,13 @@ export const getLocation = async(req:CustomRequest, res: Response): Promise<void
 } 
 
 // API to update user's current location
-export const updateLocation = async(req:Request, res: Response): Promise<void> => {
+export const updateLocation = async(req:CustomRequest, res: Response): Promise<void> => {
     try{
         const id = req.params.id;
         const { currentLocation }: { currentLocation: string } = req.body;
 
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            throwError({ message: "Invalid user ID format", res, status: 400});
-            return;
-        }
-
-        const user = await User.findById(id);
-        if (!user) {
-            throwError({ message: "User not found", res, status: 404});
+        if (!req.user) {
+            res.status(401).json({ message: "Unauthorized" });
             return;
         }
 
@@ -224,10 +218,10 @@ export const updateLocation = async(req:Request, res: Response): Promise<void> =
             return;
         }
 
-        user.currentLocation = currentLocation;
-        await user.save();
+        req.user.currentLocation = currentLocation;
+        await req.user.save();
 
-        res.status(200).send({ message: "User current location updated successfully", user });
+        res.status(200).send({ message: "User location updated successfully", user: req.user });
     }catch(error){
         throwError({ message: "Error updating user location", res, status: 500});
     }
