@@ -13,7 +13,7 @@ import { parentsMiddleware } from "../middlewares/parentsMiddleware";
 const router = express.Router();
 
 router.get("/", authMiddleware, adminMiddleware, getUsers); 
-router.get("/user/:id", authMiddleware, getUserById); 
+router.get("/user", authMiddleware, getUserById); 
 router.post("/", authMiddleware, parentsMiddleware, createUser); 
 router.put("/", authMiddleware, editUserProfile);
 router.delete("/", authMiddleware, deleteUser);

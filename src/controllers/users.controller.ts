@@ -18,15 +18,43 @@ export const getUsers = async(req: Request, res: Response): Promise<void> => {
 };
 
 // API to get a user based on his Id
-export const getUserById = async (req: Request, res: Response): Promise<void> => {
+export const getUserById = async (req: CustomRequest, res: Response): Promise<void> => {
     try{
-        const id = req.params.id;
-        const user = await User.findById(id);
-        if (user){
-            res.status(200).send(user);
+
+        // if there is id in the body so it is trying to get its data, while if no he need his data
+        const {id} = req.body;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            throwError({ message: "Invalid user ID format", res, status: 400});
             return;
         }
-        throwError({ message: "User not found", res, status: 404});
+
+        if (!req.user) {
+            throwError({ message: "Unauthorized", res, status: 401 });
+            return;
+        }
+
+        if (id && req.user._id.toString() !== id && req.user.role !== "admin" && req.user.role !== "owner"  && req.user.role !== "parent") {
+            throwError({ message: "Forbidden", res, status: 403 });
+            return;
+        }
+
+        let user;
+        if (id)
+            user = await User.findById(id);
+        else 
+            user = req.user;
+
+        if (!user){
+            throwError({ message: "User not found", res, status: 404});
+            return;
+        }
+
+        if (id && (req.user.role === "parent" || req.user.role === "owner") && user.email !== req.user.email){
+            throwError({ message: "Forbidden", res, status: 403 });
+            return;
+        }
+        res.status(200).send(user);
     }catch(error){
         throwError({ message: "Error retrieving user", res, status: 500});
     }
