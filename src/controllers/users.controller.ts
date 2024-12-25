@@ -114,6 +114,16 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
             return;
         }
 
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+        if (!passwordRegex.test(password)) {
+            throwError({
+                message: "Password must be at least 8 characters long, include an uppercase letter, lowercase letter, a number, and a special character.",
+                res,
+                status: 400
+            });
+            return;
+        }
+
         const hashedPassword = await bcrypt.hash(password, 10);
 
         const user = await User.create({...data, email:email , password: hashedPassword});
@@ -268,6 +278,17 @@ export const updatePassword = async (req: CustomRequest, res: Response): Promise
             throwError({ message: "New password cannot be the same as the old password.", res, status: 400 });
             return;
         }
+
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+        if (!passwordRegex.test(newPassword)) {
+            throwError({
+                message: "Password must be at least 8 characters long, include an uppercase letter, lowercase letter, a number, and a special character.",
+                res,
+                status: 400
+            });
+            return;
+        }
+
 
         // Hash new password
         const hashedPassword = await bcrypt.hash(newPassword, 10);

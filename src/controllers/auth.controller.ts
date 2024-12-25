@@ -114,6 +114,16 @@ export const register = async (req: Request, res: Response) : Promise<void> => {
             return;
         }
 
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+        if (!passwordRegex.test(password)) {
+            throwError({
+                message: "Password must be at least 8 characters long, include an uppercase letter, lowercase letter, a number, and a special character.",
+                res,
+                status: 400
+            });
+            return;
+        }
+
         const hashedPassword = await bcrypt.hash(password, 10);
 
         const newUser = await User.create({...data, password: hashedPassword});
