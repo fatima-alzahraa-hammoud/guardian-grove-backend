@@ -82,6 +82,13 @@ export const updateAdventure = async (req: Request, res: Response) => {
             return throwError({ message: "Invalid user ID format", res, status: 400});
         }
 
+        const updateData = { ...req.body };
+        delete updateData.adventureId; // Remove adventureId from the body for comparison
+
+        if (Object.keys(updateData).length === 0) {
+            return throwError({ message: "No other data provided to update", res, status: 400 });
+        }
+
         const adventure = await Adventure.findByIdAndUpdate(adventureId, req.body, {new: true, runValidators: true});
 
         if(!adventure){
