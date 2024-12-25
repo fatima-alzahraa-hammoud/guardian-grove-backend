@@ -93,7 +93,7 @@ export const register = async (req: Request, res: Response) : Promise<void> => {
         }
 
         // Role validation
-        const validRoles = ['user', 'father', 'mother', 'child', 'grandfather', 'grandmother', 'admin'];
+        const validRoles = ['user', 'father', 'parent', 'owner', 'grandfather', 'grandmother', 'admin'];
         if (!validRoles.includes(role)) {
             throwError({ message: "Invalid role.", res, status: 400});
             return;

@@ -61,17 +61,24 @@ export const getUserById = async (req: CustomRequest, res: Response): Promise<vo
 };
 
 // API to create user
-export const createUser = async (req: Request, res: Response): Promise<void> => {
+export const createUser = async (req: CustomRequest, res: Response): Promise<void> => {
     try{
         const data = req.body;
 
-        const { name, email, password, birthday, gender, role, avatar, interests } = data;
+        const { name, password, birthday, gender, role, avatar, interests } = data;
+
+        if (!req.user) {
+            throwError({ message: "Unauthorized", res, status: 401 });
+            return;
+        }
 
         // verify all fields are filled
-        if (!name || !email || !password || !birthday || !gender || !role || !avatar || !interests) {
+        if (!name || !password || !birthday || !gender || !role || !avatar || !interests) {
             throwError({ message: "All required fields must be filled.", res, status: 400});
             return;
         }
+
+        const email = req.user.email;
 
         const existingUser = await User.findOne({
             name: name,
@@ -87,13 +94,6 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
             return;
         }
 
-        // Email Validation
-        const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
-        if (!emailRegex.test(email)) {
-            throwError({ message: "Invalid email format.", res, status: 400});
-            return;
-        }
-
         // Gender Validation
         const validGenders = ['male', 'female'];
         if (!validGenders.includes(gender)) {
@@ -102,7 +102,7 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
         }
 
         // Role validation
-        const validRoles = ['user', 'father', 'mother', 'child', 'grandfather', 'grandmother', 'admin'];
+        const validRoles = ['user', 'parent', 'child', 'grandfather', 'grandmother', 'admin'];
         if (!validRoles.includes(role)) {
             throwError({ message: "Invalid role.", res, status: 400});
             return;
@@ -116,7 +116,7 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        const user = await User.create({...data, password: hashedPassword});
+        const user = await User.create({...data, email:email , password: hashedPassword});
 
         res.status(201).send(user);
     }catch(error){
