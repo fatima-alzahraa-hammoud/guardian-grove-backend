@@ -128,7 +128,7 @@ export const editUserProfile = async(req: CustomRequest, res: Response):Promise<
             throwError({ message: "Forbidden: You cannot change role nor email", res, status: 403 });
             return;
         }
-        
+
         let user;
 
         if(userProfileId)
@@ -156,6 +156,38 @@ export const editUserProfile = async(req: CustomRequest, res: Response):Promise<
         throwError({ message: "Failed to update. An unknown error occurred.", res, status: 500 });
     }
 }
+
+// API to delete user
+export const deleteUser = async(req: CustomRequest, res:Response):Promise<void> => {
+    try{
+        const {userDeleteId} = req.body;
+
+        if (!req.user) {
+            throwError({ message: "Unauthorized", res, status: 401 });
+            return;
+        }
+
+        if (userDeleteId && req.user._id.toString() !== userDeleteId && req.user.role !== "admin" && req.user.role !== "owner"  && req.user.role !== "parent") {
+            throwError({ message: "Forbidden", res, status: 403 });
+            return;
+        }
+
+        let deleted;
+
+        if(userDeleteId)
+            deleted = await User.findByIdAndDelete(userDeleteId);
+        else
+            deleted = await User.findByIdAndDelete(req.user._id);
+
+        if (!deleted) {
+            throwError({ message: "User not found", res, status: 404});
+        }
+      
+        res.status(200).send({message: "User deleted successfully", deleted});
+    }catch(error){
+        throwError({ message: "Failed to delete. An unknown error occurred.", res, status: 500 });
+    }
+} 
 
 // API to get user's stars
 export const getUserStars = async(req:CustomRequest, res: Response): Promise<void> => {
