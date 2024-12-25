@@ -11,6 +11,7 @@ const adventureProgressSchema = new Schema({
     adventureId: { type: Schema.Types.ObjectId, ref: 'Adventure', required: true },
     challenges: { type: [challengeProgressSchema], default: [] },
     isAdventureCompleted: { type: Boolean, default: false },
+    status: { type: String, enum: ['in-progress', 'completed'] },
     progress: { type: Number, default: 0 },
 });
 

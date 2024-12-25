@@ -68,3 +68,29 @@ export const getAdventureById = async (req: Request, res: Response) => {
         return throwError({ message: "An unknown error occurred while getting the adventure.", res, status: 500 });
     }
 };
+
+export const updateAdventure = async (req: Request, res: Response) => {
+    try{
+
+        const {adventureId} = req.body;
+
+        if(!adventureId){
+            return throwError({ message: "Id is required", res, status: 400}); 
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(adventureId)) {
+            return throwError({ message: "Invalid user ID format", res, status: 400});
+        }
+
+        const adventure = await Adventure.findByIdAndUpdate(adventureId, req.body, {new: true, runValidators: true});
+
+        if(!adventure){
+            return throwError({ message: "Adventure not found", res, status: 404});
+        }
+
+        res.status(200).json({message: "Adventure Updated Successfully", adventure});
+
+    }catch(error){
+        return throwError({ message: "Failed to update. An unknown error occurred.", res, status: 500 });
+    }
+}
