@@ -125,19 +125,12 @@ export const getUserStars = async(req:CustomRequest, res: Response): Promise<voi
 } 
 
 // API to update user's stars
-export const updateUserStars = async(req:Request, res: Response): Promise<void> => {
+export const updateUserStars = async(req:CustomRequest, res: Response): Promise<void> => {
     try{
-        const id = req.params.id;
         const { stars }: { stars: number } = req.body;
 
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            throwError({ message: "Invalid user ID format", res, status: 400});
-            return;
-        }
-
-        const user = await User.findById(id);
-        if (!user){
-            throwError({ message: "User not found", res, status: 404});
+        if (!req.user) {
+            res.status(401).json({ message: "Unauthorized" });
             return;
         }
 
@@ -146,10 +139,10 @@ export const updateUserStars = async(req:Request, res: Response): Promise<void> 
             return;
         }
 
-        user.stars = stars;
-        await user.save();
+        req.user.stars = stars;
+        await req.user.save();
 
-        res.status(200).send({ message: "User stars updated successfully", user });
+        res.status(200).send({ message: "User stars updated successfully", user: req.user });
     }catch(error){
         throwError({ message: "Error updating user stars", res, status: 500});
     }

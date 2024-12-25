@@ -16,7 +16,7 @@ router.post("/", authMiddleware, parentsMiddleware, createUser);
 
 // Routes for managing user's stars
 router.get("/stars", authMiddleware, getUserStars); 
-router.put("/:id/stars", authMiddleware, updateUserStars); 
+router.put("/stars", authMiddleware, updateUserStars); 
 
 // Routes for managing user's coins
 router.get("/:id/coins", authMiddleware, getUserCoins); 
