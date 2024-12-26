@@ -572,3 +572,17 @@ export const completeChallenge = async (req: CustomRequest, res: Response) => {
         return throwError({ message: "An unknown error occurred while completing the challenge.", res, status: 500 });
     }
 }
+
+// API to get user's adventures
+export const getUserAdventures = async(req:CustomRequest, res: Response): Promise<void> => {
+    try{
+        if (!req.user) {
+            throwError({ message: "Unauthorized", res, status: 401});
+            return;
+        }
+
+        res.status(200).send({Rank: req.user.adventures});
+    }catch(error){
+        throwError({ message: "Error retrieving user adventures", res, status: 500});
+    }
+};
