@@ -6,6 +6,7 @@ import { IPurchasedItem } from "../interfaces/IPurschasedItem";
 import { INotification } from "../interfaces/INotification";
 
 const notificationSchema: Schema = new Schema<INotification>({
+    _id: { type: Schema.Types.ObjectId, auto: true },
     title: {type: String, required: true},
     type: { type: String, required: true, enum: ['tip', 'alert', 'suggestion', 'notification'] },
     message: { type: String, required: true },

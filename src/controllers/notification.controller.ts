@@ -2,6 +2,8 @@ import { Request, Response } from "express";
 import { throwError } from "../utils/error";
 import { CustomRequest } from "../interfaces/customRequest";
 import { User } from "../models/user.model";
+import { checkId } from "../utils/checkId";
+import { Types } from "mongoose";
 
 //API to get notifications based on type
 export const getNotifications = async (req: CustomRequest, res: Response) => {
@@ -73,3 +75,41 @@ export const createNotification = async (req: CustomRequest, res: Response) => {
     return throwError({message: "An unknown error occurred while creating notification", res, status: 500});
   }
 };
+
+//API to delete notification
+export const deleteNotification = async (req: CustomRequest, res: Response) => {
+    try {
+
+        if (!req.user) {
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+        const { notificationId, userId } = req.body;
+
+        if(!checkId({id: notificationId, res})) return;
+        if(!checkId({id: userId, res})) return;
+
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return throwError({ message: "User not found", res, status: 404 });
+        }
+    
+        const notificationIndex = user.notifications.findIndex(
+            (notification) => (notification._id as Types.ObjectId).toString() === notificationId
+        );
+
+        if (notificationIndex === -1) {
+            return throwError({ message: "Notification not found", res, status: 404 });
+        }
+
+        const [deletedNotification] = user.notifications.splice(notificationIndex, 1);
+
+        await user.save();
+
+    
+        res.status(200).json({ message: 'Notification deleted successfully', DeletedNotification: deletedNotification });
+    } catch (error) {
+        console.error(error);
+        return throwError({message: "Error deleting notification", res, status: 500});
+    }
+  };  
