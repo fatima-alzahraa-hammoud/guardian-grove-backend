@@ -1,6 +1,7 @@
 import express from "express";
 import { authMiddleware } from "../middlewares/auth.middleware";
-import { createAchievement, getAllAchievements, getLockedAchievements, unlockAchievement } from "../controllers/achievement.controller";
+import { createAchievement, getAllAchievements, getLockedAchievements, unlockAchievement, updateAchievement } from "../controllers/achievement.controller";
+import { adminMiddleware } from "../middlewares/adminMiddleware";
 
 const router =  express.Router();
 
@@ -9,6 +10,7 @@ router.get("/locked", authMiddleware, getLockedAchievements);
 router.get("/unlocked", authMiddleware, getLockedAchievements);
 router.post("/unlock", authMiddleware, unlockAchievement);
 router.post("/", authMiddleware, createAchievement);
+router.put("/", authMiddleware, adminMiddleware, updateAchievement);
 
 
 export default router;
