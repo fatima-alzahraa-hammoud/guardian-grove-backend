@@ -4,6 +4,8 @@ import connectToDatabase from "./db/connection";
 import authRoutes from "./routes/auth.routes";
 import userRoutes from "./routes/users.routes";
 import adventureRoutes from "./routes/adventure.routes";
+import achievementRoutes from "./routes/achievement.routes";
+
 
 dotenv.config();
 
@@ -15,6 +17,8 @@ app.use(express.json());
 app.use("/auth", authRoutes);
 app.use("/users", userRoutes);
 app.use("/adventures", adventureRoutes);
+app.use("/achievements", achievementRoutes);
+
 
 app.listen(port, () =>{
     console.log("server is running on port 8080");
