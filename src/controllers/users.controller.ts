@@ -5,7 +5,8 @@ import mongoose from 'mongoose';
 import { throwError } from '../utils/error';
 import { CustomRequest } from '../interfaces/customRequest';
 import { checkId } from '../utils/checkId';
-
+import { Adventure } from '../models/adventure.model';
+import { IAdventureProgress } from '../interfaces/IAdventureProgress';
 
 // API to get all users
 export const getUsers = async(req: Request, res: Response): Promise<void> => {
@@ -468,5 +469,56 @@ export const getUserInterests = async(req:CustomRequest, res: Response): Promise
         res.status(200).send({Interests: req.user.interests});
     }catch(error){
         throwError({ message: "Error retrieving user interests", res, status: 500});
+    }
+};
+
+// API to start an adventure
+export const startAdventure = async (req: CustomRequest, res: Response) => {
+    try {
+        const {adventureId} = req.body;
+
+        if (!req.user) {
+            throwError({ message: "Unauthorized", res, status: 401 });
+            return;
+        }
+
+        const userId = req.user._id;
+
+        if(!checkId({id: adventureId, res})) return;
+        if(!checkId({id: userId, res})) return;
+
+        // Find the adventure by adventureId
+        const adventure = await Adventure.findById(adventureId);
+        if (!adventure) {
+            return throwError({ message: "Adventure not found", res, status: 404 });
+        }
+
+        const existingAdventureProgress = req.user.adventures.find(
+            (adventureProgress) => adventureProgress.adventureId.toString() === adventureId
+        );
+        if (existingAdventureProgress) {
+            return throwError({ message: "Adventure already started", res, status: 400 });
+        }
+
+
+        // Add adventure to user's adventures
+        const newAdventureProgress : IAdventureProgress = {
+            adventureId: adventureId,
+            challenges: adventure.challenges.map((challenge) => ({
+                challengeId: challenge._id,
+                isCompleted: false,  
+            })),
+            status: "in-progress",
+            isAdventureCompleted: false,
+            progress: 0,
+        };
+
+        req.user.adventures.push(newAdventureProgress);
+        await req.user.save();
+
+        res.status(200).json({ message: "Adventure started successfully", user: req.user });
+
+    } catch (error) {
+        return throwError({ message: "An unknown error occurred while starting the adventure.", res, status: 500 });
     }
 };
