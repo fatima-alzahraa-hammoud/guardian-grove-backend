@@ -1,13 +1,14 @@
 import { model, Schema } from "mongoose";
 import { IUser } from "../interfaces/IUser";
+import { IAdventureProgress, IChallengeProgress } from "../interfaces/IAdventureProgress";
 
-const challengeProgressSchema = new Schema({
+const challengeProgressSchema = new Schema<IChallengeProgress>({
     challengeId: { type: Schema.Types.ObjectId, required: true },
     isCompleted: { type: Boolean, default: false },
     completedAt: { type: Date }
 });
 
-const adventureProgressSchema = new Schema({
+const adventureProgressSchema = new Schema<IAdventureProgress>({
     adventureId: { type: Schema.Types.ObjectId, ref: 'Adventure', required: true },
     challenges: { type: [challengeProgressSchema], default: [] },
     isAdventureCompleted: { type: Boolean, default: false },

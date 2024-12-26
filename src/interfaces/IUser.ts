@@ -1,5 +1,5 @@
 import { Document } from "mongoose";
-import { IAdventure } from "./IAdventure";
+import { IAdventureProgress } from "./IAdventureProgress";
 
 export interface IUser extends Document{
     _id: string;
@@ -16,5 +16,5 @@ export interface IUser extends Document{
     stars: number;
     coins: number;
     rankInFamily: number;
-    adventures: IAdventure[];
+    adventures: IAdventureProgress[];
 }

@@ -130,10 +130,8 @@ export const deleteChallenge = async(req:Request, res: Response) => {
         // Remove the challenge from the array
         adventure.challenges.splice(challengeIndex, 1);
 
-        // Save the modified adventure
         await adventure.save();
 
-        // Return success response
         res.status(200).json({ message: "Challenge deleted successfully", adventure });
     } catch (error) {
         return throwError({ message: "Failed to delete. An unknown error occurred.", res, status: 500 });
