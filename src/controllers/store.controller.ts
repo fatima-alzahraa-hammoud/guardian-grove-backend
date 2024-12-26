@@ -2,6 +2,8 @@ import { Request, Response } from "express";
 import { StoreItem } from "../models/storeItem.model";
 import { throwError } from "../utils/error";
 import { IStore } from "../interfaces/IStore";
+import { checkId } from "../utils/checkId";
+import { User } from "../models/user.model";
 
 //API to get store items based on category
 export const getStoreItems = async (req: Request, res: Response) => {
@@ -52,3 +54,26 @@ export const createItem = async (req: Request, res: Response) => {
         return throwError({ message: "An unknown error occurred.", res, status: 500 });
     }
 };
+
+// API to delete item
+export const deleteItem = async(req:Request, res: Response) => {
+    try {
+        const {itemId} = req.body;
+
+        if(!checkId({id: itemId, res})) return;
+
+        const item = await StoreItem.findByIdAndDelete(itemId);
+        if (!item) 
+            return throwError({ message: "Item not found", res, status: 404});
+
+        await User.updateMany(
+            { 'purchasedItems.itemId': itemId },
+            { $pull: { purchasedItems: { itemId } } }
+        );
+
+
+        res.status(200).json({ message: "Item deleted successfully", item });
+    } catch (error) {
+        return throwError({ message: "Failed to delete. An unknown error occurred.", res, status: 500 });
+    }
+}
