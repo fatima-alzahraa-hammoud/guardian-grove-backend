@@ -1,4 +1,3 @@
-// get locked achievements
 // get my achievements
 // get Family achievements
 // unlock acievement
@@ -46,5 +45,25 @@ export const getLockedAchievements = async (req: CustomRequest, res: Response) =
         res.status(200).json({message: "Getting locked achievements Successfully", achievements: lockedAchievements });
     } catch (error) {
         throwError({ message: "An error occurred while fetching locked achievements.", res, status: 500 });
+    }
+};
+
+//API to get user achievements
+export const getUserAchievements = async (req: CustomRequest, res: Response) => {
+    try {
+        if (!req.user) {
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+
+        const user = req.user;
+        
+        await user.populate({
+            path: 'achievements.achievementId',
+            select: 'title description'
+        });
+
+        res.status(200).json({message: "Getting user achievements Successfully", achievements: user.achievements });
+    } catch (error) {
+        throwError({ message: "An error occurred while fetching user achievements.", res, status: 500 });
     }
 };
