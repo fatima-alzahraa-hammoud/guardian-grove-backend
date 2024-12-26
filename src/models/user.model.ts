@@ -3,6 +3,15 @@ import { IUser } from "../interfaces/IUser";
 import { IAdventureProgress, IChallengeProgress } from "../interfaces/IAdventureProgress";
 import { IUnlockedAchievement } from "../interfaces/IUnlockedAchievement";
 import { IPurchasedItem } from "../interfaces/IPurschasedItem";
+import { INotification } from "../interfaces/INotification";
+
+const notificationSchema: Schema = new Schema<INotification>({
+    title: {type: String, required: true},
+    type: { type: String, required: true, enum: ['tip', 'alert', 'suggestion', 'notification'] },
+    message: { type: String, required: true },
+    timestamp: { type: Date, default: Date.now },
+    isRead: { type: Boolean, default: false }
+});  
 
 const purchasedItemSchema = new Schema<IPurchasedItem>({
     itemId: { type: Schema.Types.ObjectId, ref: "StoreItem", required: true },
@@ -46,6 +55,7 @@ const userSchema = new Schema<IUser>({
     adventures: { type: [adventureProgressSchema], default: [] },
     achievements: { type: [unlockedAchievementSchema], default: [] },
     purchasedItems: { type: [purchasedItemSchema], default: [] },
+    notifications: { type: [notificationSchema], default: [] },
 });
 
 userSchema.index({ name: 1, email: 1 }, { unique: true });

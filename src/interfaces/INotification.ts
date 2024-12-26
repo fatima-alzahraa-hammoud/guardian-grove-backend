@@ -1,8 +1,9 @@
 import { Document } from "mongoose";
 
-interface INotification extends Document{
+export interface INotification extends Document{
+    title: string;
     type: 'tip' | 'alert' | 'suggestion' | 'notification';
     message: string;
     timestamp: Date;
     isRead: boolean;
-  }
+}
