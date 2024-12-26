@@ -1,7 +1,4 @@
 // get Family achievements
-// add achievements (for admin and AI)
-// delete achievement (for admin)
-// edit achievement (for admin)
 
 import { Request, Response } from "express";
 import { Achievement } from "../models/achievements.model";
@@ -60,7 +57,7 @@ export const getUserAchievements = async (req: CustomRequest, res: Response) => 
         
         await user.populate({
             path: 'achievements.achievementId',
-            select: 'title description'
+            select: 'title description photo'
         });
 
         res.status(200).json({message: "Getting user achievements Successfully", achievements: user.achievements });
