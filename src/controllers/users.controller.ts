@@ -522,3 +522,53 @@ export const startAdventure = async (req: CustomRequest, res: Response) => {
         return throwError({ message: "An unknown error occurred while starting the adventure.", res, status: 500 });
     }
 };
+
+// API to complete a challenge
+export const completeChallenge = async (req: CustomRequest, res: Response) => {
+    try {
+        const { adventureId, challengeId } = req.body;
+
+        if(!checkId({id: adventureId, res})) return;
+        if(!checkId({id: challengeId, res})) return;
+
+        if (!req.user) {
+            throwError({ message: "Unauthorized", res, status: 401 });
+            return;
+        }
+
+        const user = req.user;
+
+        // Find the user's adventure
+        const adventureProgress = user.adventures.find(adventure => adventure.adventureId.toString() === adventureId);
+        if (!adventureProgress) {
+            return throwError({ message: "Adventure not found in user's profile", res, status: 404 });
+        }
+
+        // Find the challenge within the adventure
+        const challenge = adventureProgress.challenges.find(challenge => challenge.challengeId.toString() === challengeId);
+        if (!challenge) {
+            return throwError({ message: "Challenge not found in adventure", res, status: 404 });
+        }
+
+        // Mark the challenge as completed
+        challenge.isCompleted = true;
+        challenge.completedAt = new Date();
+
+        // Calculate progress 
+        adventureProgress.progress = (adventureProgress.challenges.filter(challenge => challenge.isCompleted).length / adventureProgress.challenges.length) * 100;
+
+        // Check if all challenges are completed and mark the adventure as completed
+        if (adventureProgress.challenges.every(challenge => challenge.isCompleted)) {
+            adventureProgress.isAdventureCompleted = true;
+            adventureProgress.status = 'completed';
+        }
+
+        // Save the user's updated adventure progress
+        await user.save();
+
+        res.status(200).json({ message: "Challenge completed successfully", adventureProgress });
+
+    } catch (error) {
+        return throwError({ message: "An unknown error occurred while completing the challenge.", res, status: 500 });
+    }
+}

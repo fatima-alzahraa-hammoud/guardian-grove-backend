@@ -5,7 +5,8 @@ import {
   getLocation, updateLocation, getUserRank, updateUserRank,
   editUserProfile, deleteUser,
   getUserInterests, updatePassword,
-  startAdventure
+  startAdventure,
+  completeChallenge
 } from "../controllers/users.controller";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { adminMiddleware } from "../middlewares/adminMiddleware";
