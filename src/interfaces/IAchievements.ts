@@ -1,3 +1,5 @@
+import { Document } from "mongoose";
+
 export interface IAchievement extends Document{
     _id: string;
     title: string;

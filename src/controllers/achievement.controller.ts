@@ -1,5 +1,4 @@
 // get Family achievements
-// unlock acievement
 // add achievements (for admin and AI)
 // delete achievement (for admin)
 // edit achievement (for admin)
@@ -9,6 +8,7 @@ import { Achievement } from "../models/achievements.model";
 import { throwError } from "../utils/error";
 import { CustomRequest } from "../interfaces/customRequest";
 import { checkId } from "../utils/checkId";
+import { IAchievement } from "../interfaces/IAchievements";
 
 // API to get all achievements
 export const getAllAchievements = async (req: Request, res: Response) => {
@@ -104,5 +104,33 @@ export const unlockAchievement = async (req: CustomRequest, res: Response) => {
         res.status(200).json({ message: "Achievement unlocked successfully", unlockedAchievement });
     } catch (error) {
         return throwError({ message: "An error occurred while unlocking the achievement.", res, status: 500 });
+    }
+};
+
+// API to create new achievement
+export const createAchievement = async (req: Request, res: Response) => {
+    try {
+
+        const data = req.body;
+
+        const { title, description, starsReward, coinsReward, criteria, photo } = data;
+        if (!title || !description || !criteria || !photo) {
+            return throwError({ message: "All required fields must be filled.", res, status: 400});
+        }
+
+        const newAchievement: IAchievement = new Achievement({
+            title,
+            description,
+            starsReward: starsReward || 0,
+            coinsReward: coinsReward || 0, 
+            criteria,
+            photo
+        });
+
+        await newAchievement.save();
+
+        res.status(201).json({message: "Achievement created successfully", Achievement: newAchievement});
+    } catch (error) {
+        return throwError({ message: "An unknown error occurred.", res, status: 500 });
     }
 };
