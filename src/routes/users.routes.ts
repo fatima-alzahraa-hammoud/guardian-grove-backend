@@ -7,7 +7,8 @@ import {
   getUserInterests, updatePassword,
   startAdventure,
   completeChallenge,
-  getUserAdventures
+  getUserAdventures,
+  getUserPurchasedItems
 } from "../controllers/users.controller";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { adminMiddleware } from "../middlewares/adminMiddleware";
@@ -46,5 +47,8 @@ router.post("/adventure", authMiddleware, startAdventure);
 router.post("/adventure/challenge", authMiddleware, completeChallenge); 
 router.get("/adventures", authMiddleware, getUserAdventures); 
 
+
+// Routes for user's purchased items 
+router.get("/purchasedItems", authMiddleware, getUserPurchasedItems); 
 
 export default router;
