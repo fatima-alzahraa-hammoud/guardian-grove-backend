@@ -42,7 +42,7 @@ router.get("/interests", authMiddleware, getUserInterests);
 
 // Routes for user's adventures 
 router.post("/adventure", authMiddleware, startAdventure); 
-
+router.post("/adventure/challenge", authMiddleware, completeChallenge); 
 
 
 export default router;
