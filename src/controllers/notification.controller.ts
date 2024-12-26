@@ -115,8 +115,7 @@ export const deleteNotification = async (req: CustomRequest, res: Response) => {
 // API to update notification
 export const updateNotification = async (req: Request, res: Response) => {
     try {
-        const { userId, notificationId } = req.params;
-        const { title, message, isRead, type } = req.body;
+        const { userId, notificationId, title, message, isRead, type } = req.body;
 
         if(!checkId({id: notificationId, res})) return;
         if(!checkId({id: userId, res})) return;
@@ -144,5 +143,38 @@ export const updateNotification = async (req: Request, res: Response) => {
         });
     } catch (error) {
         return throwError({ message: "Error updating notification", res, status: 500 });
+    }
+};
+
+// API to mark a notification as done (read)
+export const markNotificationAsDone = async (req: Request, res: Response) => {
+    try {
+        const { userId, notificationId } = req.body;
+
+        if(!checkId({id: userId, res})) return;
+
+        // Find user
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        // Find the notification by ID
+        const notification = user.notifications.find(notif => notif._id.toString() === notificationId);
+        if (!notification) {
+            return res.status(404).json({ message: "Notification not found" });
+        }
+
+        // Mark as read
+        notification.isRead = true;
+        await user.save();
+
+        res.status(200).json({
+            message: "Notification marked as done",
+            notification
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Error marking notification as done", error });
     }
 };
