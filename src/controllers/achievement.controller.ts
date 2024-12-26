@@ -9,6 +9,7 @@ import { throwError } from "../utils/error";
 import { CustomRequest } from "../interfaces/customRequest";
 import { checkId } from "../utils/checkId";
 import { IAchievement } from "../interfaces/IAchievements";
+import { User } from "../models/user.model";
 
 // API to get all achievements
 export const getAllAchievements = async (req: Request, res: Response) => {
@@ -82,6 +83,12 @@ export const unlockAchievement = async (req: CustomRequest, res: Response) => {
         }
 
         const user = req.user;
+
+        // Check if the achievementId exists in the Achievement collection
+        const achievement = await Achievement.findById(achievementId);
+        if (!achievement) {
+            return throwError({ message: "Achievement not found", res, status: 404 });
+        }
 
         // Check if the achievement is already unlocked
         const existingAchievement = user.achievements.find(
@@ -173,6 +180,12 @@ export const deleteAchievement = async(req:Request, res: Response) => {
         const achievement = await Achievement.findByIdAndDelete(achievementId);
         if (!achievement) 
             return throwError({ message: "Achievement not found", res, status: 404});
+
+        await User.updateMany(
+            { 'achievements.achievementId': achievementId },
+            { $pull: { achievements: { achievementId } } }
+        );
+
 
         res.status(200).json({ message: "Achievement deleted successfully", achievement });
     } catch (error) {
