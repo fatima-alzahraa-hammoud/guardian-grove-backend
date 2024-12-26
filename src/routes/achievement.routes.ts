@@ -6,5 +6,6 @@ const router =  express.Router();
 
 router.get("/", authMiddleware, getAllAchievements);
 router.get("/locked", authMiddleware, getLockedAchievements);
+router.get("/unlocked", authMiddleware, getLockedAchievements);
 
 export default router;
