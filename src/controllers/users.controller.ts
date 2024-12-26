@@ -589,3 +589,25 @@ export const getUserAdventures = async(req:CustomRequest, res: Response): Promis
         throwError({ message: "Error retrieving user adventures", res, status: 500});
     }
 };
+
+//API to get user's purchased items
+export const getUserPurchasedItems = async (req: CustomRequest, res: Response) => {
+    try {
+
+        if (!req.user) {
+            throwError({ message: "Unauthorized", res, status: 401});
+            return;
+        }
+
+        const userId = req.user._id; 
+        const user = await User.findById(userId).populate("purchasedItems.itemId");
+
+        if (!user) {
+            return throwError({ message: "User not found", res, status: 404 });
+        }
+
+        res.status(200).json({message: "Get purchased items successfully", purchasedItems: user.purchasedItems });
+    } catch (error) {
+        res.status(500).json({ message: "Error fetching purchased items", error });
+    }
+};
