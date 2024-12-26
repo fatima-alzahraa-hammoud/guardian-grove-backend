@@ -5,7 +5,7 @@ import authRoutes from "./routes/auth.routes";
 import userRoutes from "./routes/users.routes";
 import adventureRoutes from "./routes/adventure.routes";
 import achievementRoutes from "./routes/achievement.routes";
-
+import storeRoutes from "./routes/store.routes";
 
 dotenv.config();
 
@@ -18,6 +18,7 @@ app.use("/auth", authRoutes);
 app.use("/users", userRoutes);
 app.use("/adventures", adventureRoutes);
 app.use("/achievements", achievementRoutes);
+app.use("/store", storeRoutes);
 
 
 app.listen(port, () =>{

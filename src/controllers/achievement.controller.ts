@@ -8,6 +8,85 @@ import { checkId } from "../utils/checkId";
 import { IAchievement } from "../interfaces/IAchievements";
 import { User } from "../models/user.model";
 
+// API to create new achievement
+export const createAchievement = async (req: Request, res: Response) => {
+    try {
+
+        const data = req.body;
+
+        const { title, description, starsReward, coinsReward, criteria, photo } = data;
+        if (!title || !description || !criteria || !photo) {
+            return throwError({ message: "All required fields must be filled.", res, status: 400});
+        }
+
+        const newAchievement: IAchievement = new Achievement({
+            title,
+            description,
+            starsReward: starsReward || 0,
+            coinsReward: coinsReward || 0, 
+            criteria,
+            photo
+        });
+
+        await newAchievement.save();
+
+        res.status(201).json({message: "Achievement created successfully", Achievement: newAchievement});
+    } catch (error) {
+        return throwError({ message: "An unknown error occurred.", res, status: 500 });
+    }
+};
+
+//API to update achievement
+export const updateAchievement = async (req: Request, res: Response) => {
+    try{
+
+        const {achievementId} = req.body;
+
+        if(!checkId({id: achievementId, res})) return;
+
+        const updateData = { ...req.body };
+        delete updateData.achievementId; // Remove achievementId from the body for comparison
+
+        if (Object.keys(updateData).length === 0) {
+            return throwError({ message: "No other data provided to update", res, status: 400 });
+        }
+
+        const achievement = await Achievement.findByIdAndUpdate(achievementId, req.body, {new: true, runValidators: true});
+
+        if(!achievement){
+            return throwError({ message: "Achievement not found", res, status: 404});
+        }
+
+        res.status(200).json({message: "Achievement Updated Successfully", achievement});
+
+    }catch(error){
+        return throwError({ message: "Failed to update. An unknown error occurred.", res, status: 500 });
+    }
+};
+
+// API to delete adventure
+export const deleteAchievement = async(req:Request, res: Response) => {
+    try {
+        const {achievementId} = req.body;
+
+        if(!checkId({id: achievementId, res})) return;
+
+        const achievement = await Achievement.findByIdAndDelete(achievementId);
+        if (!achievement) 
+            return throwError({ message: "Achievement not found", res, status: 404});
+
+        await User.updateMany(
+            { 'achievements.achievementId': achievementId },
+            { $pull: { achievements: { achievementId } } }
+        );
+
+
+        res.status(200).json({ message: "Achievement deleted successfully", achievement });
+    } catch (error) {
+        return throwError({ message: "Failed to delete. An unknown error occurred.", res, status: 500 });
+    }
+}
+
 // API to get all achievements
 export const getAllAchievements = async (req: Request, res: Response) => {
     try {
@@ -110,82 +189,3 @@ export const unlockAchievement = async (req: CustomRequest, res: Response) => {
         return throwError({ message: "An error occurred while unlocking the achievement.", res, status: 500 });
     }
 };
-
-// API to create new achievement
-export const createAchievement = async (req: Request, res: Response) => {
-    try {
-
-        const data = req.body;
-
-        const { title, description, starsReward, coinsReward, criteria, photo } = data;
-        if (!title || !description || !criteria || !photo) {
-            return throwError({ message: "All required fields must be filled.", res, status: 400});
-        }
-
-        const newAchievement: IAchievement = new Achievement({
-            title,
-            description,
-            starsReward: starsReward || 0,
-            coinsReward: coinsReward || 0, 
-            criteria,
-            photo
-        });
-
-        await newAchievement.save();
-
-        res.status(201).json({message: "Achievement created successfully", Achievement: newAchievement});
-    } catch (error) {
-        return throwError({ message: "An unknown error occurred.", res, status: 500 });
-    }
-};
-
-//API to update achievement
-export const updateAchievement = async (req: Request, res: Response) => {
-    try{
-
-        const {achievementId} = req.body;
-
-        if(!checkId({id: achievementId, res})) return;
-
-        const updateData = { ...req.body };
-        delete updateData.achievementId; // Remove achievementId from the body for comparison
-
-        if (Object.keys(updateData).length === 0) {
-            return throwError({ message: "No other data provided to update", res, status: 400 });
-        }
-
-        const achievement = await Achievement.findByIdAndUpdate(achievementId, req.body, {new: true, runValidators: true});
-
-        if(!achievement){
-            return throwError({ message: "Achievement not found", res, status: 404});
-        }
-
-        res.status(200).json({message: "Achievement Updated Successfully", achievement});
-
-    }catch(error){
-        return throwError({ message: "Failed to update. An unknown error occurred.", res, status: 500 });
-    }
-};
-
-// API to delete adventure
-export const deleteAchievement = async(req:Request, res: Response) => {
-    try {
-        const {achievementId} = req.body;
-
-        if(!checkId({id: achievementId, res})) return;
-
-        const achievement = await Achievement.findByIdAndDelete(achievementId);
-        if (!achievement) 
-            return throwError({ message: "Achievement not found", res, status: 404});
-
-        await User.updateMany(
-            { 'achievements.achievementId': achievementId },
-            { $pull: { achievements: { achievementId } } }
-        );
-
-
-        res.status(200).json({ message: "Achievement deleted successfully", achievement });
-    } catch (error) {
-        return throwError({ message: "Failed to delete. An unknown error occurred.", res, status: 500 });
-    }
-}
