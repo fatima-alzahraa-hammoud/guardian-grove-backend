@@ -161,4 +161,21 @@ export const updateAchievement = async (req: Request, res: Response) => {
     }catch(error){
         return throwError({ message: "Failed to update. An unknown error occurred.", res, status: 500 });
     }
+};
+
+// API to delete adventure
+export const deleteAchievement = async(req:Request, res: Response) => {
+    try {
+        const {achievementId} = req.body;
+
+        if(!checkId({id: achievementId, res})) return;
+
+        const achievement = await Achievement.findByIdAndDelete(achievementId);
+        if (!achievement) 
+            return throwError({ message: "Achievement not found", res, status: 404});
+
+        res.status(200).json({ message: "Achievement deleted successfully", achievement });
+    } catch (error) {
+        return throwError({ message: "Failed to delete. An unknown error occurred.", res, status: 500 });
+    }
 }
