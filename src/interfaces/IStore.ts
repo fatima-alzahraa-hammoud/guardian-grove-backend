@@ -6,4 +6,4 @@ export interface IStore extends Document {
     price: number;
     image: string;
     type: string;
-  }
+}
