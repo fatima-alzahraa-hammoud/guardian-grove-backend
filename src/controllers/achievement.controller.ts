@@ -134,3 +134,31 @@ export const createAchievement = async (req: Request, res: Response) => {
         return throwError({ message: "An unknown error occurred.", res, status: 500 });
     }
 };
+
+//API to update achievement
+export const updateAchievement = async (req: Request, res: Response) => {
+    try{
+
+        const {achievementId} = req.body;
+
+        if(!checkId({id: achievementId, res})) return;
+
+        const updateData = { ...req.body };
+        delete updateData.achievementId; // Remove achievementId from the body for comparison
+
+        if (Object.keys(updateData).length === 0) {
+            return throwError({ message: "No other data provided to update", res, status: 400 });
+        }
+
+        const achievement = await Achievement.findByIdAndUpdate(achievementId, req.body, {new: true, runValidators: true});
+
+        if(!achievement){
+            return throwError({ message: "Achievement not found", res, status: 404});
+        }
+
+        res.status(200).json({message: "Achievement Updated Successfully", achievement});
+
+    }catch(error){
+        return throwError({ message: "Failed to update. An unknown error occurred.", res, status: 500 });
+    }
+}
