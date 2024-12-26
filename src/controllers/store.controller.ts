@@ -77,3 +77,31 @@ export const deleteItem = async(req:Request, res: Response) => {
         return throwError({ message: "Failed to delete. An unknown error occurred.", res, status: 500 });
     }
 }
+
+//API to update item
+export const updateItem = async (req: Request, res: Response) => {
+    try{
+
+        const {itemId} = req.body;
+
+        if(!checkId({id: itemId, res})) return;
+
+        const updateData = { ...req.body };
+        delete updateData.itemId; // Remove itemId from the body for comparison
+
+        if (Object.keys(updateData).length === 0) {
+            return throwError({ message: "No other data provided to update", res, status: 400 });
+        }
+
+        const item = await StoreItem.findByIdAndUpdate(itemId, req.body, {new: true, runValidators: true});
+
+        if(!item){
+            return throwError({ message: "Item not found", res, status: 404});
+        }
+
+        res.status(200).json({message: "Item Updated Successfully", item});
+
+    }catch(error){
+        return throwError({ message: "Failed to update. An unknown error occurred.", res, status: 500 });
+    }
+};
