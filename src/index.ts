@@ -6,6 +6,7 @@ import userRoutes from "./routes/users.routes";
 import adventureRoutes from "./routes/adventure.routes";
 import achievementRoutes from "./routes/achievement.routes";
 import storeRoutes from "./routes/store.routes";
+import notificationRoutes from "./routes/notification.routes";
 
 dotenv.config();
 
@@ -19,6 +20,8 @@ app.use("/users", userRoutes);
 app.use("/adventures", adventureRoutes);
 app.use("/achievements", achievementRoutes);
 app.use("/store", storeRoutes);
+app.use("/userNotifications", notificationRoutes);
+
 
 
 app.listen(port, () =>{
