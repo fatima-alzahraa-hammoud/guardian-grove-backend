@@ -1,0 +1,13 @@
+import { model, Schema } from "mongoose";
+import { IAchievement } from "../interfaces/IAchievements";
+
+const achievementSchema = new Schema<IAchievement>({
+    title: { type: String, required: true },
+    description: { type: String, required: true },
+    starsReward: { type: Number, default: 0 },
+    coinsReward: { type: Number, default: 0 },
+    criteria: { type: String, required: true },
+    photo: { type: String, required: true },
+});
+
+export const Achievement = model<IAchievement>("Achievement", achievementSchema);
