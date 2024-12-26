@@ -37,52 +37,50 @@ export const getNotifications = async (req: CustomRequest, res: Response) => {
 
 //API to create notifications
 export const sendNotification = async (req: CustomRequest, res: Response) => {
-  try {
+    try {
 
-    if (!req.user) {
-        throwError({ message: "Unauthorized", res, status: 401 });
-        return;
+        const { userId, title, message, type } = req.body;
+        
+        if(!checkId({id: userId, res})) return;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return throwError({ message: "User not found", res, status: 404 });
+        }
+
+        if (!type || !message || !title) {
+            return throwError({message: "All required fields (type, message, title) must be filled", res, status: 400});
+        }
+
+        if (!['tip', 'alert', 'suggestion', 'notification'].includes(type)) {
+            return throwError({message: "Invalid notification type", res, status: 400});
+        }
+
+        const newNotification = ({
+            userId,
+            type,
+            message,
+            title,
+            timestamp: new Date(),
+            isRead: false,
+        });
+
+        await User.findOneAndUpdate(
+            { _id: userId },
+            { $push: { notifications: newNotification } },
+            { new: true } 
+        );
+
+        res.status(201).json({ message: 'Notification created successfully', notification: newNotification });
+    } catch (error) {
+        console.error(error); 
+        return throwError({message: "An unknown error occurred while creating notification", res, status: 500});
     }
-
-    const userId = req.user._id; 
-    const { type, message, title } = req.body;
-
-    if (!userId || !type || !message || !title) {
-        return throwError({message: "All required fields (userId, type, message, title) must be filled", res, status: 400});
-    }
-
-    if (!['tip', 'alert', 'suggestion', 'notification'].includes(type)) {
-        return throwError({message: "Invalid notification type", res, status: 400});
-    }
-
-    const newNotification = ({
-      userId,
-      type,
-      message,
-      title,
-      isRead: false,
-    });
-
-    await User.findOneAndUpdate(
-      { _id: userId },
-      { $push: { notifications: newNotification } },
-      { new: true } 
-    );
-
-    res.status(201).json({ message: 'Notification created successfully', notification: newNotification });
-  } catch (error) {
-    console.error(error); 
-    return throwError({message: "An unknown error occurred while creating notification", res, status: 500});
-  }
 };
 
 //API to delete notification
 export const deleteNotification = async (req: CustomRequest, res: Response) => {
     try {
-
-        if (!req.user) {
-            return throwError({ message: "Unauthorized", res, status: 401 });
-        }
         const { notificationId, userId } = req.body;
 
         if(!checkId({id: notificationId, res})) return;
