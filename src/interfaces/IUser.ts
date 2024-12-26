@@ -3,6 +3,7 @@ import { IAdventureProgress } from "./IAdventureProgress";
 import { IUnlockedAchievement } from "./IUnlockedAchievement";
 import { IPurchasedItem } from "./IPurschasedItem";
 import { INotification } from "./INotification";
+import { INote } from "./INote";
 
 export interface IUser extends Document{
     _id: string;
@@ -23,5 +24,5 @@ export interface IUser extends Document{
     achievements: IUnlockedAchievement[];
     purchasedItems: IPurchasedItem[];
     notifications: INotification[];
-
+    notes: INote[];
 }

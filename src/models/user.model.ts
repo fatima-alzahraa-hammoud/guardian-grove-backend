@@ -4,6 +4,14 @@ import { IAdventureProgress, IChallengeProgress } from "../interfaces/IAdventure
 import { IUnlockedAchievement } from "../interfaces/IUnlockedAchievement";
 import { IPurchasedItem } from "../interfaces/IPurschasedItem";
 import { INotification } from "../interfaces/INotification";
+import { INote } from "../interfaces/INote";
+
+const noteSchema: Schema = new Schema<INote>({
+    title: { type: String, required: true },
+    content: { type: String, required: true },
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now }
+});
 
 const notificationSchema: Schema = new Schema<INotification>({
     _id: { type: Schema.Types.ObjectId, auto: true },
@@ -57,6 +65,7 @@ const userSchema = new Schema<IUser>({
     achievements: { type: [unlockedAchievementSchema], default: [] },
     purchasedItems: { type: [purchasedItemSchema], default: [] },
     notifications: { type: [notificationSchema], default: [] },
+    notes: { type: [noteSchema], default: [] },
 });
 
 userSchema.index({ name: 1, email: 1 }, { unique: true });
