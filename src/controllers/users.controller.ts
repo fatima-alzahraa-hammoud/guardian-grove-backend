@@ -581,7 +581,7 @@ export const getUserAdventures = async(req:CustomRequest, res: Response): Promis
             return;
         }
 
-        res.status(200).send({Rank: req.user.adventures});
+        res.status(200).send({Adventure: req.user.adventures});
     }catch(error){
         throwError({ message: "Error retrieving user adventures", res, status: 500});
     }
