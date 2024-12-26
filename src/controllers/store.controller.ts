@@ -1,9 +1,10 @@
 import { Request, Response } from "express";
 import { StoreItem } from "../models/storeItem.model";
 import { throwError } from "../utils/error";
-import { IStore } from "../interfaces/IStore";
 import { checkId } from "../utils/checkId";
 import { User } from "../models/user.model";
+import { CustomRequest } from "../interfaces/customRequest";
+import { IPurchasedItem } from "../interfaces/IPurschasedItem";
 
 //API to get store items based on category
 export const getStoreItems = async (req: Request, res: Response) => {
@@ -103,5 +104,51 @@ export const updateItem = async (req: Request, res: Response) => {
 
     }catch(error){
         return throwError({ message: "Failed to update. An unknown error occurred.", res, status: 500 });
+    }
+};
+
+//API to buy item
+export const buyItem = async (req: CustomRequest, res: Response) => {
+    try {
+        if (!req.user) {
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+
+        const user = req.user;
+        
+        const { itemId } = req.body;
+
+        const item = await StoreItem.findById(itemId);
+
+        if (!item) {
+            return throwError({ message: "Item not found", res, status: 404});
+        }
+
+        // Check if user already owns the item
+        const alreadyPurchased = user.purchasedItems.some(
+            (p) => p.itemId.toString() === itemId
+        );
+
+        if (alreadyPurchased) {
+            return throwError({ message: "Item already purchased", res, status: 400});
+        }
+
+        // Check if user has enough coins
+        if (user.coins < item.price) {
+            return throwError({ message: "Insufficient coins", res, status: 400});
+        }
+
+        // Deduct coins and add item to purchases
+        user.coins -= item.price;
+        user.purchasedItems.push({ 
+            itemId: item._id, 
+            purchasedAt: new Date() 
+        } as IPurchasedItem);
+
+        await user.save();
+
+        res.status(200).json({ message: "Item purchased successfully", item });
+    } catch (error) {
+        return throwError({ message: "Purchase failed", res, status: 500});
     }
 };
