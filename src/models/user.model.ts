@@ -6,7 +6,7 @@ const challengeProgressSchema = new Schema<IChallengeProgress>({
     challengeId: { type: Schema.Types.ObjectId, required: true },
     isCompleted: { type: Boolean, default: false },
     completedAt: { type: Date }
-});
+}, { _id: false });
 
 const adventureProgressSchema = new Schema<IAdventureProgress>({
     adventureId: { type: Schema.Types.ObjectId, ref: 'Adventure', required: true },
@@ -14,7 +14,7 @@ const adventureProgressSchema = new Schema<IAdventureProgress>({
     isAdventureCompleted: { type: Boolean, default: false },
     status: { type: String, enum: ['in-progress', 'completed'] },
     progress: { type: Number, default: 0 },
-});
+} , { _id: false });
 
 const userSchema = new Schema<IUser>({
     name: {type: String, required: true },

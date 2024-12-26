@@ -1,13 +1,13 @@
-import { ObjectId } from "mongoose";
+import { ObjectId, Types } from "mongoose";
 
 export interface IChallengeProgress {
-    challengeId: String;  
+    challengeId: Types.ObjectId;  
     isCompleted: boolean;
     completedAt?: Date;
 }
 
 export interface IAdventureProgress {
-    adventureId: String; 
+    adventureId: Types.ObjectId; 
     challenges: IChallengeProgress[];
     isAdventureCompleted: boolean;
     status: 'in-progress' | 'completed';

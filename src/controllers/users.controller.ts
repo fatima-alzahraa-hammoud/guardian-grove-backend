@@ -7,6 +7,7 @@ import { CustomRequest } from '../interfaces/customRequest';
 import { checkId } from '../utils/checkId';
 import { Adventure } from '../models/adventure.model';
 import { IAdventureProgress } from '../interfaces/IAdventureProgress';
+import { Types } from 'mongoose';
 
 // API to get all users
 export const getUsers = async(req: Request, res: Response): Promise<void> => {
@@ -494,12 +495,12 @@ export const startAdventure = async (req: CustomRequest, res: Response) => {
         }
 
         const existingAdventureProgress = req.user.adventures.find(
-            (adventureProgress) => adventureProgress.adventureId.toString() === adventureId
+            (adventureProgress) => 
+                adventureProgress.adventureId.equals(adventureId)
         );
         if (existingAdventureProgress) {
             return throwError({ message: "Adventure already started", res, status: 400 });
         }
-
 
         // Add adventure to user's adventures
         const newAdventureProgress : IAdventureProgress = {
@@ -537,15 +538,17 @@ export const completeChallenge = async (req: CustomRequest, res: Response) => {
         }
 
         const user = req.user;
-
-        // Find the user's adventure
-        const adventureProgress = user.adventures.find(adventure => adventure.adventureId.toString() === adventureId);
+        // Challenge Progress Check
+        const adventureProgress = req.user.adventures.find(
+            adventure => adventure.adventureId.equals(adventureId)
+        );
         if (!adventureProgress) {
             return throwError({ message: "Adventure not found in user's profile", res, status: 404 });
         }
-
-        // Find the challenge within the adventure
-        const challenge = adventureProgress.challenges.find(challenge => challenge.challengeId.toString() === challengeId);
+        
+        const challenge = adventureProgress.challenges.find(
+            challenge => challenge.challengeId.equals(challengeId)
+        );
         if (!challenge) {
             return throwError({ message: "Challenge not found in adventure", res, status: 404 });
         }
