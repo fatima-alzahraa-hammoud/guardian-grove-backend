@@ -9,6 +9,7 @@ import { INote } from "../interfaces/INote";
 const noteSchema: Schema = new Schema<INote>({
     title: { type: String, required: true },
     content: { type: String, required: true },
+    type: { type: String, required: true},
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
 });
