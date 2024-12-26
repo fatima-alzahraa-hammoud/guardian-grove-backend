@@ -1,3 +1,4 @@
+//APIs for generating notifications using AI
 import { Request, Response } from "express";
 import { throwError } from "../utils/error";
 import { CustomRequest } from "../interfaces/customRequest";
@@ -156,13 +157,13 @@ export const markNotificationAsDone = async (req: Request, res: Response) => {
         // Find user
         const user = await User.findById(userId);
         if (!user) {
-            return res.status(404).json({ message: "User not found" });
+            return throwError({ message: "User not found", res, status: 404 });
         }
 
         // Find the notification by ID
         const notification = user.notifications.find(notif => notif._id.toString() === notificationId);
         if (!notification) {
-            return res.status(404).json({ message: "Notification not found" });
+            return throwError({ message: "Notification not found", res, status: 404 });
         }
 
         // Mark as read
@@ -174,7 +175,6 @@ export const markNotificationAsDone = async (req: Request, res: Response) => {
             notification
         });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Error marking notification as done", error });
+        return throwError({ message: "Error marking notification as done", res, status: 500 });
     }
 };
