@@ -36,7 +36,7 @@ export const getNotifications = async (req: CustomRequest, res: Response) => {
 };
 
 //API to create notifications
-export const createNotification = async (req: CustomRequest, res: Response) => {
+export const sendNotification = async (req: CustomRequest, res: Response) => {
   try {
 
     if (!req.user) {
