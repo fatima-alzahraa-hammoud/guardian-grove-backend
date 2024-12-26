@@ -1,6 +1,7 @@
 import { Document } from "mongoose";
 import { IAdventureProgress } from "./IAdventureProgress";
 import { IUnlockedAchievement } from "./IUnlockedAchievement";
+import { IPurchasedItem } from "./IPurschasedItem";
 
 export interface IUser extends Document{
     _id: string;
@@ -19,4 +20,5 @@ export interface IUser extends Document{
     rankInFamily: number;
     adventures: IAdventureProgress[];
     achievements: IUnlockedAchievement[];
+    purchasedItems: IPurchasedItem[];
 }

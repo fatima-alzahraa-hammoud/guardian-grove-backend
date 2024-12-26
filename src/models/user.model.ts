@@ -2,6 +2,12 @@ import { model, Schema } from "mongoose";
 import { IUser } from "../interfaces/IUser";
 import { IAdventureProgress, IChallengeProgress } from "../interfaces/IAdventureProgress";
 import { IUnlockedAchievement } from "../interfaces/IUnlockedAchievement";
+import { IPurchasedItem } from "../interfaces/IPurschasedItem";
+
+const purchasedItemSchema = new Schema<IPurchasedItem>({
+    itemId: { type: Schema.Types.ObjectId, ref: "Store", required: true },
+    purchasedAt: { type: Date, default: Date.now },
+}, { _id: false });
 
 const unlockedAchievementSchema = new Schema<IUnlockedAchievement>({
     achievementId: { type: Schema.Types.ObjectId, ref: "Achievement", required: true },
@@ -39,6 +45,7 @@ const userSchema = new Schema<IUser>({
     rankInFamily: {type: Number, required: true, default: 0},
     adventures: { type: [adventureProgressSchema], default: [] },
     achievements: { type: [unlockedAchievementSchema], default: [] },
+    purchasedItems: { type: [purchasedItemSchema], default: [] },
 });
 
 userSchema.index({ name: 1, email: 1 }, { unique: true });
