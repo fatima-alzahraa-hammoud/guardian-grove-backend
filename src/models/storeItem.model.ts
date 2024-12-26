@@ -9,5 +9,5 @@ const storeSchema = new Schema<IStore>({
     image: { type: String, required: true },
 });
   
-export const Store = model<IStore>("Store", storeSchema);
+export const StoreItem = model<IStore>("StoreItem", storeSchema);
   

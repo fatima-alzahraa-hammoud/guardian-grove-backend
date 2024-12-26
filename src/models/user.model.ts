@@ -5,7 +5,7 @@ import { IUnlockedAchievement } from "../interfaces/IUnlockedAchievement";
 import { IPurchasedItem } from "../interfaces/IPurschasedItem";
 
 const purchasedItemSchema = new Schema<IPurchasedItem>({
-    itemId: { type: Schema.Types.ObjectId, ref: "Store", required: true },
+    itemId: { type: Schema.Types.ObjectId, ref: "StoreItem", required: true },
     purchasedAt: { type: Date, default: Date.now },
 }, { _id: false });
 

@@ -1,6 +1,6 @@
 import express from "express";
 import { authMiddleware } from "../middlewares/auth.middleware";
-import { getStoreItems } from "../controllers/store.controller";
+import {getStoreItems } from "../controllers/store.controller";
 
 const router =  express.Router();
 
