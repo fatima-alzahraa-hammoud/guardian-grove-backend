@@ -1,4 +1,3 @@
-// get my achievements
 // get Family achievements
 // unlock acievement
 // add achievements (for admin and AI)
@@ -9,6 +8,7 @@ import { Request, Response } from "express";
 import { Achievement } from "../models/achievements.model";
 import { throwError } from "../utils/error";
 import { CustomRequest } from "../interfaces/customRequest";
+import { checkId } from "../utils/checkId";
 
 // API to get all achievements
 export const getAllAchievements = async (req: Request, res: Response) => {
@@ -65,5 +65,44 @@ export const getUserAchievements = async (req: CustomRequest, res: Response) => 
         res.status(200).json({message: "Getting user achievements Successfully", achievements: user.achievements });
     } catch (error) {
         throwError({ message: "An error occurred while fetching user achievements.", res, status: 500 });
+    }
+};
+
+//API to unlock an achievement
+export const unlockAchievement = async (req: CustomRequest, res: Response) => {
+    try {
+        const { achievementId } = req.body;
+
+        if(!checkId({id: achievementId, res})) return;
+    
+
+        if (!req.user) {
+            throwError({ message: "Unauthorized", res, status: 401 });
+            return;
+        }
+
+        const user = req.user;
+
+        // Check if the achievement is already unlocked
+        const existingAchievement = user.achievements.find(
+            (achievement) => achievement.achievementId.toString() === achievementId
+        );
+
+        if (existingAchievement) {
+            return throwError({ message: "Achievement already unlocked", res, status: 400 });
+        }
+
+        // Unlock the achievement
+        const unlockedAchievement = {
+            achievementId,
+            unlockedAt: new Date(),
+        };
+
+        user.achievements.push(unlockedAchievement);
+        await user.save();
+
+        res.status(200).json({ message: "Achievement unlocked successfully", unlockedAchievement });
+    } catch (error) {
+        return throwError({ message: "An error occurred while unlocking the achievement.", res, status: 500 });
     }
 };
