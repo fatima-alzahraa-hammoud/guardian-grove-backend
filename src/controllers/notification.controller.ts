@@ -112,4 +112,39 @@ export const deleteNotification = async (req: CustomRequest, res: Response) => {
         console.error(error);
         return throwError({message: "Error deleting notification", res, status: 500});
     }
-  };  
+};
+
+// API to update notification
+export const updateNotification = async (req: Request, res: Response) => {
+    try {
+        const { userId, notificationId } = req.params;
+        const { title, message, isRead, type } = req.body;
+
+        if(!checkId({id: notificationId, res})) return;
+        if(!checkId({id: userId, res})) return;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return throwError({ message: "User not found", res, status: 404 });
+        }
+
+        const notification = user.notifications.find(notif => notif._id.toString() === notificationId);
+        if (!notification) {
+            return throwError({ message: "Notification not found", res, status: 404 });
+        }
+
+        if (title) notification.title = title;
+        if (message) notification.message = message;
+        if (typeof isRead !== "undefined") notification.isRead = isRead;
+        if (type) notification.type = type;
+
+        await user.save();
+
+        res.status(200).json({
+            message: "Notification updated successfully",
+            notification,
+        });
+    } catch (error) {
+        return throwError({ message: "Error updating notification", res, status: 500 });
+    }
+};
