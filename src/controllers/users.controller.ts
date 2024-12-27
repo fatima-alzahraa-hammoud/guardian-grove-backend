@@ -50,7 +50,7 @@ export const getUserById = async (req: CustomRequest, res: Response): Promise<vo
          
         const user = req.user;
 
-        res.status(200).json({message: "Retrieving user successfully", user: user });
+        res.status(200).send({message: "Retrieving user successfully", user: user });
     }catch(error){
         throwError({ message: "Error retrieving user", res, status: 500});
     }
@@ -66,6 +66,9 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
         if (!req.user) {
             throwError({ message: "Unauthorized", res, status: 401 });
             return;
+        }
+        if(req.user.role === "child"){
+            return throwError({ message: "Forbidden", res, status: 403 });
         }
 
         // verify all fields are filled
@@ -98,7 +101,7 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
         }
 
         // Role validation
-        const validRoles = ['user', 'parent', 'child', 'grandfather', 'grandmother', 'admin'];
+        const validRoles = ['owner', 'parent', 'child', 'grandfather', 'grandmother', 'admin'];
         if (!validRoles.includes(role)) {
             throwError({ message: "Invalid role.", res, status: 400});
             return;
@@ -124,7 +127,7 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
 
         const user = await User.create({...data, email:email , password: hashedPassword});
 
-        res.status(201).send(user);
+        res.status(200).send({message: "Retrieving user successfully", user: user });
     }catch(error){
         if (error instanceof Error) {
             // Handle MongoDB duplicate key error (11000)

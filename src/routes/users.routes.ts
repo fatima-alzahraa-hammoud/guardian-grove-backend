@@ -18,7 +18,7 @@ const router = express.Router();
 
 router.get("/", authMiddleware, adminMiddleware, getUsers); 
 router.get("/user", authMiddleware, getUserById); 
-router.post("/", authMiddleware, parentsMiddleware, createUser); 
+router.post("/", authMiddleware, createUser); 
 router.put("/", authMiddleware, editUserProfile);
 router.delete("/", authMiddleware, deleteUser);
 router.put("/updatePassword", authMiddleware, updatePassword);
