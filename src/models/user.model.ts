@@ -1,4 +1,4 @@
-import { model, Schema } from "mongoose";
+import { model, Schema, Types } from "mongoose";
 import { IUser } from "../interfaces/IUser";
 import { IAdventureProgress, IChallengeProgress } from "../interfaces/IAdventureProgress";
 import { IUnlockedAchievement } from "../interfaces/IUnlockedAchievement";
@@ -67,6 +67,7 @@ const userSchema = new Schema<IUser>({
     stars: {type: Number, required: true, default: 0},
     coins: {type: Number, required: true, default: 0},
     rankInFamily: {type: Number, required: true, default: 0},
+    familyId: { type: Types.ObjectId, ref: "Family", default: null },
     adventures: { type: [adventureProgressSchema], default: [] },
     achievements: { type: [unlockedAchievementSchema], default: [] },
     purchasedItems: { type: [purchasedItemSchema], default: [] },
