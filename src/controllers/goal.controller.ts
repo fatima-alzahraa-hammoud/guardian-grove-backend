@@ -3,6 +3,7 @@ import { User } from "../models/user.model";
 import { checkId } from "../utils/checkId";
 import { throwError } from "../utils/error";
 import { CustomRequest } from "../interfaces/customRequest";
+import { ITask } from "../interfaces/ITask";
 
 //API to create goal
 export const createGoal = async (req: Request, res: Response) => {
@@ -199,5 +200,42 @@ export const deleteGoal = async (req: CustomRequest, res: Response) => {
     } catch (error) {
         console.error(error);
         return throwError({message: "Error deleting goal", res, status: 500});
+    }
+};
+
+// API to create task
+export const createTask = async(req: Request, res: Response) => {
+    try{
+        const {userId, goalId, title, description, type, rewards} = req.body;
+
+        if(!checkId({id: goalId, res})) return;
+        if(!checkId({id: userId, res})) return;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return throwError({ message: "User not found", res, status: 404 });
+        }
+
+        const goal = user.goals.find(goal => goal._id.toString() === goalId);
+        if (!goal) 
+            return throwError({ message: "Goal not found", res, status: 404});
+
+        if (!title || !description || !type) {
+            return throwError({ message: "All required fields must be filled.", res, status: 400});
+        }
+
+        const newTask = ({
+            title,
+            description,
+            type,
+            rewards,
+        } as ITask);
+
+        goal.tasks.push(newTask);
+        await user.save();
+
+        res.status(201).json({ message: 'Task created successfully', Task: newTask });
+    }catch(error) {
+        return throwError({ message: "An unknown error occurred while creating Tasl.", res, status: 500 });
     }
 };
