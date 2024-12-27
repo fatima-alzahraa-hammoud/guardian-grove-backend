@@ -307,3 +307,46 @@ export const updateTask = async(req: Request, res: Response) => {
         return throwError({ message: "An unknown error occurred while update task.", res, status: 500 });
     }
 };
+
+//API to delete task
+export const deleteTask = async (req: CustomRequest, res: Response) => {
+    try {
+
+        if(!req.user || (req.user.role !== 'parent' && req.user.role !== 'admin' && req.user.role !== 'owner')){
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+
+        const { userId, goalId, taskId } = req.body;
+
+        if(!checkId({id: goalId, res})) return;
+        if(!checkId({id: userId, res})) return;
+        if(!checkId({id: taskId, res})) return;
+
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return throwError({ message: "User not found", res, status: 404 });
+        }
+
+        const goal = user.goals.find(goal => goal._id.toString() === goalId);
+        if (!goal) 
+            return throwError({ message: "Goal not found", res, status: 404});
+
+
+        const taskIndex = goal.tasks.findIndex(
+            (task) => task._id.toString() === taskId
+        );        
+        if (taskIndex === -1) {
+            return throwError({ message: "Task not found", res, status: 404 });
+        }
+
+        const [deletedTask] = goal.tasks.splice(taskIndex, 1);
+
+        await user.save();
+
+        res.status(200).json({ message: 'Task deleted successfully', DeletedTask: deletedTask });
+    } catch (error) {
+        console.error(error);
+        return throwError({message: "Error deleting task", res, status: 500});
+    }
+};
