@@ -72,7 +72,7 @@ export const getChallengeById = async(req: Request, res: Response) => {
 
         res.status(200).json(challenge);    
     }catch(error){
-        return throwError({ message: "An unknown error occurred while getting all challenges.", res, status: 500 });
+        return throwError({ message: "An unknown error occurred while getting challenge.", res, status: 500 });
     }
 }
 

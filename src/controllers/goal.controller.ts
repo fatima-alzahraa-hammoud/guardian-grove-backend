@@ -236,6 +236,34 @@ export const createTask = async(req: Request, res: Response) => {
 
         res.status(201).json({ message: 'Task created successfully', Task: newTask });
     }catch(error) {
-        return throwError({ message: "An unknown error occurred while creating Tasl.", res, status: 500 });
+        return throwError({ message: "An unknown error occurred while creating Task.", res, status: 500 });
     }
 };
+
+//API to get task by id
+export const getTaskById = async(req: Request, res: Response) => {
+    try{
+        const {userId, taskId, goalId } = req.body;
+        if(!checkId({id: taskId, res})) return;
+        if(!checkId({id: goalId, res})) return;
+        if(!checkId({id: userId, res})) return;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return throwError({ message: "User not found", res, status: 404 });
+        }
+
+        const goal = user.goals.find(goal => goal._id.toString() === goalId);
+        if (!goal) 
+            return throwError({ message: "Goal not found", res, status: 404});
+    
+        const task = goal.tasks.find(task => task._id.toString() === taskId);
+        if (!task) {
+            return throwError({ message: "Task not found", res, status: 404 });
+        }
+
+        res.status(201).json({ message: 'Retrieve task successfully', Task: task });
+    }catch(error){
+        return throwError({ message: "An unknown error occurred while getting task.", res, status: 500 });
+    }
+}
