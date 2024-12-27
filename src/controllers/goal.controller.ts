@@ -124,8 +124,12 @@ export const getGoalById = async (req: CustomRequest, res: Response) => {
 
 
 //API to update goal
-export const updateGoal = async (req: Request, res: Response) => {
+export const updateGoal = async (req: CustomRequest, res: Response) => {
     try {
+
+        if(!req.user || (req.user.role !== 'parent' && req.user.role !== 'admin' && req.user.role !== 'owner')){
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
 
         const { userId, goalId, title, description, type, dueDate, rewards } = req.body;
 
@@ -158,5 +162,42 @@ export const updateGoal = async (req: Request, res: Response) => {
     } catch (error) {
         console.error(error);
         return throwError({ message: "Error updating goal", res, status: 500 });
+    }
+};
+
+//API to delete goal
+export const deleteGoal = async (req: CustomRequest, res: Response) => {
+    try {
+
+        if(!req.user || (req.user.role !== 'parent' && req.user.role !== 'admin' && req.user.role !== 'owner')){
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+
+        const { userId, goalId } = req.body;
+
+        if(!checkId({id: goalId, res})) return;
+        if(!checkId({id: userId, res})) return;
+
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return throwError({ message: "User not found", res, status: 404 });
+        }
+
+        const goalIndex = user.goals.findIndex(
+            (goal) => goal._id.toString() === goalId
+        );        
+        if (goalIndex === -1) {
+            return throwError({ message: "Goal not found", res, status: 404 });
+        }
+
+        const [deletedGoal] = user.goals.splice(goalIndex, 1);
+
+        await user.save();
+
+        res.status(200).json({ message: 'Goal deleted successfully', DeletedGoal: deletedGoal });
+    } catch (error) {
+        console.error(error);
+        return throwError({message: "Error deleting goal", res, status: 500});
     }
 };
