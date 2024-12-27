@@ -7,7 +7,7 @@ import { checkId } from "../utils/checkId";
 
 
 //API to create note
-export const createNote = async (req: CustomRequest, res: Response) => {
+export const createNote = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
 
         if (!req.user) {
@@ -56,7 +56,7 @@ export const createNote = async (req: CustomRequest, res: Response) => {
 };
 
 //API to get notes of the user/users
-export const getNotes = async (req: CustomRequest, res: Response) => {
+export const getNotes = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
         const {userId} = req.body;
         
@@ -95,7 +95,7 @@ export const getNotes = async (req: CustomRequest, res: Response) => {
 };
 
 //API to update note
-export const updateNote = async (req: Request, res: Response) => {
+export const updateNote = async (req: Request, res: Response): Promise<void> => {
     try {
 
         const { userId, noteId, title, content, isPinned } = req.body;
@@ -127,7 +127,7 @@ export const updateNote = async (req: Request, res: Response) => {
 };
 
 //API to delete note
-export const deleteNote = async (req: Request, res: Response) => {
+export const deleteNote = async (req: Request, res: Response): Promise<void> => {
     try {
         const { userId, noteId } = req.body;
 
