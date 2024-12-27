@@ -124,6 +124,10 @@ export const deleteFamily = async (req: CustomRequest, res: Response): Promise<v
             return throwError({ message: "Family not found.", res, status: 404 });
         }
 
+        if(req.user.email !== family.email && req.user.role !== "admin"){
+            return throwError({ message: "Forbidden", res, status: 401 });
+        }
+
         // Delete all users associated with the family
         await User.deleteMany({ familyId });
 
