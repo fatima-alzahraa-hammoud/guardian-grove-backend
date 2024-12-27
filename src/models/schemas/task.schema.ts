@@ -3,7 +3,7 @@ import { ITask } from "../../interfaces/ITask";
 
 export const taskSchema = new Schema<ITask>({
     title: { type: String, required: true },
-    description: { type: String },
+    description: { type: String, required: true },
     type: { type: String, required:true, enum: ['personal', 'family'] },
     isCompleted: { type: Boolean, default: false },
     completedAt: { type: Date },
@@ -11,4 +11,4 @@ export const taskSchema = new Schema<ITask>({
         stars: { type: Number, default: 2 },
         coins: { type: Number, default: 1 }
     },
-}, { _id: false });
+});
