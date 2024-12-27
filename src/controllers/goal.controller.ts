@@ -146,9 +146,11 @@ export const updateGoal = async (req: Request, res: Response) => {
         goal.description = description || goal.description;
         goal.type = type || goal.type;
         goal.dueDate = dueDate || goal.dueDate;
-        goal.rewards.stars = rewards.stars || goal.rewards.stars;
-        goal.rewards.coins = rewards.coins || goal.rewards.coins;
-        goal.rewards.badge = rewards.badge || goal.rewards.badge;
+        if (rewards) {
+            goal.rewards.stars = rewards.stars || goal.rewards.stars;
+            goal.rewards.coins = rewards.coins || goal.rewards.coins;
+            goal.rewards.badge = rewards.badge || goal.rewards.badge;
+        }
 
         await user.save();
 
