@@ -28,13 +28,15 @@ export const createGoal = async (req: Request, res: Response) => {
             tasks: [],
         });
 
-        await User.findOneAndUpdate(
+        const updatedUser = await User.findOneAndUpdate(
             { _id: userId },
             { $push: { goals: newGoal } },
-            { new: true } 
+            { new: true }
         );
 
-        await user.save();
+        if (!updatedUser) {
+            return throwError({ message: "Failed to update user goals.", res, status: 500 });
+        }
 
         res.status(201).json({ message: 'Goal created successfully', goal: newGoal});
     } catch (err) {
@@ -46,17 +48,21 @@ export const createGoal = async (req: Request, res: Response) => {
 export const getGoals = async (req: CustomRequest, res: Response) => {
     try {
         const {userId} = req.body;
-        if(!checkId({id: userId, res})) return;
         
         if (userId) {
+            if(!checkId({id: userId, res})) return;
             const user = await User.findById(userId);
 
             if (!user) {
                 return throwError({ message: "User not found", res, status: 404 });
             }
 
-            res.status(200).json({message: "Retrieving goals successfully", goals: user.goals });
+            res.status(200).json({message: "Retrieving user goals successfully", goals: user.goals });
             return;
+        }
+
+        if(!req.user || req.user.role !== 'admin'){
+            return throwError({ message: "Unauthorized", res, status: 401 });
         }
         const users = await User.find();
         if (!users || users.length === 0) {
@@ -69,7 +75,7 @@ export const getGoals = async (req: CustomRequest, res: Response) => {
         }));
 
 
-        res.status(200).json({message: "Retrieving goals successfully", goals: allGoals });
+        res.status(200).json({message: "Retrieving all users' goals successfully", goals: allGoals });
     } catch (error) {
         console.error(error);
         return throwError({ message: "Error retrieving goals", res, status: 500 });

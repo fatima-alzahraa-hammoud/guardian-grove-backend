@@ -39,13 +39,16 @@ export const createNote = async (req: CustomRequest, res: Response) => {
             isPinned: false,
         });
 
-        await User.findOneAndUpdate(
+        const updatedUser = await User.findOneAndUpdate(
             { _id: user._id },
             { $push: { notes: newNote } },
             { new: true } 
         );
 
-        await user.save();
+        if (!updatedUser) {
+            return throwError({ message: "Failed to update user notes.", res, status: 500 });
+        }
+
         res.status(201).json({ message: "Note created", note: newNote });
     } catch (error) {
         return throwError({ message: "Error creating note", res, status: 500 });
@@ -53,21 +56,26 @@ export const createNote = async (req: CustomRequest, res: Response) => {
 };
 
 //API to get notes of the user/users
-export const getNotes = async (req: Request, res: Response) => {
+export const getNotes = async (req: CustomRequest, res: Response) => {
     try {
         const {userId} = req.body;
-        if(!checkId({id: userId, res})) return;
         
         if (userId) {
+            if(!checkId({id: userId, res})) return;
             const user = await User.findById(userId);
 
             if (!user) {
                 return throwError({ message: "User not found", res, status: 404 });
             }
 
-            res.status(200).json({message: "Retrieving notes successfully", notes: user.notes });
+            res.status(200).json({message: "Retrieving user notes successfully", notes: user.notes });
             return;
         }
+
+        if(!req.user || req.user.role !== 'admin'){
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+
         const users = await User.find();
         if (!users || users.length === 0) {
             return throwError({ message: "No users in the database", res, status: 404 });
@@ -79,7 +87,7 @@ export const getNotes = async (req: Request, res: Response) => {
         }));
 
 
-        res.status(200).json({message: "Retrieving notes successfully", notes: allNotes });
+        res.status(200).json({message: "Retrieving all users' notes successfully", notes: allNotes });
     } catch (error) {
         console.error(error);
         return throwError({ message: "Error retrieving notes", res, status: 500 });
