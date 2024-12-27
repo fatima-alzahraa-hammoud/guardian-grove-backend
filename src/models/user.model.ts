@@ -10,7 +10,7 @@ const noteSchema: Schema = new Schema<INote>({
     _id: { type: Schema.Types.ObjectId, auto: true },
     title: { type: String, required: true },
     content: { type: String, required: true },
-    type: { type: String, required: true},
+    type: { type: String, required: true, enum: ['personal', 'family']},
     isPinned: {type: Boolean, default:false},
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }

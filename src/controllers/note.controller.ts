@@ -18,6 +18,10 @@ export const createNote = async (req: CustomRequest, res: Response) => {
         if (!type || !content || !type) {
             return throwError({message: "All required fields must be filled", res, status: 400});
         }
+
+        if(type !== "personal" && type !=="family"){
+            return throwError({message: "Invalid type", res, status: 400});
+        }
         
         const user = req.user;
 
