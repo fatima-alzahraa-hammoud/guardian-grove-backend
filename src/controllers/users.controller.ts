@@ -1,13 +1,11 @@
 import { Request, Response } from 'express';
 import bcrypt from "bcrypt";
 import { User } from "../models/user.model";
-import mongoose from 'mongoose';
 import { throwError } from '../utils/error';
 import { CustomRequest } from '../interfaces/customRequest';
 import { checkId } from '../utils/checkId';
 import { Adventure } from '../models/adventure.model';
 import { IAdventureProgress } from '../interfaces/IAdventureProgress';
-import { Types } from 'mongoose';
 
 // API to get all users
 export const getUsers = async(req: Request, res: Response): Promise<void> => {
@@ -24,37 +22,35 @@ export const getUserById = async (req: CustomRequest, res: Response): Promise<vo
     try{
 
         // if there is id in the body so it is trying to get its data, while if no he need his data
-        const {id} = req.body;
-
-        if(!checkId({id: id, res})) return;
-        
+        const {userId} = req.body;
 
         if (!req.user) {
-            throwError({ message: "Unauthorized", res, status: 401 });
-            return;
+            return throwError({ message: "Unauthorized", res, status: 401 });
         }
 
-        if (id && req.user._id.toString() !== id && req.user.role !== "admin" && req.user.role !== "owner"  && req.user.role !== "parent") {
-            throwError({ message: "Forbidden", res, status: 403 });
+        if(userId){
+            if(!checkId({id: userId, res})) return;
+            if (req.user._id.toString() !== userId && req.user.role !== "admin" && req.user.role !== "owner"  && req.user.role !== "parent") {
+                return throwError({ message: "Forbidden", res, status: 403 });
+            }
+            const user = await User.findById(userId);
+
+            if (!user){
+                throwError({ message: "User not found", res, status: 404});
+                return;
+            }
+
+            if(req.user.role !== "admin" && req.user.email !== user.email){
+                return throwError({ message: "Forbidden", res, status: 403 });
+            }
+
+            res.status(200).json({message: "Retrieving user successfully", user: user });
             return;
         }
+         
+        const user = req.user;
 
-        let user;
-        if (id)
-            user = await User.findById(id);
-        else 
-            user = req.user;
-
-        if (!user){
-            throwError({ message: "User not found", res, status: 404});
-            return;
-        }
-
-        if (id && (req.user.role === "parent" || req.user.role === "owner") && user.email !== req.user.email){
-            throwError({ message: "Forbidden", res, status: 403 });
-            return;
-        }
-        res.status(200).send(user);
+        res.status(200).json({message: "Retrieving user successfully", user: user });
     }catch(error){
         throwError({ message: "Error retrieving user", res, status: 500});
     }

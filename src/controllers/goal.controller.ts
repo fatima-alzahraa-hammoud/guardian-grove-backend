@@ -7,7 +7,7 @@ import { ITask } from "../interfaces/ITask";
 import { Achievement } from "../models/achievements.model";
 
 //API to create goal
-export const createGoal = async (req: Request, res: Response) => {
+export const createGoal = async (req: Request, res: Response):Promise<void> => {
     try {
         const {userId, title, description, type, dueDate, rewards } = req.body;
         if(!checkId({id: userId, res})) return;
@@ -423,7 +423,7 @@ export const completeTask = async (req: CustomRequest, res: Response) => {
         }
 
         await user.save();
-        
+
         res.status(200).json({ message: "Task marked as done", task, goal });
     } catch (error) {
         console.error(error);
