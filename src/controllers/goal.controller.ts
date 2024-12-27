@@ -43,7 +43,7 @@ export const createGoal = async (req: Request, res: Response) => {
 }
 
 //API to get goals of the user/users
-export const getGoals = async (req: Request, res: Response) => {
+export const getGoals = async (req: CustomRequest, res: Response) => {
     try {
         const {userId} = req.body;
         if(!checkId({id: userId, res})) return;
