@@ -82,12 +82,19 @@ export const updateFamily = async (req: CustomRequest, res: Response): Promise<v
             return throwError({ message: "Family not found.", res, status: 404 });
         }
 
-        if(req.user.email !== family.email){
+        if(req.user.email !== family.email && req.user.role !== "admin"){
             return throwError({ message: "Forbidden", res, status: 401 });
         }
 
         family.familyName = familyName || family.familyName;
         family.email = email || family.email;
+
+        if (email) {
+            await User.updateMany(
+                { familyId: familyId }, 
+                { $set: { email: email } }
+            );
+        }
 
         await family.save();
 
