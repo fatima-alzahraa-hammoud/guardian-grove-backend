@@ -4,6 +4,7 @@ import { IUnlockedAchievement } from "./IUnlockedAchievement";
 import { IPurchasedItem } from "./IPurschasedItem";
 import { INotification } from "./INotification";
 import { INote } from "./INote";
+import { IGoal } from "./IGoal";
 
 export interface IUser extends Document{
     _id: string;
@@ -25,4 +26,5 @@ export interface IUser extends Document{
     purchasedItems: IPurchasedItem[];
     notifications: INotification[];
     notes: INote[];
+    goals: IGoal[];
 }
