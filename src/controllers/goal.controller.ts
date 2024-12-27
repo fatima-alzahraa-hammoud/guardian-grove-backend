@@ -228,7 +228,7 @@ export const createTask = async(req: Request, res: Response) => {
             title,
             description,
             type,
-            rewards,
+            rewards : rewards || {stars: 2, coins: 1},
         } as ITask);
 
         goal.tasks.push(newTask);
