@@ -203,36 +203,36 @@ export const editUserProfile = async(req: CustomRequest, res: Response):Promise<
 // API to delete user
 export const deleteUser = async(req: CustomRequest, res:Response):Promise<void> => {
     try{
-        const {userDeleteId} = req.body;
+        const {userId} = req.body;
 
         if (!req.user) {
             throwError({ message: "Unauthorized", res, status: 401 });
             return;
         }
 
-        if (userDeleteId && req.user._id.toString() !== userDeleteId && req.user.role !== "admin" && req.user.role !== "owner"  && req.user.role !== "parent") {
-            throwError({ message: "Forbidden", res, status: 403 });
-            return;
+        let user;
+        if(userId){
+            if(!checkId({id: userId, res})) return;
+            if (req.user._id.toString() !== userId && req.user.role !== "admin" && req.user.role !== "owner"  && req.user.role !== "parent") {
+                return throwError({ message: "Forbidden", res, status: 403 });
+            }
+
+            user = await User.findById(userId);
+
+            if (!user){
+                throwError({ message: "User not found", res, status: 404});
+                return;
+            }
+
+            if(req.user.role !== "admin" && req.user.email !== user.email){
+                return throwError({ message: "Forbidden", res, status: 403 });
+            }
         }
-
-        let deleted;
-
-        if(userDeleteId)
-            deleted = await User.findByIdAndDelete(userDeleteId);
-        else
-            deleted = await User.findByIdAndDelete(req.user._id);
-
-        if (!deleted) {
-            throwError({ message: "User not found", res, status: 404});
-            return;
-        }
-
-        if (userDeleteId && (req.user.role === "parent" || req.user.role === "owner") && deleted.email !== req.user.email){
-            throwError({ message: "Forbidden", res, status: 403 });
-            return;
+        else{
+            user = req.user;
         }
       
-        res.status(200).send({message: "User deleted successfully", deleted});
+        res.status(200).send({message: "User deleted successfully", user});
     }catch(error){
         throwError({ message: "Failed to delete. An unknown error occurred.", res, status: 500 });
     }
