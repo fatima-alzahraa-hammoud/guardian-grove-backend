@@ -3,6 +3,7 @@ import { CustomRequest } from "../interfaces/customRequest";
 import { throwError } from "../utils/error";
 import { INote } from "../interfaces/INote";
 import { User } from "../models/user.model";
+import { checkId } from "../utils/checkId";
 
 
 //API to create note
@@ -55,6 +56,8 @@ export const createNote = async (req: CustomRequest, res: Response) => {
 export const getNotes = async (req: Request, res: Response) => {
     try {
         const {userId} = req.body;
+        if(!checkId({id: userId, res})) return;
+        
         if (userId) {
             const user = await User.findById(userId);
 
@@ -80,5 +83,37 @@ export const getNotes = async (req: Request, res: Response) => {
     } catch (error) {
         console.error(error);
         return throwError({ message: "Error retrieving notes", res, status: 500 });
+    }
+};
+
+//API to update note
+export const updateNote = async (req: Request, res: Response) => {
+    try {
+
+        const { userId, noteId, title, content, isPinned } = req.body;
+
+        if(!checkId({id: userId, res})) return;
+        if(!checkId({id: noteId, res})) return;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return throwError({ message: "User not found", res, status: 404 });
+        }
+
+        const note = user.notes.find(note => note._id.toString() === noteId);
+        if (!note) {
+            return throwError({ message: "Notes not found", res, status: 404 });
+        }
+
+        note.title ??= title;
+        note.content ??= content;
+        note.isPinned ??= isPinned;
+        note.updatedAt = new Date();
+
+        await user.save();
+        res.status(200).json({ message: "Note updated", note });
+    } catch (error) {
+        console.error(error);
+        return throwError({ message: "Error updating notes", res, status: 500 });
     }
 };
