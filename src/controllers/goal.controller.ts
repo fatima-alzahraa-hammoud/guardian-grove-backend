@@ -7,7 +7,7 @@ import { ITask } from "../interfaces/ITask";
 import { Achievement } from "../models/achievements.model";
 
 //API to create goal
-export const createGoal = async (req: Request, res: Response):Promise<void> => {
+export const createGoal = async (req: Request, res: Response): Promise<void> => {
     try {
         const {userId, title, description, type, dueDate, rewards } = req.body;
         if(!checkId({id: userId, res})) return;
@@ -55,7 +55,7 @@ export const createGoal = async (req: Request, res: Response):Promise<void> => {
 }
 
 //API to get goals of the user/users
-export const getGoals = async (req: CustomRequest, res: Response) => {
+export const getGoals = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
         const {userId} = req.body;
         
@@ -93,7 +93,7 @@ export const getGoals = async (req: CustomRequest, res: Response) => {
 };
 
 //API to get Goal of specific Id
-export const getGoalById = async (req: CustomRequest, res: Response) => {
+export const getGoalById = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
 
         if(!req.user){
@@ -134,7 +134,7 @@ export const getGoalById = async (req: CustomRequest, res: Response) => {
 
 
 //API to update goal
-export const updateGoal = async (req: CustomRequest, res: Response) => {
+export const updateGoal = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
 
         if(!req.user || (req.user.role !== 'parent' && req.user.role !== 'admin' && req.user.role !== 'owner')){
@@ -185,7 +185,7 @@ export const updateGoal = async (req: CustomRequest, res: Response) => {
 };
 
 //API to delete goal
-export const deleteGoal = async (req: CustomRequest, res: Response) => {
+export const deleteGoal = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
 
         if(!req.user || (req.user.role !== 'parent' && req.user.role !== 'admin' && req.user.role !== 'owner')){
@@ -222,7 +222,7 @@ export const deleteGoal = async (req: CustomRequest, res: Response) => {
 };
 
 // API to create task
-export const createTask = async(req: Request, res: Response) => {
+export const createTask = async(req: Request, res: Response): Promise<void> => {
     try{
         const {userId, goalId, title, description, type, rewards} = req.body;
 
@@ -259,7 +259,7 @@ export const createTask = async(req: Request, res: Response) => {
 };
 
 //API to get task by id
-export const getTaskById = async(req: Request, res: Response) => {
+export const getTaskById = async(req: Request, res: Response): Promise<void> => {
     try{
         const {userId, taskId, goalId } = req.body;
         if(!checkId({id: taskId, res})) return;
@@ -287,7 +287,7 @@ export const getTaskById = async(req: Request, res: Response) => {
 }
 
 // API to update task
-export const updateTask = async(req: Request, res: Response) => {
+export const updateTask = async(req: Request, res: Response): Promise<void> => {
     try{
         const {userId, taskId, goalId, title, description, type, rewards } = req.body;
         if(!checkId({id: taskId, res})) return;
@@ -327,7 +327,7 @@ export const updateTask = async(req: Request, res: Response) => {
 };
 
 //API to delete task
-export const deleteTask = async (req: CustomRequest, res: Response) => {
+export const deleteTask = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
 
         if(!req.user || (req.user.role !== 'parent' && req.user.role !== 'admin' && req.user.role !== 'owner')){
@@ -370,7 +370,7 @@ export const deleteTask = async (req: CustomRequest, res: Response) => {
 };
 
 //API to complete task
-export const completeTask = async (req: CustomRequest, res: Response) => {
+export const completeTask = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
         const { userId, goalId, taskId } = req.body;
 
