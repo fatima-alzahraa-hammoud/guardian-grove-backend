@@ -9,7 +9,7 @@ import { IAchievement } from "../interfaces/IAchievements";
 import { User } from "../models/user.model";
 
 // API to create new achievement
-export const createAchievement = async (req: Request, res: Response) => {
+export const createAchievement = async (req: Request, res: Response): Promise<void> => {
     try {
 
         const data = req.body;
@@ -37,7 +37,7 @@ export const createAchievement = async (req: Request, res: Response) => {
 };
 
 //API to update achievement
-export const updateAchievement = async (req: Request, res: Response) => {
+export const updateAchievement = async (req: Request, res: Response): Promise<void> => {
     try{
 
         const {achievementId} = req.body;
@@ -65,7 +65,7 @@ export const updateAchievement = async (req: Request, res: Response) => {
 };
 
 // API to delete adventure
-export const deleteAchievement = async(req:Request, res: Response) => {
+export const deleteAchievement = async(req:Request, res: Response): Promise<void> => {
     try {
         const {achievementId} = req.body;
 
@@ -88,7 +88,7 @@ export const deleteAchievement = async(req:Request, res: Response) => {
 }
 
 // API to get all achievements
-export const getAllAchievements = async (req: Request, res: Response) => {
+export const getAllAchievements = async (req: Request, res: Response): Promise<void> => {
     try {
         const achievements = await Achievement.find();
 
@@ -103,7 +103,7 @@ export const getAllAchievements = async (req: Request, res: Response) => {
 };
 
 // API to get locked achievements
-export const getLockedAchievements = async (req: CustomRequest, res: Response) => {
+export const getLockedAchievements = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
 
         if (!req.user) {
@@ -126,7 +126,7 @@ export const getLockedAchievements = async (req: CustomRequest, res: Response) =
 };
 
 //API to get user achievements
-export const getUserAchievements = async (req: CustomRequest, res: Response) => {
+export const getUserAchievements = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
         if (!req.user) {
             return throwError({ message: "Unauthorized", res, status: 401 });
@@ -146,7 +146,7 @@ export const getUserAchievements = async (req: CustomRequest, res: Response) => 
 };
 
 //API to unlock an achievement
-export const unlockAchievement = async (req: CustomRequest, res: Response) => {
+export const unlockAchievement = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
         const { achievementId } = req.body;
 
