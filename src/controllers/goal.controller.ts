@@ -267,3 +267,43 @@ export const getTaskById = async(req: Request, res: Response) => {
         return throwError({ message: "An unknown error occurred while getting task.", res, status: 500 });
     }
 }
+
+// API to update task
+export const updateTask = async(req: Request, res: Response) => {
+    try{
+        const {userId, taskId, goalId, title, description, type, rewards } = req.body;
+        if(!checkId({id: taskId, res})) return;
+        if(!checkId({id: goalId, res})) return;
+        if(!checkId({id: userId, res})) return;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return throwError({ message: "User not found", res, status: 404 });
+        }
+
+        const goal = user.goals.find(goal => goal._id.toString() === goalId);
+        if (!goal) 
+            return throwError({ message: "Goal not found", res, status: 404});
+    
+        const task = goal.tasks.find(task => task._id.toString() === taskId);
+        if (!task) {
+            return throwError({ message: "Task not found", res, status: 404 });
+        }
+
+
+        task.title = title || task.title;
+        task.description = description || task.description;
+        task.type = type || task.type;
+        if (rewards) {
+            task.rewards.stars = rewards.stars || task.rewards.stars;
+            task.rewards.coins = rewards.coins || task.rewards.coins;
+        }
+
+        await user.save();
+
+        res.status(200).json({ message: "Task updated successfully", task });
+
+    }catch(error){
+        return throwError({ message: "An unknown error occurred while update task.", res, status: 500 });
+    }
+};
