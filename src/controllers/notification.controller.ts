@@ -7,7 +7,7 @@ import { checkId } from "../utils/checkId";
 import { Types } from "mongoose";
 
 //API to get notifications based on type
-export const getNotifications = async (req: CustomRequest, res: Response) => {
+export const getNotifications = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
 
         if (!req.user) {
@@ -37,7 +37,7 @@ export const getNotifications = async (req: CustomRequest, res: Response) => {
 };
 
 //API to create notifications
-export const sendNotification = async (req: CustomRequest, res: Response) => {
+export const sendNotification = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
 
         const { userId, title, message, type } = req.body;
@@ -80,7 +80,7 @@ export const sendNotification = async (req: CustomRequest, res: Response) => {
 };
 
 //API to delete notification
-export const deleteNotification = async (req: CustomRequest, res: Response) => {
+export const deleteNotification = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
         const { notificationId, userId } = req.body;
 
@@ -114,7 +114,7 @@ export const deleteNotification = async (req: CustomRequest, res: Response) => {
 };
 
 // API to update notification
-export const updateNotification = async (req: Request, res: Response) => {
+export const updateNotification = async (req: Request, res: Response): Promise<void> => {
     try {
         const { userId, notificationId, title, message, isRead, type } = req.body;
 
@@ -148,18 +148,17 @@ export const updateNotification = async (req: Request, res: Response) => {
 };
 
 // API to mark a notification as done (read)
-export const markNotificationAsDone = async (req: Request, res: Response) => {
+export const markNotificationAsDone = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
-        const { userId, notificationId } = req.body;
-
-        if(!checkId({id: userId, res})) return;
+        const {notificationId } = req.body;
 
         // Find user
-        const user = await User.findById(userId);
-        if (!user) {
-            return throwError({ message: "User not found", res, status: 404 });
+        if (!req.user) {
+            return throwError({ message: "Unauthorized", res, status: 401 });
         }
 
+        const user = req.user;
+        
         // Find the notification by ID
         const notification = user.notifications.find(notif => notif._id.toString() === notificationId);
         if (!notification) {
