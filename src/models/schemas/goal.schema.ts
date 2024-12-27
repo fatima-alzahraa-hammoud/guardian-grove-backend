@@ -1,6 +1,7 @@
 import { Schema } from "mongoose";
 import { IGoal } from "../../interfaces/IGoal";
 import { taskSchema } from "./task.schema";
+import { Achievement } from "../achievements.model";
 
 export const goalSchema = new Schema<IGoal>({
     _id: { type: Schema.Types.ObjectId, auto: true },
@@ -13,6 +14,7 @@ export const goalSchema = new Schema<IGoal>({
     rewards: {
         stars: { type: Number, default: 10 },
         coins: { type: Number, default: 5 },
-        badge: { type: String },
+        achievementName: { type: String },
+        achievementId: { type: Schema.Types.ObjectId, ref: "Achievement" },     
     },
 });

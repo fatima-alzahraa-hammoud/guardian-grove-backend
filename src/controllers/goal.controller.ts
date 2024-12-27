@@ -4,6 +4,7 @@ import { checkId } from "../utils/checkId";
 import { throwError } from "../utils/error";
 import { CustomRequest } from "../interfaces/customRequest";
 import { ITask } from "../interfaces/ITask";
+import { Achievement } from "../models/achievements.model";
 
 //API to create goal
 export const createGoal = async (req: Request, res: Response) => {
@@ -18,6 +19,14 @@ export const createGoal = async (req: Request, res: Response) => {
 
         if (!title || !description || !type) {
             return throwError({ message: "All required fields must be filled.", res, status: 400});
+        }
+
+        if (rewards?.achievementId) {
+            const achievement = await Achievement.findById(rewards.achievementId);
+            if (!achievement) {
+                return throwError({ message: "Achievement not found.", res, status: 404 });
+            }
+            rewards.achievementName = achievement.title;
         }
         
         const newGoal = ({
@@ -147,6 +156,14 @@ export const updateGoal = async (req: CustomRequest, res: Response) => {
             return throwError({ message: "Goal not found", res, status: 404 });
         }
 
+        if (rewards?.achievementId) {
+            const achievement = await Achievement.findById(rewards.achievementId);
+            if (!achievement) {
+                return throwError({ message: "Achievement not found.", res, status: 404 });
+            }
+            rewards.achievementName = achievement.title;
+        }
+
         goal.title = title || goal.title;
         goal.description = description || goal.description;
         goal.type = type || goal.type;
@@ -154,7 +171,8 @@ export const updateGoal = async (req: CustomRequest, res: Response) => {
         if (rewards) {
             goal.rewards.stars = rewards.stars || goal.rewards.stars;
             goal.rewards.coins = rewards.coins || goal.rewards.coins;
-            goal.rewards.badge = rewards.badge || goal.rewards.badge;
+            goal.rewards.achievementName = rewards.achievementName || goal.rewards.achievementName;
+            goal.rewards.achievementId = rewards.achievementId || goal.rewards.achievementId;
         }
 
         await user.save();

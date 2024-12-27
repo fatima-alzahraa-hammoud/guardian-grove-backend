@@ -9,5 +9,5 @@ export interface IGoal extends Document {
     tasks: ITask[];
     isCompleted: boolean;
     dueDate: Date;
-    rewards: { stars: number; coins: number, badge?: string };
+    rewards: { stars: number; coins: number, achievementName?: string; achievementId?: string;  };
 }
