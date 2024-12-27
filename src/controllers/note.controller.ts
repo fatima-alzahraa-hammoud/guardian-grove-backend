@@ -105,9 +105,9 @@ export const updateNote = async (req: Request, res: Response) => {
             return throwError({ message: "Notes not found", res, status: 404 });
         }
 
-        note.title ??= title;
-        note.content ??= content;
-        note.isPinned ??= isPinned;
+        note.title = title || note.title;
+        note.content = content || note.content;
+        note.isPinned = isPinned || note.isPinned;
         note.updatedAt = new Date();
 
         await user.save();
