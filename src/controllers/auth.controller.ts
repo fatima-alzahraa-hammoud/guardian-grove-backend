@@ -18,8 +18,7 @@ export const login = async ( req: Request, res: Response) : Promise<void> => {
         const {name, email, password} = req.body;
 
         if (!name || !email || !password) {
-            throwError({ message: "Name, email, and password are required.", res, status: 400 });
-            return;
+            return throwError({ message: "Name, email, and password are required.", res, status: 400 });
         }
     
         const user = await User.findOne({
@@ -28,27 +27,24 @@ export const login = async ( req: Request, res: Response) : Promise<void> => {
         });
 
         if (!user) {
-            throwError({ message: "Invalid credentials. User not found.", res, status: 404 });
-            return; 
+            return throwError({ message: "Invalid credentials. User not found.", res, status: 404 });
         }
 
         // Verify password
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
-            throwError({ message: "Invalid password.", res, status: 401 });
-            return;
+            return throwError({ message: "Invalid password.", res, status: 401 });
         }
 
         if (!JWT_SECRET_KEY) {
-            throwError({ message: "JWT_SECRET_KEY is not defined", res, status: 500 });
-            return;
+            return throwError({ message: "JWT_SECRET_KEY is not defined", res, status: 500 });
         }
 
         const token = await jwt.sign({ userId: user.id }, JWT_SECRET_KEY);
 
         res.status(200).send({user, token});
     }catch(error){
-        throwError({ message: "Something went wrong while logging in.", res, status: 500});
+        return throwError({ message: "Something went wrong while logging in.", res, status: 500});
     }
 }
 
@@ -60,8 +56,7 @@ export const register = async (req: Request, res: Response) : Promise<void> => {
         
         // verify all fields are filled
         if (!name || !email || !password || !confirmPassword || !birthday || !gender || !role || !avatar || !interests) {
-            throwError({ message: "All required fields must be filled.", res, status: 400});
-            return;
+            return throwError({ message: "All required fields must be filled.", res, status: 400});
         }
 
         const existingUser = await User.findOne({
@@ -69,59 +64,50 @@ export const register = async (req: Request, res: Response) : Promise<void> => {
         });
 
         if(existingUser){
-            throwError({ message: "Family with this email exists", res, status: 400 });
-            return;
+            return throwError({ message: "Family with this email exists", res, status: 400 });
         }
 
         if (password !== confirmPassword){
-            throwError({ message: "Passwords do not match", res, status: 400 });
-            return;
+            return throwError({ message: "Passwords do not match", res, status: 400 });
         }
 
         // Email Validation
         const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
         if (!emailRegex.test(email)) {
-            throwError({ message: "Invalid email format.", res, status: 400});
-            return;
+            return throwError({ message: "Invalid email format.", res, status: 400});
         }
 
         // Role validation
         const validRoles = ['parent', 'grandparent', 'admin'];
         if (!validRoles.includes(role)) {
             if (role === "child"){
-                throwError({ message: "Children must be added by a parent.", res, status: 400});
-                return;
+                return throwError({ message: "Children must be added by a parent.", res, status: 400});
             }
-            throwError({ message: "Invalid role.", res, status: 400});
-            return;
+            return throwError({ message: "Invalid role.", res, status: 400});
         }
         
         if (!Array.isArray(interests)) {
-            throwError({ message: "Interests must be an array.", res, status: 400 });
-            return;
+            return throwError({ message: "Interests must be an array.", res, status: 400 });
         }
 
         // Gender Validation
         const validGenders = ['male', 'female'];
         if (!validGenders.includes(gender)) {
-            throwError({ message: "Gender must be either 'male' or 'female'.", res, status: 400});
-            return;
+            return throwError({ message: "Gender must be either 'male' or 'female'.", res, status: 400});
         }
 
         // Birthday Validation
         if (isNaN(new Date(birthday).getTime())) {
-            throwError({ message: "Invalid birthday format.", res, status: 400 });
-            return;
+            return throwError({ message: "Invalid birthday format.", res, status: 400 });
         }
 
         const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
         if (!passwordRegex.test(password)) {
-            throwError({
+            return throwError({
                 message: "Password must be at least 8 characters long, include an uppercase letter, lowercase letter, a number, and a special character.",
                 res,
                 status: 400
             });
-            return;
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -130,8 +116,7 @@ export const register = async (req: Request, res: Response) : Promise<void> => {
         
 
         if (!JWT_SECRET_KEY) {
-            throwError({ message: "JWT_SECRET_KEY is not defined", res, status: 500 });
-            return;
+            return throwError({ message: "JWT_SECRET_KEY is not defined", res, status: 500 });
         }
 
         const token = await jwt.sign({ userId: newUser.id }, JWT_SECRET_KEY);
@@ -139,6 +124,6 @@ export const register = async (req: Request, res: Response) : Promise<void> => {
         res.status(200).send({newUser, token});
 
     }catch(error){
-        throwError({ message: "Something went wrong while registering.", res, status: 500});
+        return throwError({ message: "Something went wrong while registering.", res, status: 500});
     }
 }  
