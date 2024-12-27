@@ -103,3 +103,35 @@ export const updateFamily = async (req: CustomRequest, res: Response): Promise<v
         return throwError({ message: "Failed to update family.", res, status: 500 });
     }
 };
+
+//API to delete family
+export const deleteFamily = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+        // Check for authorized user roles
+        if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'parent')) {
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+
+        const { familyId } = req.body;
+
+        // Check if familyId is valid
+        if (!checkId({ id: familyId, res })) return;
+
+        // Find the family to delete
+        const family = await Family.findById(familyId);
+
+        if (!family) {
+            return throwError({ message: "Family not found.", res, status: 404 });
+        }
+
+        // Delete all users associated with the family
+        await User.deleteMany({ familyId });
+
+        // Delete the family
+        await Family.findByIdAndDelete(familyId);
+
+        res.status(200).send({ message: "Family and all associated members deleted successfully." });
+    } catch (error) {
+        return throwError({ message: "Failed to delete family.", res, status: 500 });
+    }
+};
