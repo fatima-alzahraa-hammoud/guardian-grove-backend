@@ -2,6 +2,7 @@ import { model, Schema } from "mongoose";
 import { IAchievement } from "../interfaces/IAchievements";
 
 const achievementSchema = new Schema<IAchievement>({
+    _id: { type: Schema.Types.ObjectId, auto: true },
     title: { type: String, required: true },
     description: { type: String, required: true },
     starsReward: { type: Number, default: 0 },

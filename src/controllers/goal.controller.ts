@@ -368,3 +368,65 @@ export const deleteTask = async (req: CustomRequest, res: Response) => {
         return throwError({message: "Error deleting task", res, status: 500});
     }
 };
+
+//API to complete task
+export const completeTask = async (req: CustomRequest, res: Response) => {
+    try {
+        const { userId, goalId, taskId } = req.body;
+
+        if (!checkId({ id: userId, res }) || !checkId({ id: goalId, res }) || !checkId({ id: taskId, res })) {
+            return;
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return throwError({ message: "User not found", res, status: 404 });
+        }
+
+        const goal = user.goals.find(goal => goal._id.toString() === goalId);
+        if (!goal) {
+            return throwError({ message: "Goal not found", res, status: 404 });
+        }
+
+        const task = goal.tasks.find(task => task._id.toString() === taskId);
+        if (!task) {
+            return throwError({ message: "Task not found", res, status: 404 });
+        }
+
+        // Mark the task as completed
+        if (task.isCompleted) {
+            return throwError({ message: "Task already completed", res, status: 400 });
+        }
+        task.isCompleted = true;
+        user.coins += task.rewards.coins;
+        user.stars += task.rewards.stars;
+
+        // Check if all tasks in the goal are completed
+        const allTasksCompleted = goal.tasks.every(task => task.isCompleted);
+        if (allTasksCompleted) {
+            goal.isCompleted = true;
+
+            // Reward user with coins and stars
+            user.coins += goal.rewards.coins;
+            user.stars += goal.rewards.stars;
+
+            // Unlock Achievement if available
+            if (goal.rewards.achievementId) {
+                const achievement = await Achievement.findById(goal.rewards.achievementId);
+                if (!achievement) {
+                    return throwError({ message: "Achievement not found", res, status: 404 });
+                }
+                user.achievements.push({achievementId: achievement._id, unlockedAt: new Date(),});
+
+                res.status(200).json({ message: "Achievement unlocked successfully", achievement });
+            }
+        }
+
+        await user.save();
+        
+        res.status(200).json({ message: "Task marked as done", task, goal });
+    } catch (error) {
+        console.error(error);
+        return throwError({ message: "Error marking task as done", res, status: 500 });
+    }
+};
