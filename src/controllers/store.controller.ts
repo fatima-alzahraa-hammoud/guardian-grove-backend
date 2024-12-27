@@ -7,7 +7,7 @@ import { CustomRequest } from "../interfaces/customRequest";
 import { IPurchasedItem } from "../interfaces/IPurschasedItem";
 
 //API to get store items based on category
-export const getStoreItems = async (req: Request, res: Response) => {
+export const getStoreItems = async (req: Request, res: Response): Promise<void> => {
     try {
         const { category } = req.query;
 
@@ -30,7 +30,7 @@ export const getStoreItems = async (req: Request, res: Response) => {
 
 
 //API to add Items to store
-export const createItem = async (req: Request, res: Response) => {
+export const createItem = async (req: Request, res: Response): Promise<void> => {
     try {
 
         const data = req.body;
@@ -57,7 +57,7 @@ export const createItem = async (req: Request, res: Response) => {
 };
 
 // API to delete item
-export const deleteItem = async(req:Request, res: Response) => {
+export const deleteItem = async(req:Request, res: Response): Promise<void> => {
     try {
         const {itemId} = req.body;
 
@@ -80,7 +80,7 @@ export const deleteItem = async(req:Request, res: Response) => {
 }
 
 //API to update item
-export const updateItem = async (req: Request, res: Response) => {
+export const updateItem = async (req: Request, res: Response): Promise<void> => {
     try{
 
         const {itemId} = req.body;
@@ -108,7 +108,7 @@ export const updateItem = async (req: Request, res: Response) => {
 };
 
 //API to buy item
-export const buyItem = async (req: CustomRequest, res: Response) => {
+export const buyItem = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
         if (!req.user) {
             return throwError({ message: "Unauthorized", res, status: 401 });
