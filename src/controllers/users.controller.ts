@@ -241,17 +241,30 @@ export const deleteUser = async(req: CustomRequest, res:Response):Promise<void> 
 // API to update password
 export const updatePassword = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
-        const { oldPassword, newPassword, confirmPassword } = req.body;
-        const userId = req.user?.id;
-
-        if (!userId) {
-            res.status(401).json({ message: "Unauthorized" });
-            return;
-        }
-
+        const {userId, oldPassword, newPassword, confirmPassword } = req.body;
+        
         if (!req.user) {
             throwError({ message: "Unauthorized", res, status: 401 });
             return;
+        }
+
+        let user;
+
+        if(userId){
+            if(!checkId({id: userId, res})) return;
+            if (req.user._id.toString() !== userId && req.user.role !== "admin") {
+                return throwError({ message: "Forbidden", res, status: 403 });
+            }
+
+            user = await User.findById(userId);
+
+            if (!user){
+                throwError({ message: "User not found", res, status: 404});
+                return;
+            }
+        }
+        else{
+            user = req.user;
         }
 
         // Validate required fields
@@ -266,7 +279,7 @@ export const updatePassword = async (req: CustomRequest, res: Response): Promise
         }
 
         // Verify old password
-        const isMatch = await bcrypt.compare(oldPassword, req.user.password);
+        const isMatch = await bcrypt.compare(oldPassword, user.password);
         if (!isMatch) {
             throwError({ message: "Old password is incorrect.", res, status: 400 });
             return;
@@ -292,11 +305,11 @@ export const updatePassword = async (req: CustomRequest, res: Response): Promise
 
         // Hash new password
         const hashedPassword = await bcrypt.hash(newPassword, 10);
-        req.user.password = hashedPassword;
-        await req.user.save();
+        user.password = hashedPassword;
+        await user.save();
 
         // Return success response
-        res.status(200).json({ message: "Password updated successfully." });
+        res.status(200).json({ message: "Password updated successfully.", password: newPassword });
 
     } catch (error) {
         console.error("Error updating password: ", error);
