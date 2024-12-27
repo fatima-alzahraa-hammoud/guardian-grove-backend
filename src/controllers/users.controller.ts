@@ -149,15 +149,10 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
 // API to edit user profile
 export const editUserProfile = async(req: CustomRequest, res: Response):Promise<void> => {
     try{
-        const {userProfileId, name, birthday, gender, avatar, role, email, interests} = req.body;
+        const {userId, name, birthday, gender, avatar, role, email, interests} = req.body;
 
         if (!req.user) {
             throwError({ message: "Unauthorized", res, status: 401 });
-            return;
-        }
-
-        if (userProfileId && req.user._id.toString() !== userProfileId && req.user.role !== "admin" && req.user.role !== "owner"  && req.user.role !== "parent") {
-            throwError({ message: "Forbidden", res, status: 403 });
             return;
         }
 
@@ -168,19 +163,25 @@ export const editUserProfile = async(req: CustomRequest, res: Response):Promise<
 
         let user;
 
-        if(userProfileId)
-            user = await User.findById(userProfileId);
-        else
-            user = req.user;
+        if(userId){
+            if(!checkId({id: userId, res})) return;
+            if (req.user._id.toString() !== userId && req.user.role !== "admin" && req.user.role !== "owner"  && req.user.role !== "parent") {
+                return throwError({ message: "Forbidden", res, status: 403 });
+            }
 
-        if (!user){
-            throwError({ message: "User not found", res, status: 404});
-            return;
+            user = await User.findById(userId);
+
+            if (!user){
+                throwError({ message: "User not found", res, status: 404});
+                return;
+            }
+
+            if(req.user.role !== "admin" && req.user.email !== user.email){
+                return throwError({ message: "Forbidden", res, status: 403 });
+            }
         }
-
-        if (userProfileId && (req.user.role === "parent" || req.user.role === "owner") && user.email !== req.user.email){
-            throwError({ message: "Forbidden", res, status: 403 });
-            return;
+        else{
+            user = req.user;
         }
 
         if (name) user.name = name;
