@@ -121,3 +121,40 @@ export const getGoalById = async (req: CustomRequest, res: Response) => {
         return throwError({ message: "Error retrieving goal", res, status: 500 });
     }
 }
+
+
+//API to update goal
+export const updateGoal = async (req: Request, res: Response) => {
+    try {
+
+        const { userId, goalId, title, description, type, dueDate, rewards } = req.body;
+
+        if(!checkId({id: userId, res})) return;
+        if(!checkId({id: goalId, res})) return;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return throwError({ message: "User not found", res, status: 404 });
+        }
+
+        const goal = user.goals.find(goal => goal._id.toString() === goalId);
+        if (!goal) {
+            return throwError({ message: "Goal not found", res, status: 404 });
+        }
+
+        goal.title = title || goal.title;
+        goal.description = description || goal.description;
+        goal.type = type || goal.type;
+        goal.dueDate = dueDate || goal.dueDate;
+        goal.rewards.stars = rewards.stars || goal.rewards.stars;
+        goal.rewards.coins = rewards.coins || goal.rewards.coins;
+        goal.rewards.badge = rewards.badge || goal.rewards.badge;
+
+        await user.save();
+
+        res.status(200).json({ message: "Goal updated", goal });
+    } catch (error) {
+        console.error(error);
+        return throwError({ message: "Error updating goal", res, status: 500 });
+    }
+};

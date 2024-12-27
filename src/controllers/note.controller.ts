@@ -110,7 +110,7 @@ export const updateNote = async (req: Request, res: Response) => {
 
         const note = user.notes.find(note => note._id.toString() === noteId);
         if (!note) {
-            return throwError({ message: "Notes not found", res, status: 404 });
+            return throwError({ message: "Note not found", res, status: 404 });
         }
 
         note.title = title || note.title;
@@ -122,7 +122,7 @@ export const updateNote = async (req: Request, res: Response) => {
         res.status(200).json({ message: "Note updated", note });
     } catch (error) {
         console.error(error);
-        return throwError({ message: "Error updating notes", res, status: 500 });
+        return throwError({ message: "Error updating note", res, status: 500 });
     }
 };
 
