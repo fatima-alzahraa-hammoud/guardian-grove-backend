@@ -3,6 +3,7 @@ import { IGoal } from "../../interfaces/IGoal";
 import { taskSchema } from "./task.schema";
 
 export const goalSchema = new Schema<IGoal>({
+    _id: { type: Schema.Types.ObjectId, auto: true },
     title: { type: String, required: true },
     description: { type: String, required:true },
     type: { type: String, required: true, enum: ['personal', 'family'] },

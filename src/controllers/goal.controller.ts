@@ -81,3 +81,43 @@ export const getGoals = async (req: CustomRequest, res: Response) => {
         return throwError({ message: "Error retrieving goals", res, status: 500 });
     }
 };
+
+//API to get Goal of specific Id
+export const getGoalById = async (req: CustomRequest, res: Response) => {
+    try {
+
+        if(!req.user){
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+
+        const {userId, goalId} = req.body;
+
+        if(!checkId({id: goalId, res})) return;
+
+        if(userId && (req.user.role === 'parent' || req.user.role === 'admin' || req.user.role === 'owner')){
+            if(!checkId({id: userId, res})) return;
+            const user = await User.findById(userId);
+            if (!user) {
+                return throwError({ message: "User not found", res, status: 404 });
+            }
+
+            const goal = user.goals.find(goal => goal._id.toString() === goalId);
+            if (!goal) {
+                return throwError({ message: "Gole not found", res, status: 404 });
+            }
+
+            res.status(200).json({message: "Retrieving user goal successfully", goal: goal });
+            return;
+        }
+
+        const goal = req.user.goals.find(goal => goal._id.toString() === goalId);
+        if (!goal) {
+            return throwError({ message: "Gole not found", res, status: 404 });
+        }
+
+        res.status(200).json({message: "Retrieving your goal successfully", goal: goal });        
+
+    } catch (err) {
+        return throwError({ message: "Error retrieving goal", res, status: 500 });
+    }
+}
