@@ -49,6 +49,8 @@ const adventureProgressSchema = new Schema<IAdventureProgress>({
     isAdventureCompleted: { type: Boolean, default: false },
     status: { type: String, enum: ['in-progress', 'completed'] },
     progress: { type: Number, default: 0 },
+    starsReward: { type: Number, default: 20 },
+    coinsReward: { type: Number, default: 5 },
 } , { _id: false });
 
 const userSchema = new Schema<IUser>({

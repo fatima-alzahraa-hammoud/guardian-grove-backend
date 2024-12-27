@@ -11,5 +11,7 @@ export interface IAdventureProgress {
     challenges: IChallengeProgress[];
     isAdventureCompleted: boolean;
     status: 'in-progress' | 'completed';
+    starsReward: number;
+    coinsReward: number;
     progress: number;
 }

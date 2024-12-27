@@ -13,7 +13,7 @@ export const getUsers = async(req: Request, res: Response): Promise<void> => {
         const users = await User.find();
         res.status(200).send(users);
     }catch(error){
-        throwError({ message: "Error retrieving users", res, status: 500});
+        return throwError({ message: "Error retrieving users", res, status: 500});
     }
 };
 
@@ -36,8 +36,7 @@ export const getUserById = async (req: CustomRequest, res: Response): Promise<vo
             const user = await User.findById(userId);
 
             if (!user){
-                throwError({ message: "User not found", res, status: 404});
-                return;
+                return throwError({ message: "User not found", res, status: 404});
             }
 
             if(req.user.role !== "admin" && req.user.email !== user.email){
@@ -52,7 +51,7 @@ export const getUserById = async (req: CustomRequest, res: Response): Promise<vo
 
         res.status(200).send({message: "Retrieving user successfully", user: user });
     }catch(error){
-        throwError({ message: "Error retrieving user", res, status: 500});
+        return throwError({ message: "Error retrieving user", res, status: 500});
     }
 };
 
@@ -64,8 +63,7 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
         const { name, password, birthday, gender, role, avatar, interests } = data;
 
         if (!req.user) {
-            throwError({ message: "Unauthorized", res, status: 401 });
-            return;
+            return  throwError({ message: "Unauthorized", res, status: 401 });
         }
         if(req.user.role === "child"){
             return throwError({ message: "Forbidden", res, status: 403 });
@@ -73,8 +71,7 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
 
         // verify all fields are filled
         if (!name || !password || !birthday || !gender || !role || !avatar || !interests) {
-            throwError({ message: "All required fields must be filled.", res, status: 400});
-            return;
+            return throwError({ message: "All required fields must be filled.", res, status: 400});
         }
 
         const email = req.user.email;
@@ -84,43 +81,37 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
             email: email   
         });
         if (existingUser) {
-            throwError({ message: "This username is already taken for this email.", res, status: 409});
-            return;
+            return throwError({ message: "This username is already taken for this email.", res, status: 409});
         }
 
         if (!Array.isArray(interests)) {
-            throwError({ message: "Interests must be an array.", res, status: 400 });
-            return;
+            return throwError({ message: "Interests must be an array.", res, status: 400 });
         }
 
         // Gender Validation
         const validGenders = ['male', 'female'];
         if (!validGenders.includes(gender)) {
-            throwError({ message: "Gender must be either 'male' or 'female'.", res, status: 400});
-            return;
+            return throwError({ message: "Gender must be either 'male' or 'female'.", res, status: 400});
         }
 
         // Role validation
         const validRoles = ['owner', 'parent', 'child', 'grandfather', 'grandmother', 'admin'];
         if (!validRoles.includes(role)) {
-            throwError({ message: "Invalid role.", res, status: 400});
-            return;
+            return throwError({ message: "Invalid role.", res, status: 400});
         }
 
         // Birthday Validation
         if (isNaN(new Date(birthday).getTime())) {
-            throwError({ message: "Invalid birthday format.", res, status: 400 });
-            return;
+            return throwError({ message: "Invalid birthday format.", res, status: 400 });
         }
 
         const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
         if (!passwordRegex.test(password)) {
-            throwError({
+            return throwError({
                 message: "Password must be at least 8 characters long, include an uppercase letter, lowercase letter, a number, and a special character.",
                 res,
                 status: 400
             });
-            return;
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -132,16 +123,16 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
         if (error instanceof Error) {
             // Handle MongoDB duplicate key error (11000)
             if ((error as any).code === 11000) {
-                throwError({ 
+                return throwError({ 
                     message: "A user with this name and email already exists.", 
                     res, 
                     status: 409 
                 });
             } else {
-                throwError({ message: error.message, res, status: 500 });
+                return throwError({ message: error.message, res, status: 500 });
             }
         } else {
-            throwError({ message: "An unknown error occurred.", res, status: 500 });
+            return throwError({ message: "An unknown error occurred.", res, status: 500 });
         }    
     } 
 };
@@ -152,13 +143,11 @@ export const editUserProfile = async(req: CustomRequest, res: Response):Promise<
         const {userId, name, birthday, gender, avatar, role, email, interests} = req.body;
 
         if (!req.user) {
-            throwError({ message: "Unauthorized", res, status: 401 });
-            return;
+            return throwError({ message: "Unauthorized", res, status: 401 });
         }
 
         if ((role || email) && req.user.role !== "admin"&& req.user.role !== "owner"  && req.user.role !== "parent") {
-            throwError({ message: "Forbidden: You cannot change role nor email", res, status: 403 });
-            return;
+            return throwError({ message: "Forbidden: You cannot change role nor email", res, status: 403 });
         }
 
         let user;
@@ -172,8 +161,7 @@ export const editUserProfile = async(req: CustomRequest, res: Response):Promise<
             user = await User.findById(userId);
 
             if (!user){
-                throwError({ message: "User not found", res, status: 404});
-                return;
+                return throwError({ message: "User not found", res, status: 404});
             }
 
             if(req.user.role !== "admin" && req.user.email !== user.email){
@@ -196,7 +184,7 @@ export const editUserProfile = async(req: CustomRequest, res: Response):Promise<
 
         res.status(200).send({message: "User profile updated successfully", user});
     }catch(error){
-        throwError({ message: "Failed to update. An unknown error occurred.", res, status: 500 });
+        return throwError({ message: "Failed to update. An unknown error occurred.", res, status: 500 });
     }
 }
 
@@ -206,8 +194,7 @@ export const deleteUser = async(req: CustomRequest, res:Response):Promise<void> 
         const {userId} = req.body;
 
         if (!req.user) {
-            throwError({ message: "Unauthorized", res, status: 401 });
-            return;
+            return throwError({ message: "Unauthorized", res, status: 401 });
         }
 
         let user;
@@ -220,8 +207,7 @@ export const deleteUser = async(req: CustomRequest, res:Response):Promise<void> 
             user = await User.findById(userId);
 
             if (!user){
-                throwError({ message: "User not found", res, status: 404});
-                return;
+                return throwError({ message: "User not found", res, status: 404});
             }
 
             if(req.user.role !== "admin" && req.user.email !== user.email){
@@ -234,7 +220,7 @@ export const deleteUser = async(req: CustomRequest, res:Response):Promise<void> 
       
         res.status(200).send({message: "User deleted successfully", user});
     }catch(error){
-        throwError({ message: "Failed to delete. An unknown error occurred.", res, status: 500 });
+        return throwError({ message: "Failed to delete. An unknown error occurred.", res, status: 500 });
     }
 } 
 
@@ -244,8 +230,7 @@ export const updatePassword = async (req: CustomRequest, res: Response): Promise
         const {userId, oldPassword, newPassword, confirmPassword } = req.body;
         
         if (!req.user) {
-            throwError({ message: "Unauthorized", res, status: 401 });
-            return;
+            return throwError({ message: "Unauthorized", res, status: 401 });
         }
 
         let user;
@@ -259,8 +244,7 @@ export const updatePassword = async (req: CustomRequest, res: Response): Promise
             user = await User.findById(userId);
 
             if (!user){
-                throwError({ message: "User not found", res, status: 404});
-                return;
+                return throwError({ message: "User not found", res, status: 404});
             }
         }
         else{
@@ -269,37 +253,32 @@ export const updatePassword = async (req: CustomRequest, res: Response): Promise
 
         // Validate required fields
         if (!oldPassword || !newPassword || !confirmPassword) {
-            throwError({ message: "All fields are required.", res, status: 400 });
-            return;
+            return throwError({ message: "All fields are required.", res, status: 400 });
         }
 
         if (newPassword !== confirmPassword) {
-            throwError({ message: "Passwords do not match.", res, status: 400 });
-            return;
+            return throwError({ message: "Passwords do not match.", res, status: 400 });
         }
 
         // Verify old password
         const isMatch = await bcrypt.compare(oldPassword, user.password);
         if (!isMatch) {
-            throwError({ message: "Old password is incorrect.", res, status: 400 });
-            return;
+            return throwError({ message: "Old password is incorrect.", res, status: 400 });
         }
 
         // Check if the new password is different from the old one
         const isSamePassword = await bcrypt.compare(newPassword, req.user.password);
         if (isSamePassword) {
-            throwError({ message: "New password cannot be the same as the old password.", res, status: 400 });
-            return;
+            return throwError({ message: "New password cannot be the same as the old password.", res, status: 400 });
         }
 
         const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
         if (!passwordRegex.test(newPassword)) {
-            throwError({
+            return throwError({
                 message: "Password must be at least 8 characters long, include an uppercase letter, lowercase letter, a number, and a special character.",
                 res,
                 status: 400
             });
-            return;
         }
 
 
@@ -313,7 +292,7 @@ export const updatePassword = async (req: CustomRequest, res: Response): Promise
 
     } catch (error) {
         console.error("Error updating password: ", error);
-        throwError({ message: "Failed to update password.", res, status: 500 });
+        return throwError({ message: "Failed to update password.", res, status: 500 });
     }
 };
 
@@ -321,14 +300,13 @@ export const updatePassword = async (req: CustomRequest, res: Response): Promise
 export const getUserStars = async(req:CustomRequest, res: Response): Promise<void> => {
     try{
         if (!req.user) {
-            throwError({ message: "Unauthorized", res, status: 401});
-            return;
+            return throwError({ message: "Unauthorized", res, status: 401});
         }
 
         res.status(200).send({stars: req.user.stars});
 
     }catch(error){
-        throwError({ message: "Error retrieving user stars", res, status: 500});
+        return throwError({ message: "Error retrieving user stars", res, status: 500});
     }
 } 
 
@@ -338,13 +316,11 @@ export const updateUserStars = async(req:CustomRequest, res: Response): Promise<
         const { stars }: { stars: number } = req.body;
 
         if (!req.user) {
-            throwError({ message: "Unauthorized", res, status: 401});
-            return;
+            return throwError({ message: "Unauthorized", res, status: 401});
         }
 
         if (stars === undefined || typeof stars !== "number"){
-            throwError({ message: "Stars must be a valid number.", res, status: 400});
-            return;
+            return throwError({ message: "Stars must be a valid number.", res, status: 400});
         }
 
         req.user.stars = stars;
@@ -352,7 +328,7 @@ export const updateUserStars = async(req:CustomRequest, res: Response): Promise<
 
         res.status(200).send({ message: "User stars updated successfully", user: req.user });
     }catch(error){
-        throwError({ message: "Error updating user stars", res, status: 500});
+        return throwError({ message: "Error updating user stars", res, status: 500});
     }
 } 
 
@@ -360,13 +336,12 @@ export const updateUserStars = async(req:CustomRequest, res: Response): Promise<
 export const getUserCoins = async(req:CustomRequest, res: Response): Promise<void> => {
     try{
         if (!req.user) {
-            throwError({ message: "Unauthorized", res, status: 401});
-            return;
+            return throwError({ message: "Unauthorized", res, status: 401});
         }
 
         res.status(200).send({coins: req.user.coins});
     }catch(error){
-        throwError({ message: "Error retrieving user coins", res, status: 500});
+        return throwError({ message: "Error retrieving user coins", res, status: 500});
     }
 } 
 
@@ -376,13 +351,11 @@ export const updateUserCoins = async(req:CustomRequest, res: Response): Promise<
         const { coins }: { coins: number } = req.body;
 
         if (!req.user) {
-            throwError({ message: "Unauthorized", res, status: 401});
-            return;
+            return throwError({ message: "Unauthorized", res, status: 401});
         }
 
         if (coins === undefined || typeof coins !== "number"){
-            throwError({ message: "Stars must be a valid number.", res, status: 400});
-            return;
+            return throwError({ message: "Stars must be a valid number.", res, status: 400});
         }
 
         req.user.coins = coins;
@@ -390,7 +363,7 @@ export const updateUserCoins = async(req:CustomRequest, res: Response): Promise<
 
         res.status(200).send({ message: "User coins updated successfully", user: req.user });
     }catch(error){
-        throwError({ message: "Error updating user coins", res, status: 500});
+        return throwError({ message: "Error updating user coins", res, status: 500});
     }
 } 
 
@@ -399,14 +372,13 @@ export const updateUserCoins = async(req:CustomRequest, res: Response): Promise<
 export const getLocation = async(req:CustomRequest, res: Response): Promise<void> => {
     try{
         if (!req.user) {
-            throwError({ message: "Unauthorized", res, status: 401});
-            return;
+            return throwError({ message: "Unauthorized", res, status: 401});
         }
 
         res.status(200).send({location: req.user.currentLocation});
 
     }catch(error){
-        throwError({ message: "Error retrieving user location", res, status: 500});
+        return throwError({ message: "Error retrieving user location", res, status: 500});
     }
 } 
 
@@ -416,13 +388,11 @@ export const updateLocation = async(req:CustomRequest, res: Response): Promise<v
         const { currentLocation }: { currentLocation: string } = req.body;
 
         if (!req.user) {
-            throwError({ message: "Unauthorized", res, status: 401});
-            return;
+            return throwError({ message: "Unauthorized", res, status: 401});
         }
 
         if (typeof currentLocation !== "string" || currentLocation.trim() === ""){
-            throwError({ message: "Location must be valid.", res, status: 400});
-            return;
+            return throwError({ message: "Location must be valid.", res, status: 400});
         }
 
         req.user.currentLocation = currentLocation;
@@ -430,7 +400,7 @@ export const updateLocation = async(req:CustomRequest, res: Response): Promise<v
 
         res.status(200).send({ message: "User location updated successfully", user: req.user });
     }catch(error){
-        throwError({ message: "Error updating user location", res, status: 500});
+        return throwError({ message: "Error updating user location", res, status: 500});
     }
 } 
 
@@ -438,13 +408,12 @@ export const updateLocation = async(req:CustomRequest, res: Response): Promise<v
 export const getUserRank = async(req:CustomRequest, res: Response): Promise<void> => {
     try{
         if (!req.user) {
-            throwError({ message: "Unauthorized", res, status: 401});
-            return;
+            return throwError({ message: "Unauthorized", res, status: 401});
         }
 
         res.status(200).send({Rank: req.user.rankInFamily});
     }catch(error){
-        throwError({ message: "Error retrieving user rank", res, status: 500});
+        return throwError({ message: "Error retrieving user rank", res, status: 500});
     }
 };
 
@@ -454,13 +423,11 @@ export const updateUserRank = async(req:CustomRequest, res: Response): Promise<v
         const { rank }: { rank: number } = req.body;
 
         if (!req.user) {
-            throwError({ message: "Unauthorized", res, status: 401});
-            return;
+            return throwError({ message: "Unauthorized", res, status: 401});
         }
 
         if (rank === undefined || typeof rank !== "number"){
-            throwError({ message: "Rank must be a valid number.", res, status: 400});
-            return;
+            return throwError({ message: "Rank must be a valid number.", res, status: 400});
         }
 
         req.user.rankInFamily = rank;
@@ -468,7 +435,7 @@ export const updateUserRank = async(req:CustomRequest, res: Response): Promise<v
 
         res.status(200).send({ message: "User rank updated successfully", user: req.user });
     }catch(error){
-        throwError({ message: "Error updating user rank", res, status: 500});
+        return throwError({ message: "Error updating user rank", res, status: 500});
     }
 };
 
@@ -476,8 +443,7 @@ export const updateUserRank = async(req:CustomRequest, res: Response): Promise<v
 export const getUserInterests = async(req:CustomRequest, res: Response): Promise<void> => {
     try{
         if (!req.user) {
-            throwError({ message: "Unauthorized", res, status: 401});
-            return;
+            return throwError({ message: "Unauthorized", res, status: 401});
         }
 
         res.status(200).send({Interests: req.user.interests});
@@ -487,13 +453,12 @@ export const getUserInterests = async(req:CustomRequest, res: Response): Promise
 };
 
 // API to start an adventure
-export const startAdventure = async (req: CustomRequest, res: Response) => {
+export const startAdventure = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
         const {adventureId} = req.body;
 
         if (!req.user) {
-            throwError({ message: "Unauthorized", res, status: 401 });
-            return;
+            return throwError({ message: "Unauthorized", res, status: 401 });
         }
 
         const userId = req.user._id;
@@ -524,6 +489,8 @@ export const startAdventure = async (req: CustomRequest, res: Response) => {
             })),
             status: "in-progress",
             isAdventureCompleted: false,
+            starsReward: adventure.starsReward,
+            coinsReward: adventure.coinsReward,
             progress: 0,
         };
 
@@ -538,7 +505,7 @@ export const startAdventure = async (req: CustomRequest, res: Response) => {
 };
 
 // API to complete a challenge
-export const completeChallenge = async (req: CustomRequest, res: Response) => {
+export const completeChallenge = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
         const { adventureId, challengeId } = req.body;
 
@@ -546,8 +513,7 @@ export const completeChallenge = async (req: CustomRequest, res: Response) => {
         if(!checkId({id: challengeId, res})) return;
 
         if (!req.user) {
-            throwError({ message: "Unauthorized", res, status: 401 });
-            return;
+            return throwError({ message: "Unauthorized", res, status: 401 });
         }
 
         const user = req.user;
@@ -577,6 +543,8 @@ export const completeChallenge = async (req: CustomRequest, res: Response) => {
         if (adventureProgress.challenges.every(challenge => challenge.isCompleted)) {
             adventureProgress.isAdventureCompleted = true;
             adventureProgress.status = 'completed';
+            user.coins += adventureProgress.starsReward;
+            user.stars += adventureProgress.coinsReward;
         }
 
         // Save the user's updated adventure progress
@@ -593,13 +561,12 @@ export const completeChallenge = async (req: CustomRequest, res: Response) => {
 export const getUserAdventures = async(req:CustomRequest, res: Response): Promise<void> => {
     try{
         if (!req.user) {
-            throwError({ message: "Unauthorized", res, status: 401});
-            return;
+            return throwError({ message: "Unauthorized", res, status: 401});
         }
 
         res.status(200).send({Adventure: req.user.adventures});
     }catch(error){
-        throwError({ message: "Error retrieving user adventures", res, status: 500});
+        return throwError({ message: "Error retrieving user adventures", res, status: 500});
     }
 };
 
@@ -608,19 +575,13 @@ export const getUserPurchasedItems = async (req: CustomRequest, res: Response) =
     try {
 
         if (!req.user) {
-            throwError({ message: "Unauthorized", res, status: 401});
-            return;
+            return throwError({ message: "Unauthorized", res, status: 401});
         }
 
-        const userId = req.user._id; 
-        const user = await User.findById(userId).populate("purchasedItems.itemId");
-
-        if (!user) {
-            return throwError({ message: "User not found", res, status: 404 });
-        }
+        const user = req.user;
 
         res.status(200).json({message: "Get purchased items successfully", purchasedItems: user.purchasedItems });
     } catch (error) {
-        res.status(500).json({ message: "Error fetching purchased items", error });
+        return throwError({ message: "Error fetching purchased items", res, status: 500});
     }
 };

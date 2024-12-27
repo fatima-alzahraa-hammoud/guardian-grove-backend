@@ -401,6 +401,8 @@ export const completeTask = async (req: CustomRequest, res: Response) => {
         user.coins += task.rewards.coins;
         user.stars += task.rewards.stars;
 
+        goal.progress = (goal.tasks.filter(task => task.isCompleted).length / goal.tasks.length) * 100;
+
         // Check if all tasks in the goal are completed
         const allTasksCompleted = goal.tasks.every(task => task.isCompleted);
         if (allTasksCompleted) {

@@ -10,4 +10,5 @@ export interface IGoal extends Document {
     isCompleted: boolean;
     dueDate: Date;
     rewards: { stars: number; coins: number, achievementName?: string; achievementId?: string;  };
+    progress: number;
 }
