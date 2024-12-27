@@ -2,6 +2,8 @@ import { Request, Response } from "express";
 import { Family } from "../models/family.model";
 import { throwError } from "../utils/error";
 import { User } from "../models/user.model";
+import { checkId } from "../utils/checkId";
+import { CustomRequest } from "../interfaces/customRequest";
 
 //API get all families
 export const getAllFamilies = async (req: Request, res: Response): Promise<void> => {
@@ -59,5 +61,38 @@ export const getFamilyMembers = async (req: Request, res: Response): Promise<voi
 
     } catch (error) {
         return throwError({ message: "Failed to retrieve family members.", res, status: 500 });
+    }
+};
+
+// Update Family Details
+export const updateFamily = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+
+        if(!req.user || (req.user.role !== 'parent' && req.user.role !== 'admin' && req.user.role !== 'owner')){
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+
+        const { familyId, familyName, email } = req.body;
+        if(!checkId({id: familyId, res})) return;
+
+        
+        const family = await Family.findById(familyId);
+
+        if (!family) {
+            return throwError({ message: "Family not found.", res, status: 404 });
+        }
+
+        if(req.user.email !== family.email){
+            return throwError({ message: "Forbidden", res, status: 401 });
+        }
+
+        family.familyName = familyName || family.familyName;
+        family.email = email || family.email;
+
+        await family.save();
+
+        res.status(200).send({ message: "Family updated successfully.", family: family });
+    } catch (error) {
+        return throwError({ message: "Failed to update family.", res, status: 500 });
     }
 };
