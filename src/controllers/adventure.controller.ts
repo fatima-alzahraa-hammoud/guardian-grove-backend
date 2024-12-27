@@ -7,7 +7,7 @@ import mongoose from 'mongoose';
 import { checkId } from '../utils/checkId';
 
 // API to create new adventure
-export const createAdventure = async (req: Request, res: Response) => {
+export const createAdventure = async (req: Request, res: Response): Promise<void> => {
     try {
 
         const data = req.body;
@@ -34,7 +34,7 @@ export const createAdventure = async (req: Request, res: Response) => {
 };
 
 // Get all adventures
-export const getAllAdventures = async (req: Request, res: Response) => {
+export const getAllAdventures = async (req: Request, res: Response): Promise<void> => {
     try {
         const adventures = await Adventure.find();
 
@@ -49,7 +49,7 @@ export const getAllAdventures = async (req: Request, res: Response) => {
 };
 
 // Get adventure by ID
-export const getAdventureById = async (req: Request, res: Response) => {
+export const getAdventureById = async (req: Request, res: Response): Promise<void> => {
     try {
         const {adventureId} = req.body;
 
@@ -64,7 +64,7 @@ export const getAdventureById = async (req: Request, res: Response) => {
     }
 };
 
-export const updateAdventure = async (req: Request, res: Response) => {
+export const updateAdventure = async (req: Request, res: Response): Promise<void> => {
     try{
 
         const {adventureId} = req.body;
@@ -91,7 +91,7 @@ export const updateAdventure = async (req: Request, res: Response) => {
     }
 }
 
-export const deleteAdventure = async(req:Request, res: Response) => {
+export const deleteAdventure = async(req:Request, res: Response): Promise<void> => {
     try {
 
         const {adventureId} = req.body;
