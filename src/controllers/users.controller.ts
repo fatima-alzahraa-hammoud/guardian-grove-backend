@@ -6,6 +6,7 @@ import { CustomRequest } from '../interfaces/customRequest';
 import { checkId } from '../utils/checkId';
 import { Adventure } from '../models/adventure.model';
 import { IAdventureProgress } from '../interfaces/IAdventureProgress';
+import { Family } from '../models/family.model';
 
 // API to get all users
 export const getUsers = async(req: Request, res: Response): Promise<void> => {
@@ -116,9 +117,27 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        const user = await User.create({...data, email:email , password: hashedPassword});
+        // Find the parent's family
+        const family = await Family.findOne({ email: req.user.email });
+        if (!family) {
+            return throwError({ message: "Family not found.", res, status: 404 });
+        }
 
-        res.status(200).send({message: "Retrieving user successfully", user: user });
+        // Create the user with the parent's familyId
+        const user = await User.create({
+            ...data,
+            email: email,
+            password: hashedPassword,
+            familyId: family._id  // Link to parent's family
+        });
+
+        // Add the new user to the family's members list
+        if (!family.members.includes(user.id)) {
+            family.members.push({_id: user.id, role, name});
+            await family.save();
+        }
+        res.status(200).send({message: "Creating user successfully", user: user });
+
     }catch(error){
         if (error instanceof Error) {
             // Handle MongoDB duplicate key error (11000)
