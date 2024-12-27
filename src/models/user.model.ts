@@ -54,6 +54,7 @@ const adventureProgressSchema = new Schema<IAdventureProgress>({
 } , { _id: false });
 
 const userSchema = new Schema<IUser>({
+    _id: { type: Schema.Types.ObjectId, auto: true },
     name: {type: String, required: true },
     email: {type: String, required: [true, "Email is required"],  match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, "Email is invalid",]},
     password: {type: String, required: true},

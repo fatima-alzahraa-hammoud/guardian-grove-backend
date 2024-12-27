@@ -5,6 +5,8 @@ import { User } from "../models/user.model";
 import { createUser } from "./users.controller";
 import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
+import { Family } from "../models/family.model";
+import { Types } from "mongoose";
 
 dotenv.config();
 
@@ -52,19 +54,11 @@ export const login = async ( req: Request, res: Response) : Promise<void> => {
 export const register = async (req: Request, res: Response) : Promise<void> => {
     try{
         const data = req.body;
-        const { name, email, password, confirmPassword, birthday, gender, role, avatar, interests } = data;
+        const { name, email, password, confirmPassword, birthday, gender, role, avatar, interests, familyName } = data;
         
         // verify all fields are filled
-        if (!name || !email || !password || !confirmPassword || !birthday || !gender || !role || !avatar || !interests) {
+        if (!name || !email || !password || !confirmPassword || !birthday || !gender || !role || !avatar || !interests || !familyName) {
             return throwError({ message: "All required fields must be filled.", res, status: 400});
-        }
-
-        const existingUser = await User.findOne({
-            email: email, 
-        });
-
-        if(existingUser){
-            return throwError({ message: "Family with this email exists", res, status: 400 });
         }
 
         if (password !== confirmPassword){
@@ -112,8 +106,40 @@ export const register = async (req: Request, res: Response) : Promise<void> => {
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        const newUser = await User.create({...data, password: hashedPassword});
-        
+
+         // Family Assignment
+         let family = await Family.findOne({ email });
+
+         if (!family) {
+            family = new Family({
+                familyName: familyName,
+                email,
+                members: [],
+                createdAt: new Date()
+            });
+            await family.save();
+        }
+        else{
+            if (family.familyName !== familyName){
+                return throwError({ message: "Wrong family name", res, status: 400 })
+            }
+        }
+
+        // Check if a family member with the same name already exists
+        const existingFamilyMember = await User.findOne({ name, familyId: family._id });
+        if (existingFamilyMember) {
+            return throwError({ message: "A member with this name already exists in the family.", res, status: 400 });
+        }
+
+        // Create the user and link to family
+        const newUser = await User.create({...data, password: hashedPassword, familyId: family._id}); 
+
+        // Add user to the family members list if not already present
+        if (!family.members.includes(newUser.id)) {
+            family.members.push({_id: newUser.id, role, name});
+            await family.save();
+        }
+
 
         if (!JWT_SECRET_KEY) {
             return throwError({ message: "JWT_SECRET_KEY is not defined", res, status: 500 });
@@ -124,6 +150,7 @@ export const register = async (req: Request, res: Response) : Promise<void> => {
         res.status(200).send({newUser, token});
 
     }catch(error){
+        console.error(error); 
         return throwError({ message: "Something went wrong while registering.", res, status: 500});
     }
 }  

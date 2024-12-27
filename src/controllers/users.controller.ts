@@ -464,7 +464,7 @@ export const startAdventure = async (req: CustomRequest, res: Response): Promise
         const userId = req.user._id;
 
         if(!checkId({id: adventureId, res})) return;
-        if(!checkId({id: userId, res})) return;
+        if(!checkId({id: userId.toString(), res})) return;
 
         // Find the adventure by adventureId
         const adventure = await Adventure.findById(adventureId);

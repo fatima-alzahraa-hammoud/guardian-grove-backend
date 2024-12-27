@@ -7,11 +7,12 @@ const familySchema = new Schema<IFamily>({
     familyName: { type: String, required: true, unique: true },
     members: [
         {
-            type: Types.ObjectId,
-            ref: "User",
-            required: true,
+            _id: { type: Types.ObjectId, ref: "User", required: true },
+            name: { type: String, required: true },
+            role: { type: String, required: true, enum: ['parent', 'grandparent', 'admin', 'child'] },
         },
     ],
+
     email: { type: String, required:true, unique: true},
     createdAt: {type: Date, required: true},
 });

@@ -4,7 +4,11 @@ import { IUser } from "./IUser";
 export interface IFamily extends Document {
     _id: Types.ObjectId;
     familyName: string;
-    members: Pick<IUser, "_id" | "name" | "role">[];
+    members: Array<{
+        _id: Types.ObjectId;
+        name: string;
+        role: string;
+    }>;
     email: string;
     createdAt: Date;
 }

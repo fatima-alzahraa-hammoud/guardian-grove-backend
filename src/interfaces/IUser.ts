@@ -7,7 +7,7 @@ import { INote } from "./INote";
 import { IGoal } from "./IGoal";
 
 export interface IUser extends Document{
-    _id: string;
+    _id: Types.ObjectId;
     name: string;
     email: string;
     password: string;
