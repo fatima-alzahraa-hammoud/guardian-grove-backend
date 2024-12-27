@@ -1,6 +1,6 @@
 import express from "express";
 import { authMiddleware } from "../middlewares/auth.middleware";
-import { createGoal, createTask, deleteGoal, getGoalById, getGoals, getTaskById, updateGoal, updateTask } from "../controllers/goal.controller";
+import { createGoal, createTask, deleteGoal, deleteTask, getGoalById, getGoals, getTaskById, updateGoal, updateTask } from "../controllers/goal.controller";
 
 const router =  express.Router();
 
@@ -14,5 +14,6 @@ router.delete("/", authMiddleware, deleteGoal);
 router.post("/task", authMiddleware, createTask);
 router.get("/task", authMiddleware, getTaskById);
 router.put("/task", authMiddleware, updateTask);
+router.delete("/task", authMiddleware, deleteTask);
 
 export default router;
