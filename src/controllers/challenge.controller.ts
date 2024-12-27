@@ -6,7 +6,7 @@ import { checkId } from '../utils/checkId';
 import { IChallenge } from '../interfaces/IChallenge';
 
 // API to create challenges
-export const createChallenge = async(req: Request, res: Response) => {
+export const createChallenge = async(req: Request, res: Response): Promise<void> => {
     try{
         const {adventureId, title, content, starsReward, coinsReward} = req.body;
 
@@ -30,14 +30,14 @@ export const createChallenge = async(req: Request, res: Response) => {
 
         adventure.challenges.push(challenge);
         await adventure.save();
-        res.status(201).json(challenge);
+        res.status(201).json({ message: 'Challenge created successfully', Challenge: challenge});
     }catch(error) {
         return throwError({ message: "An unknown error occurred while creating.", res, status: 500 });
     }
 };
 
 // API to get all challenges
-export const getAllChallenges = async(req: Request, res: Response) => {
+export const getAllChallenges = async(req: Request, res: Response): Promise<void> => {
     try{
         const { adventureId } = req.body;
         if(!checkId({id: adventureId, res})) return;
@@ -47,14 +47,14 @@ export const getAllChallenges = async(req: Request, res: Response) => {
         if (!adventure) 
             return throwError({ message: "Adventure not found", res, status: 404});
     
-        res.status(200).json(adventure.challenges);    
+        res.status(200).json({ message: 'Retrieving challenges successfully', Challenges: adventure.challenges});
     }catch(error){
         return throwError({ message: "An unknown error occurred while getting all challenges.", res, status: 500 });
     }
 }
 
 // API to get challenges by id
-export const getChallengeById = async(req: Request, res: Response) => {
+export const getChallengeById = async(req: Request, res: Response): Promise<void> => {
     try{
         const { adventureId, challengeId } = req.body;
         if(!checkId({id: adventureId, res})) return;
@@ -70,14 +70,14 @@ export const getChallengeById = async(req: Request, res: Response) => {
             return throwError({ message: "Challenge not found", res, status: 404 });
         }
 
-        res.status(200).json(challenge);    
+        res.status(200).json({ message: 'Retrieving challenge successfully', Challenges: challenge});
     }catch(error){
         return throwError({ message: "An unknown error occurred while getting challenge.", res, status: 500 });
     }
 }
 
 // API to update challenges
-export const updateChallege = async(req: Request, res: Response) => {
+export const updateChallege = async(req: Request, res: Response): Promise<void> => {
     try{
         const { adventureId, challengeId } = req.body;
         if(!checkId({id: adventureId, res})) return;
@@ -103,21 +103,21 @@ export const updateChallege = async(req: Request, res: Response) => {
         Object.assign(challenge, updateData);
 
         await adventure.save();
-        res.status(200).json(challenge);
+        res.status(200).json({ message: 'Updating challenge successfully', Challenges: challenge});
+
     }catch(error){
-        return throwError({ message: "An unknown error occurred while getting all challenges.", res, status: 500 });
+        return throwError({ message: "An unknown error occurred while updating challenge.", res, status: 500 });
     }
 };
 
 // API to delete challenge
-export const deleteChallenge = async(req:Request, res: Response) => {
+export const deleteChallenge = async(req:Request, res: Response): Promise<void> => {
     try {
 
         const {adventureId, challengeId} = req.body;
 
         if(!checkId({id: adventureId, res})) return;
         if(!checkId({id: challengeId, res})) return;
-
 
         const adventure = await Adventure.findById(adventureId);
         if (!adventure) 
