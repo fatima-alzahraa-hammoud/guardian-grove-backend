@@ -117,3 +117,35 @@ export const updateNote = async (req: Request, res: Response) => {
         return throwError({ message: "Error updating notes", res, status: 500 });
     }
 };
+
+//API to delete note
+export const deleteNote = async (req: Request, res: Response) => {
+    try {
+        const { userId, noteId } = req.body;
+
+        if(!checkId({id: noteId, res})) return;
+        if(!checkId({id: userId, res})) return;
+
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return throwError({ message: "User not found", res, status: 404 });
+        }
+
+        const noteIndex = user.notes.findIndex(
+            (note) => note._id.toString() === noteId
+        );        
+        if (noteIndex === -1) {
+            return throwError({ message: "Note not found", res, status: 404 });
+        }
+
+        const [deletedNote] = user.notes.splice(noteIndex, 1);
+
+        await user.save();
+
+        res.status(200).json({ message: 'Note deleted successfully', DeletedNote: deletedNote });
+    } catch (error) {
+        console.error(error);
+        return throwError({message: "Error deleting note", res, status: 500});
+    }
+};
