@@ -85,7 +85,7 @@ export const startNewChat = async (req: CustomRequest, res: Response) => {
     }
 };
 
-// Send message and receive bot response
+//API to send message and receive bot response
 export const sendMessage = async (req: CustomRequest, res: Response) => {
     try {
 
@@ -131,5 +131,24 @@ export const sendMessage = async (req: CustomRequest, res: Response) => {
     } catch (err) {
         console.error(err);
         return throwError({ message: "Error sending message!", res, status: 500 });
+    }
+};
+
+//API to get all chats for user
+export const getUserChats = async (req: CustomRequest, res: Response) => {
+
+    try {
+        if(!req.user){
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+        const userId = req.user._id;
+
+        const chats = await Chat.find({ userId }).select("title createdAt updatedAt");
+
+        res.status(200).send({ message: 'Chats retrieved successfully', chats: chats });
+        
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Error fetching chats!");
     }
 };
