@@ -196,13 +196,13 @@ export const updateFamilyGoal = async (req: CustomRequest, res: Response): Promi
 };
 
 // Get all goals for a specific family
-const getFamilyGoals = async (req: Request, res: Response) => {
+export const getFamilyGoals = async (req: Request, res: Response): Promise<void> => {
     try {
         const { familyId } = req.body;
 
         const family = await Family.findById(familyId);
         if (!family) {
-            return res.status(404).json({ message: 'Family not found' });
+            return throwError({ message: "Family not found", res, status: 404 });
         }
 
         res.status(200).json({ message: 'Family goals retrieved', goals: family.goals });
