@@ -199,6 +199,7 @@ export const updateFamilyGoal = async (req: CustomRequest, res: Response): Promi
 export const getFamilyGoals = async (req: Request, res: Response): Promise<void> => {
     try {
         const { familyId } = req.body;
+        if(!checkId({id: familyId, res})) return;
 
         const family = await Family.findById(familyId);
         if (!family) {
@@ -212,10 +213,13 @@ export const getFamilyGoals = async (req: Request, res: Response): Promise<void>
 };
 
 //API to delete a specific goal from the family
-const deleteFamilyGoal = async (req: Request, res: Response) => {
-    const { familyId, goalId } = req.params;
-
+export const deleteFamilyGoal = async (req: Request, res: Response) => {
     try {
+        const { familyId, goalId } = req.body;
+
+        if(!checkId({id: familyId, res})) return;
+        if(!checkId({id: goalId, res})) return;
+
         const family = await Family.findById(familyId);
         if (!family) {
             return throwError({ message: "Family not found", res, status: 404 });
@@ -223,14 +227,14 @@ const deleteFamilyGoal = async (req: Request, res: Response) => {
 
         const goalIndex = family.goals.findIndex(goal => goal._id.toString() === goalId);
         if (goalIndex === -1) {
-            return res.status(404).json({ message: 'Goal not found' });
+            return throwError({ message: "Goal not found", res, status: 404 });
         }
 
         family.goals.splice(goalIndex, 1);
         await family.save();
 
-        res.status(200).json({ message: 'Goal deleted successfully' });
+        res.status(200).json({ message: 'Goal deleted successfully', family });
     } catch (error) {
-        res.status(500).json({ message: 'Internal server error' });
+        return throwError({ message: "Error deleting family goal", res, status: 500 });
     }
 };
