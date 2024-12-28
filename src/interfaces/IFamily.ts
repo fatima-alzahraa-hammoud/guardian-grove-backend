@@ -1,5 +1,8 @@
 import { Document, Types } from "mongoose";
 import { IUser } from "./IUser";
+import { INotification } from "./INotification";
+import { IGoal } from "./IGoal";
+import { IAchievement } from "./IAchievements";
 
 export interface IFamily extends Document {
     _id: Types.ObjectId;
@@ -11,4 +14,7 @@ export interface IFamily extends Document {
     }>;
     email: string;
     createdAt: Date;
+    notifications: INotification[];
+    goals: IGoal[];
+    achievements: IAchievement[];  
 }

@@ -1,6 +1,9 @@
 import { Schema, model, Types } from "mongoose";
 import { IFamily } from "../interfaces/IFamily";
 import { User } from "./user.model";
+import { goalSchema } from "./schemas/goal.schema";
+import { notificationSchema } from "./schemas/notification.schema";
+import { unlockedAchievementSchema } from "./schemas/unlockedAchievementSchema.schema";
 
 const familySchema = new Schema<IFamily>({
     _id: { type: Schema.Types.ObjectId, auto: true },
@@ -15,6 +18,10 @@ const familySchema = new Schema<IFamily>({
 
     email: { type: String, required:true, unique: true},
     createdAt: {type: Date, required: true},
+
+    notifications: { type: [notificationSchema], default: [] },
+    goals: { type: [goalSchema], default: [] },
+    achievements: { type: [unlockedAchievementSchema], default: [] },
 });
 
 // Virtual for calculating total stars
