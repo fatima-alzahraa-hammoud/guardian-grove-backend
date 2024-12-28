@@ -125,13 +125,22 @@ export const getLockedAchievements = async (req: CustomRequest, res: Response): 
         }
 
         const user = req.user;
-
-        const allAchievements = await Achievement.find();
-        const lockedAchievements = allAchievements.filter(
-            (achievement) => !user.achievements.some(
-                (userAchievement) => userAchievement.achievementId.toString() === achievement._id.toString()
-            )
+        
+        const personalUnlockedAchievements = user.achievements.map((userAchievement) => 
+            userAchievement.achievementId.toString()
         );
+
+        const family = await Family.findById(user.familyId);
+        
+        const familyUnlockedAchievements = family ? family.achievements.map((familyAchievement) => 
+            familyAchievement.achievementId.toString()
+        ) : [];
+
+        const unlockedAchievements = [...personalUnlockedAchievements, ...familyUnlockedAchievements];
+
+        const lockedAchievements = await Achievement.find({
+            _id: { $nin: unlockedAchievements },
+        });
 
         res.status(200).json({message: "Getting locked achievements Successfully", achievements: lockedAchievements });
     } catch (error) {
