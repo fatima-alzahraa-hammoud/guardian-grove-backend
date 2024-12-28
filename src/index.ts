@@ -10,6 +10,7 @@ import notificationRoutes from "./routes/notification.routes";
 import noteRoutes from "./routes/note.routes";
 import goalRoutes from "./routes/goal.routes";
 import familyRoutes from "./routes/family.routes";
+import chatRoutes from "./routes/chat.routes";
 
 dotenv.config();
 
@@ -27,6 +28,7 @@ app.use("/userNotifications", notificationRoutes);
 app.use("/userNotes", noteRoutes);
 app.use("/userGoals", goalRoutes);
 app.use("/family", familyRoutes);
+app.use("/chat", chatRoutes);
 
 app.listen(port, () =>{
     console.log("server is running on port 8080");
