@@ -5,6 +5,7 @@ import { CustomRequest } from "../interfaces/customRequest";
 import { User } from "../models/user.model";
 import { checkId } from "../utils/checkId";
 import { Types } from "mongoose";
+import { Family } from "../models/family.model";
 
 //API to get notifications based on type
 export const getNotifications = async (req: CustomRequest, res: Response): Promise<void> => {
@@ -19,12 +20,18 @@ export const getNotifications = async (req: CustomRequest, res: Response): Promi
 
         const { category } = req.query;
 
-        let notifications;
+        let notifications = user.notifications;
 
+        // Fetch family notifications
+        const family = await Family.findById(user.familyId);
+        if (family) {
+            const familyNotifications = family.notifications;
+            notifications = [...notifications, ...familyNotifications];
+        }
+
+        // Filter by category if provided
         if (category && category !== "All") {
-            notifications = user.notifications.filter(n => n.category === category); 
-        } else {
-            notifications = user.notifications; 
+            notifications = notifications.filter(n => n.category === category);
         }
 
         if (notifications.length === 0) {
