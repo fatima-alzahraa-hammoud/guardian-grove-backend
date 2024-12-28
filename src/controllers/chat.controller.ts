@@ -9,18 +9,21 @@ import { IMessage } from "../interfaces/IMessage";
 export const sendMessage = async (req: CustomRequest, res: Response) => {
 
     try{
-
         if(!req.user){
             return throwError({ message: "Unauthorized", res, status: 401 });
         }
     
         const { chatId, sender, message, image, title } = req.body;
     
+        if (!sender || (!image && !message)) {
+            return throwError({ message: "All required fields must be filled.", res, status: 400});
+        }
+
         let chat;
     
         if(chatId){ 
             if (!checkId({id: chatId, res})) return;
-            chat = await Chat.findOne({ chatId });
+            chat = await Chat.findOne({ _id: chatId });
         }
             
         // If no id exists, create a new one with the provided title
