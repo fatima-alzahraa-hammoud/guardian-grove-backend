@@ -1,7 +1,7 @@
 import express from "express";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { adminMiddleware } from "../middlewares/adminMiddleware";
-import { createFamilyTasks, deleteFamily, deleteFamilyGoal, deleteFamilyTask, getAllFamilies, getFamily, getFamilyGoals, getFamilyMembers, updateFamily, updateFamilyGoal, updateFamilyTask } from "../controllers/family.controller";
+import { createFamilyTasks, deleteFamily, deleteFamilyGoal, deleteFamilyTask, getAllFamilies, getFamily, getFamilyGoals, getFamilyMembers, getFamilyTaskById, updateFamily, updateFamilyGoal, updateFamilyTask } from "../controllers/family.controller";
 
 const router =  express.Router();
 
@@ -20,5 +20,6 @@ router.delete("/goal", authMiddleware, deleteFamilyGoal);
 router.post("/goal/task", authMiddleware, createFamilyTasks);
 router.put("/goal/task", authMiddleware, updateFamilyTask);
 router.delete("/goal/task", authMiddleware, deleteFamilyTask);
+router.get("/goal/task", authMiddleware, getFamilyTaskById);
 
 export default router;
