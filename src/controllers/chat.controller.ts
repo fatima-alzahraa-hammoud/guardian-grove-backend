@@ -6,7 +6,7 @@ import { checkId } from "../utils/checkId";
 import { IMessage } from "../interfaces/IMessage";
 
 //API to send messages and save (and create new chat if no chat exists)
-export const sendMessage = async (req: CustomRequest, res: Response) => {
+/*export const sendMessage = async (req: CustomRequest, res: Response) => {
 
     try{
         if(!req.user){
@@ -53,5 +53,34 @@ export const sendMessage = async (req: CustomRequest, res: Response) => {
     
     }catch(error){
         return throwError({ message: "Error occured while sending message or creating chat", res, status: 500 });
+    }
+};*/
+
+// Create a new chat
+export const startNewChat = async (req: CustomRequest, res: Response) => {
+    try {
+
+        if(!req.user){
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+    
+        const userId = req.user._id;
+        const { sender, message, title, image } = req.body;
+
+        if (!sender || (!image && !message)) {
+            return throwError({ message: "All required fields must be filled.", res, status: 400});
+        }
+
+        const newChat = new Chat({
+            userId,
+            title: title || message.substring(0, 40),
+            messages: [{ sender: sender, message: message , image: image}]
+        });
+
+        const savedChat = await newChat.save();
+        res.status(201).send({ message: 'Chat started and message sent', chat: savedChat });
+    } catch (err) {
+        console.error(err);
+        return throwError({ message: "Error starting chat!", res, status: 500 });
     }
 };
