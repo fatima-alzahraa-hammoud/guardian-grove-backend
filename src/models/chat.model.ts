@@ -1,5 +1,6 @@
 import { Schema, model, Types } from "mongoose";
 import { IMessage } from "../interfaces/IMessage";
+import { IChat } from "../interfaces/IChat";
 
 const messageSchema = new Schema<IMessage>({
   sender: { type: String, enum: ['user', 'bot'], required: true },
@@ -7,3 +8,9 @@ const messageSchema = new Schema<IMessage>({
   timestamp: { type: Date, default: Date.now },
 }, { _id: false });
 
+const chatSchema = new Schema<IChat>({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  messages: { type: [messageSchema], default: [] },
+}, { timestamps: true });
+
+export const Chat = model<IChat>('Chat', chatSchema);
