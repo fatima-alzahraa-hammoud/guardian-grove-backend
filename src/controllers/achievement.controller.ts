@@ -7,6 +7,7 @@ import { CustomRequest } from "../interfaces/customRequest";
 import { checkId } from "../utils/checkId";
 import { IAchievement } from "../interfaces/IAchievements";
 import { User } from "../models/user.model";
+import { Family } from "../models/family.model";
 
 // API to create new achievement
 export const createAchievement = async (req: Request, res: Response): Promise<void> => {
@@ -81,6 +82,10 @@ export const deleteAchievement = async(req:Request, res: Response): Promise<void
             { $pull: { achievements: { achievementId } } }
         );
 
+        await Family.updateMany(
+            { 'achievements.achievementId': achievementId },
+            { $pull: { achievements: { achievementId } } }
+        );
 
         res.status(200).json({ message: "Achievement deleted successfully", achievement });
     } catch (error) {
