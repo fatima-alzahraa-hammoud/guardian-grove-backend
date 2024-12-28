@@ -28,7 +28,7 @@ app.use("/userNotifications", notificationRoutes);
 app.use("/userNotes", noteRoutes);
 app.use("/userGoals", goalRoutes);
 app.use("/family", familyRoutes);
-app.use("/chat", chatRoutes);
+app.use("/chats", chatRoutes);
 
 app.listen(port, () =>{
     console.log("server is running on port 8080");

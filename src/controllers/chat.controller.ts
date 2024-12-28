@@ -136,7 +136,6 @@ export const sendMessage = async (req: CustomRequest, res: Response) => {
 
 //API to get all chats for user
 export const getUserChats = async (req: CustomRequest, res: Response) => {
-
     try {
         if(!req.user){
             return throwError({ message: "Unauthorized", res, status: 401 });
@@ -146,9 +145,31 @@ export const getUserChats = async (req: CustomRequest, res: Response) => {
         const chats = await Chat.find({ userId }).select("title createdAt updatedAt");
 
         res.status(200).send({ message: 'Chats retrieved successfully', chats: chats });
-        
+
     } catch (err) {
         console.error(err);
         res.status(500).send("Error fetching chats!");
+    }
+};
+
+// Get chat by ID
+export const getChatById = async (req: CustomRequest, res: Response) => {
+    try {
+        if(!req.user){
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+        const userId = req.user._id;
+
+        const { chatId } = req.body;
+
+        const chat = await Chat.findOne({ _id: chatId, userId });
+        if (!chat) {
+            return throwError({ message: "Chat not found!", res, status: 404 });
+        }
+
+        res.status(200).send({ message: 'Chat retrieved successfully', chat: chat});
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Error fetching chat!");
     }
 };
