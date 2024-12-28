@@ -14,7 +14,7 @@ export const createAchievement = async (req: Request, res: Response): Promise<vo
 
         const data = req.body;
 
-        const { title, description, starsReward, coinsReward, criteria, photo } = data;
+        const { title, description, starsReward, coinsReward, criteria, photo, type } = data;
         if (!title || !description || !criteria || !photo) {
             return throwError({ message: "All required fields must be filled.", res, status: 400});
         }
@@ -25,7 +25,8 @@ export const createAchievement = async (req: Request, res: Response): Promise<vo
             starsReward: starsReward || 0,
             coinsReward: coinsReward || 0, 
             criteria,
-            photo
+            photo,
+            type: type || 'personal'
         });
 
         await newAchievement.save();
