@@ -390,3 +390,80 @@ export const getFamilyTaskById = async(req: Request, res: Response): Promise<voi
         return throwError({ message: "An unknown error occurred while getting task.", res, status: 500 });
     }
 }
+
+//API to complete family task
+export const completeFamilyTask = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+        const { familyId, goalId, taskId } = req.body;
+
+        if (!checkId({ id: familyId, res }) || !checkId({ id: goalId, res }) || !checkId({ id: taskId, res })) {
+            return;
+        }
+
+        const family = await Family.findById(familyId);
+        if (!family) {
+            return throwError({ message: "Family not found", res, status: 404 });
+        }
+
+        const goal = family.goals.find(goal => goal._id.toString() === goalId);
+        if (!goal) {
+            return throwError({ message: "Goal not found", res, status: 404 });
+        }
+
+        const task = goal.tasks.find(task => task._id.toString() === taskId);
+        if (!task) {
+            return throwError({ message: "Task not found", res, status: 404 });
+        }
+
+        // Mark the task as completed
+        if (task.isCompleted) {
+            return throwError({ message: "Task already completed", res, status: 400 });
+        }
+        task.isCompleted = true;
+
+        for (const member of family.members) {
+            const user = await User.findById(member._id);
+            if (user) {
+                user.coins += task.rewards.coins;
+                user.stars += task.rewards.stars;
+                await user.save();
+            }
+        }
+
+        goal.progress = (goal.tasks.filter(task => task.isCompleted).length / goal.tasks.length) * 100;
+
+        // Check if all tasks in the goal are completed
+        const allTasksCompleted = goal.tasks.every(task => task.isCompleted);
+        if (allTasksCompleted) {
+            goal.isCompleted = true;
+
+            // Reward user with coins and stars
+            for (const member of family.members) {
+                const user = await User.findById(member._id);
+                if (user) {
+                    user.coins += goal.rewards.coins;
+                    user.stars += goal.rewards.stars;
+                    await user.save();
+                }
+            }
+
+            // Unlock Achievement if available
+            if (goal.rewards.achievementId) {
+                const achievement = await Achievement.findById(goal.rewards.achievementId);
+                if (!achievement) {
+                    return throwError({ message: "Achievement not found", res, status: 404 });
+                }
+                family.achievements.push({achievementId: achievement._id, unlockedAt: new Date(),});
+
+                res.status(200).json({ message: "Achievement unlocked successfully", achievement });
+            }
+        }
+
+        await family.save();
+
+        res.status(200).json({ message: "Task marked as done", task, goal });
+    } catch (error) {
+        console.error(error);
+        return throwError({ message: "Error marking task as done", res, status: 500 });
+    }
+};

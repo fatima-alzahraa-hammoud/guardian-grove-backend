@@ -3,6 +3,7 @@ import { IUser } from "./IUser";
 import { INotification } from "./INotification";
 import { IGoal } from "./IGoal";
 import { IAchievement } from "./IAchievements";
+import { IUnlockedAchievement } from "./IUnlockedAchievement";
 
 export interface IFamily extends Document {
     _id: Types.ObjectId;
@@ -16,5 +17,5 @@ export interface IFamily extends Document {
     createdAt: Date;
     notifications: INotification[];
     goals: IGoal[];
-    achievements: IAchievement[];  
+    achievements: IUnlockedAchievement[];  
 }
