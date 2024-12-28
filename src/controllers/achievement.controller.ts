@@ -125,7 +125,7 @@ export const getLockedAchievements = async (req: CustomRequest, res: Response): 
         }
 
         const user = req.user;
-        
+
         const personalUnlockedAchievements = user.achievements.map((userAchievement) => 
             userAchievement.achievementId.toString()
         );
@@ -143,6 +143,45 @@ export const getLockedAchievements = async (req: CustomRequest, res: Response): 
         });
 
         res.status(200).json({message: "Getting locked achievements Successfully", achievements: lockedAchievements });
+    } catch (error) {
+        throwError({ message: "An error occurred while fetching locked achievements.", res, status: 500 });
+    }
+};
+
+// API to get unlocked achievements
+export const getUnLockedAchievements = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+
+        if (!req.user) {
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+
+        const user = req.user;
+        
+        const personalUnlockedAchievements = user.achievements.map((userAchievement) => 
+            userAchievement.achievementId.toString()
+        );
+
+        const family = await Family.findById(user.familyId);
+        
+        const familyUnlockedAchievements = family ? family.achievements.map((familyAchievement) => 
+            familyAchievement.achievementId.toString()
+        ) : [];
+
+        const unlockedAchievementIds = [
+            ...personalUnlockedAchievements, 
+            ...familyUnlockedAchievements
+        ];
+
+        const unlockedAchievements = await Achievement.find({
+            _id: { $in: unlockedAchievementIds }
+        });
+
+        if (unlockedAchievements.length === 0) {
+            return throwError({ message: "No unlocked achievements found", res, status: 404 });
+        }
+
+        res.status(200).json({message: "Getting locked achievements Successfully", achievements: unlockedAchievements });
     } catch (error) {
         throwError({ message: "An error occurred while fetching locked achievements.", res, status: 500 });
     }
