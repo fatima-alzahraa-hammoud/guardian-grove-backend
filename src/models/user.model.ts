@@ -7,6 +7,7 @@ import { INotification } from "../interfaces/INotification";
 import { INote } from "../interfaces/INote";
 import { goalSchema } from "./schemas/goal.schema";
 import { notificationSchema } from "./schemas/notification.schema";
+import { unlockedAchievementSchema } from "./schemas/unlockedAchievementSchema.schema";
 
 const noteSchema: Schema = new Schema<INote>({
     _id: { type: Schema.Types.ObjectId, auto: true },
@@ -22,12 +23,6 @@ const purchasedItemSchema = new Schema<IPurchasedItem>({
     itemId: { type: Schema.Types.ObjectId, ref: "StoreItem", required: true },
     purchasedAt: { type: Date, default: Date.now },
 }, { _id: false });
-
-const unlockedAchievementSchema = new Schema<IUnlockedAchievement>({
-    achievementId: { type: Schema.Types.ObjectId, ref: "Achievement", required: true },
-    unlockedAt: { type: Date, default: Date.now },
-}, {_id: false});
-
 
 const challengeProgressSchema = new Schema<IChallengeProgress>({
     challengeId: { type: Schema.Types.ObjectId, required: true },

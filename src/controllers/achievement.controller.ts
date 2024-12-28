@@ -94,12 +94,20 @@ export const deleteAchievement = async(req:Request, res: Response): Promise<void
 }
 
 // API to get all achievements
-export const getAllAchievements = async (req: Request, res: Response): Promise<void> => {
+export const getAchievements = async (req: Request, res: Response): Promise<void> => {
     try {
-        const achievements = await Achievement.find();
+        const { type } = req.query;
+        
+        let query: Record<string, any> = {};
 
-        if(!achievements){
-            return throwError({message: "No achievements found", res, status: 400});
+        if (type && type !== "All") {
+            query.type = type; 
+        }
+
+        const achievements = await Achievement.find(query);
+
+        if (achievements.length === 0) {
+            return throwError({message: "No achievements found", res, status: 404});
         }
 
         res.status(200).json({message: "Getting all achievements Successfully", achievements});
