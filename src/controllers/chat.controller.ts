@@ -173,3 +173,29 @@ export const getChatById = async (req: CustomRequest, res: Response) => {
         res.status(500).send("Error fetching chat!");
     }
 };
+
+//API to delete a chat
+export const deleteChat = async (req: CustomRequest, res: Response) => {
+
+    try{
+        if(!req.user){
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+
+        const { chatId } = req.body;
+
+        if (!checkId({id: chatId, res})) return;
+
+        const userId = req.user._id;
+    
+        const chat = await Chat.findByIdAndDelete({ _id: chatId, userId });
+        if (!chat) {
+            return throwError({ message: "Chat not found!", res, status: 404 });
+        }
+
+        res.status(200).send({ message: 'Chat deleted successfully!', chat: chat});
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Error deleting chat!");
+    }
+};
