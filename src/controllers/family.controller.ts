@@ -361,3 +361,32 @@ export const deleteFamilyTask = async (req: CustomRequest, res: Response): Promi
         return throwError({message: "Error deleting task", res, status: 500});
     }
 };
+
+
+//API to get family task by id
+export const getFamilyTaskById = async(req: Request, res: Response): Promise<void> => {
+    try{
+        const {familyId, taskId, goalId } = req.body;
+        if(!checkId({id: taskId, res})) return;
+        if(!checkId({id: goalId, res})) return;
+        if(!checkId({id: familyId, res})) return;
+
+        const family = await Family.findById(familyId);
+        if (!family) {
+            return throwError({ message: "family not found", res, status: 404 });
+        }
+
+        const goal = family.goals.find(goal => goal._id.toString() === goalId);
+        if (!goal) 
+            return throwError({ message: "Goal not found", res, status: 404});
+    
+        const task = goal.tasks.find(task => task._id.toString() === taskId);
+        if (!task) {
+            return throwError({ message: "Task not found", res, status: 404 });
+        }
+
+        res.status(201).json({ message: 'Retrieve task successfully', Task: task });
+    }catch(error){
+        return throwError({ message: "An unknown error occurred while getting task.", res, status: 500 });
+    }
+}
