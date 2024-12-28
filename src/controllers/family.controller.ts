@@ -5,6 +5,7 @@ import { User } from "../models/user.model";
 import { checkId } from "../utils/checkId";
 import { CustomRequest } from "../interfaces/customRequest";
 import { Achievement } from "../models/achievements.model";
+import { ITask } from "../interfaces/ITask";
 
 //API get all families
 export const getAllFamilies = async (req: Request, res: Response): Promise<void> => {
@@ -236,5 +237,42 @@ export const deleteFamilyGoal = async (req: Request, res: Response) => {
         res.status(200).json({ message: 'Goal deleted successfully', family });
     } catch (error) {
         return throwError({ message: "Error deleting family goal", res, status: 500 });
+    }
+};
+
+// API to create task for family goals
+export const createFamilyTasks = async(req: Request, res: Response): Promise<void> => {
+    try{
+        const {familyId, goalId, title, description, type, rewards} = req.body;
+
+        if(!checkId({id: goalId, res})) return;
+        if(!checkId({id: familyId, res})) return;
+
+        const family = await Family.findById(familyId);
+        if (!family) {
+            return throwError({ message: "Family not found", res, status: 404 });
+        }
+
+        const goal = family.goals.find(goal => goal._id.toString() === goalId);
+        if (!goal) 
+            return throwError({ message: "Goal not found", res, status: 404});
+
+        if (!title || !description || !type) {
+            return throwError({ message: "All required fields must be filled.", res, status: 400});
+        }
+
+        const newTask = ({
+            title,
+            description,
+            type,
+            rewards : rewards || {stars: 2, coins: 1},
+        } as ITask);
+
+        goal.tasks.push(newTask);
+        await family.save();
+
+        res.status(201).json({ message: 'Task created successfully', Task: newTask });
+    }catch(error) {
+        return throwError({ message: "An unknown error occurred while creating Task.", res, status: 500 });
     }
 };

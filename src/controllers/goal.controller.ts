@@ -173,7 +173,7 @@ export const getGoalById = async (req: CustomRequest, res: Response): Promise<vo
 }
 
 
-//API to update goal of a user
+//API to update goal for personal goals
 export const updateUserGoal = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
 
@@ -261,8 +261,8 @@ export const deleteGoal = async (req: CustomRequest, res: Response): Promise<voi
     }
 };
 
-// API to create task
-export const createTask = async(req: Request, res: Response): Promise<void> => {
+// API to create task for personal goals
+export const createUserTask = async(req: Request, res: Response): Promise<void> => {
     try{
         const {userId, goalId, title, description, type, rewards} = req.body;
 
