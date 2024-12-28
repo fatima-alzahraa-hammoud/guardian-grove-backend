@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { Request, response, Response } from "express";
 import { Chat } from "../models/chat.model";
 import { throwError } from "../utils/error";
 import { CustomRequest } from "../interfaces/customRequest";
@@ -82,5 +82,54 @@ export const startNewChat = async (req: CustomRequest, res: Response) => {
     } catch (err) {
         console.error(err);
         return throwError({ message: "Error starting chat!", res, status: 500 });
+    }
+};
+
+// Send message and receive bot response
+export const sendMessage = async (req: CustomRequest, res: Response) => {
+    try {
+
+        if(!req.user){
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+    
+        const userId = req.user._id;
+    
+        const { chatId, text, image } = req.body;
+        if (!checkId({id: chatId, res})) return;
+    
+        if (!image && !text) {
+            return throwError({ message: "All required fields must be filled.", res, status: 400});
+        }
+
+        const chat = await Chat.findOne({ _id: chatId, userId });
+        if (!chat){
+            return throwError({ message: "Chat not found!", res, status: 404 });
+        }
+
+        // Add user message
+        chat.messages.push({
+            sender: "user",
+            message: text,
+            image: image,
+            timestamp: new Date()
+        } as IMessage);
+
+        // Simulate bot response (you can integrate with OpenAI API here)
+        const botResponse = `AI: ${text}`;
+
+        chat.messages.push({
+            sender: "bot",
+            message: botResponse,
+            image: image,
+            timestamp: new Date()
+        } as IMessage);
+
+        await chat.save();
+        res.status(200).send({ message: 'AI response generated successfully and Chat saved', response: botResponse, chat: chat });
+        
+    } catch (err) {
+        console.error(err);
+        return throwError({ message: "Error sending message!", res, status: 500 });
     }
 };
