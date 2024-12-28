@@ -5,22 +5,22 @@ import { throwError } from "../utils/error";
 import { CustomRequest } from "../interfaces/customRequest";
 import { ITask } from "../interfaces/ITask";
 import { Achievement } from "../models/achievements.model";
+import { Family } from "../models/family.model";
+import { IGoal } from "../interfaces/IGoal";
 
 //API to create goal
 export const createGoal = async (req: Request, res: Response): Promise<void> => {
     try {
-        const {userId, title, description, type, dueDate, rewards } = req.body;
-        if(!checkId({id: userId, res})) return;
-        
-        const user = await User.findById(userId);
-        if (!user) {
-            return throwError({ message: "User not found", res, status: 404 });
-        }
+        let {familyId, userId, title, description, type, dueDate, rewards } = req.body;
 
-        if (!title || !description || !type) {
+        if (!title || !description) {
             return throwError({ message: "All required fields must be filled.", res, status: 400});
         }
 
+        if(!type){
+            type = 'personal';
+        }
+        
         if (rewards?.achievementId) {
             const achievement = await Achievement.findById(rewards.achievementId);
             if (!achievement) {
@@ -38,16 +38,41 @@ export const createGoal = async (req: Request, res: Response): Promise<void> => 
             tasks: [],
         });
 
-        const updatedUser = await User.findOneAndUpdate(
-            { _id: userId },
-            { $push: { goals: newGoal } },
-            { new: true }
-        );
+        if (type === "personal"){
+            if(!checkId({id: userId, res})) return;
+            
+            const user = await User.findById(userId);
+            if (!user) {
+                return throwError({ message: "User not found", res, status: 404 });
+            }
+            const updatedUser = await User.findOneAndUpdate(
+                { _id: userId },
+                { $push: { goals: newGoal } },
+                { new: true }
+            );
 
-        if (!updatedUser) {
-            return throwError({ message: "Failed to update user goals.", res, status: 500 });
+            if (!updatedUser) {
+                return throwError({ message: "Failed to update user goals.", res, status: 500 });
+            }
         }
+        else{
+            if(!checkId({id: familyId, res})) return;
 
+            const family = await Family.findById({_id: familyId});
+            if(!family){
+                return throwError({ message: "Family not found", res, status: 404 });
+            }
+            const updatedFamily = await Family.findOneAndUpdate(
+                { _id: familyId },
+                { $push: { goals: newGoal } },
+                { new: true }
+            );
+
+            if (!updatedFamily) {
+                return throwError({ message: "Failed to update family goals.", res, status: 500 });
+            }
+        }
+        
         res.status(201).json({ message: 'Goal created successfully', goal: newGoal});
     } catch (err) {
         return throwError({message: "An unknown error occurred while creating goal", res, status: 500});
