@@ -317,3 +317,47 @@ export const updateFamilyTask = async(req: Request, res: Response): Promise<void
         return throwError({ message: "An unknown error occurred while update task.", res, status: 500 });
     }
 };
+
+
+//API to delete task
+export const deleteFamilyTask = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+
+        if(!req.user || (req.user.role !== 'parent' && req.user.role !== 'admin' && req.user.role !== 'owner')){
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+
+        const { familyId, goalId, taskId } = req.body;
+
+        if(!checkId({id: goalId, res})) return;
+        if(!checkId({id: familyId, res})) return;
+        if(!checkId({id: taskId, res})) return;
+
+
+        const family = await Family.findById(familyId);
+        if (!family) {
+            return throwError({ message: "Family not found", res, status: 404 });
+        }
+
+        const goal = family.goals.find(goal => goal._id.toString() === goalId);
+        if (!goal) 
+            return throwError({ message: "Goal not found", res, status: 404});
+
+
+        const taskIndex = goal.tasks.findIndex(
+            (task) => task._id.toString() === taskId
+        );        
+        if (taskIndex === -1) {
+            return throwError({ message: "Task not found", res, status: 404 });
+        }
+
+        const [deletedTask] = goal.tasks.splice(taskIndex, 1);
+
+        await family.save();
+
+        res.status(200).json({ message: 'Task deleted successfully', DeletedTask: deletedTask });
+    } catch (error) {
+        console.error(error);
+        return throwError({message: "Error deleting task", res, status: 500});
+    }
+};
