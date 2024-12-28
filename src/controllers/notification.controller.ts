@@ -17,12 +17,12 @@ export const getNotifications = async (req: CustomRequest, res: Response): Promi
 
         const user = req.user;
 
-        const { type } = req.query;
+        const { category } = req.query;
 
         let notifications;
 
-        if (type && type !== "All") {
-            notifications = user.notifications.filter(n => n.type === type); 
+        if (category && category !== "All") {
+            notifications = user.notifications.filter(n => n.category === category); 
         } else {
             notifications = user.notifications; 
         }
@@ -40,7 +40,7 @@ export const getNotifications = async (req: CustomRequest, res: Response): Promi
 export const sendNotification = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
 
-        const { userId, title, message, type } = req.body;
+        const { userId, title, message, category } = req.body;
         
         if(!checkId({id: userId, res})) return;
 
@@ -49,17 +49,17 @@ export const sendNotification = async (req: CustomRequest, res: Response): Promi
             return throwError({ message: "User not found", res, status: 404 });
         }
 
-        if (!type || !message || !title) {
+        if (!category || !message || !title) {
             return throwError({message: "All required fields (type, message, title) must be filled", res, status: 400});
         }
 
-        if (!['tip', 'alert', 'suggestion', 'notification'].includes(type)) {
+        if (!['tip', 'alert', 'suggestion', 'notification'].includes(category)) {
             return throwError({message: "Invalid notification type", res, status: 400});
         }
 
         const newNotification = ({
             userId,
-            type,
+            category,
             message,
             title,
             timestamp: new Date(),
@@ -116,7 +116,7 @@ export const deleteNotification = async (req: CustomRequest, res: Response): Pro
 // API to update notification
 export const updateNotification = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { userId, notificationId, title, message, isRead, type } = req.body;
+        const { userId, notificationId, title, message, isRead, category } = req.body;
 
         if(!checkId({id: notificationId, res})) return;
         if(!checkId({id: userId, res})) return;
@@ -134,7 +134,7 @@ export const updateNotification = async (req: Request, res: Response): Promise<v
         if (title) notification.title = title;
         if (message) notification.message = message;
         if (typeof isRead !== "undefined") notification.isRead = isRead;
-        if (type) notification.type = type;
+        if (category) notification.category = category;
 
         await user.save();
 

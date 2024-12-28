@@ -6,6 +6,7 @@ import { IPurchasedItem } from "../interfaces/IPurschasedItem";
 import { INotification } from "../interfaces/INotification";
 import { INote } from "../interfaces/INote";
 import { goalSchema } from "./schemas/goal.schema";
+import { notificationSchema } from "./schemas/notification.schema";
 
 const noteSchema: Schema = new Schema<INote>({
     _id: { type: Schema.Types.ObjectId, auto: true },
@@ -16,15 +17,6 @@ const noteSchema: Schema = new Schema<INote>({
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
 });
-
-const notificationSchema: Schema = new Schema<INotification>({
-    _id: { type: Schema.Types.ObjectId, auto: true },
-    title: {type: String, required: true},
-    type: { type: String, required: true, enum: ['tip', 'alert', 'suggestion', 'notification'] },
-    message: { type: String, required: true },
-    timestamp: { type: Date, default: Date.now },
-    isRead: { type: Boolean, default: false }
-});  
 
 const purchasedItemSchema = new Schema<IPurchasedItem>({
     itemId: { type: Schema.Types.ObjectId, ref: "StoreItem", required: true },
