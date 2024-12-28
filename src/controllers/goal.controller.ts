@@ -138,26 +138,31 @@ export const getGoalById = async (req: CustomRequest, res: Response): Promise<vo
         const {userId, goalId} = req.body;
 
         if(!checkId({id: goalId, res})) return;
+        let user;
 
-        if(userId && (req.user.role === 'parent' || req.user.role === 'admin' || req.user.role === 'owner')){
+        if(userId && ['parent', 'admin', 'owner'].includes(req.user.role)){
             if(!checkId({id: userId, res})) return;
-            const user = await User.findById(userId);
+            user = await User.findById(userId);
             if (!user) {
                 return throwError({ message: "User not found", res, status: 404 });
             }
-
-            const goal = user.goals.find(goal => goal._id.toString() === goalId);
-            if (!goal) {
-                return throwError({ message: "Gole not found", res, status: 404 });
-            }
-
-            res.status(200).json({message: "Retrieving user goal successfully", goal: goal });
-            return;
+        }else{
+            user = req.user;
         }
 
-        const goal = req.user.goals.find(goal => goal._id.toString() === goalId);
+        let goal = user.goals.find(goal => goal._id.toString() === goalId);
         if (!goal) {
-            return throwError({ message: "Gole not found", res, status: 404 });
+
+            const family = await Family.findById(user.familyId).populate('goals');
+
+            if (!family) {
+                return throwError({ message: "Family not found", res, status: 404 });
+            }
+
+            goal = family.goals.find(goal => goal._id.toString() === goalId);
+
+            if(!goal)
+                return throwError({ message: "Goal not found", res, status: 404 });
         }
 
         res.status(200).json({message: "Retrieving your goal successfully", goal: goal });        
