@@ -237,6 +237,10 @@ export const unlockAchievement = async (req: CustomRequest, res: Response): Prom
             return throwError({ message: "Achievement already unlocked", res, status: 400 });
         }
 
+        if(achievement.type !== "personal"){
+            return throwError({ message: "It is not personal achievement", res, status: 400 });
+        }
+
         // Unlock the achievement
         const unlockedAchievement = {
             achievementId,
@@ -245,6 +249,54 @@ export const unlockAchievement = async (req: CustomRequest, res: Response): Prom
 
         user.achievements.push(unlockedAchievement);
         await user.save();
+
+        res.status(200).json({ message: "Achievement unlocked successfully", unlockedAchievement });
+    } catch (error) {
+        return throwError({ message: "An error occurred while unlocking the achievement.", res, status: 500 });
+    }
+};
+
+//API to unlock family achievement
+export const unlockFamilyAchievement = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+        
+        const { familyId, achievementId } = req.body;
+
+        if(!checkId({id: achievementId, res})) return;
+        if(!checkId({id: familyId, res})) return;
+
+        const family = await Family.findById(familyId);
+        if (!family) {
+            return throwError({ message: "Family not found", res, status: 404 });
+        }
+
+        // Check if the achievementId exists in the Achievement collection
+        const achievement = await Achievement.findById(achievementId);
+        if (!achievement) {
+            return throwError({ message: "Achievement not found", res, status: 404 });
+        }
+
+        // Check if the achievement is already unlocked
+        const existingAchievement = family.achievements.find(
+            (achievement) => achievement.achievementId.toString() === achievementId
+        );
+
+        if (existingAchievement) {
+            return throwError({ message: "Achievement already unlocked", res, status: 400 });
+        }
+
+        if(achievement.type !== "family"){
+            return throwError({ message: "It is not family achievement", res, status: 400 });
+        }
+
+        // Unlock the achievement
+        const unlockedAchievement = {
+            achievementId,
+            unlockedAt: new Date(),
+        };
+
+        family.achievements.push(unlockedAchievement);
+        await family.save();
 
         res.status(200).json({ message: "Achievement unlocked successfully", unlockedAchievement });
     } catch (error) {
