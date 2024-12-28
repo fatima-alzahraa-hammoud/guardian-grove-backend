@@ -173,8 +173,8 @@ export const getGoalById = async (req: CustomRequest, res: Response): Promise<vo
 }
 
 
-//API to update goal
-export const updateGoal = async (req: CustomRequest, res: Response): Promise<void> => {
+//API to update goal of a user
+export const updateUserGoal = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
 
         if(!req.user || (req.user.role !== 'parent' && req.user.role !== 'admin' && req.user.role !== 'owner')){
@@ -216,6 +216,61 @@ export const updateGoal = async (req: CustomRequest, res: Response): Promise<voi
         }
 
         await user.save();
+
+        res.status(200).json({ message: "Goal updated", goal });
+    } catch (error) {
+        console.error(error);
+        return throwError({ message: "Error updating goal", res, status: 500 });
+    }
+};
+
+
+//API to update goal of a family
+export const updateFamilyGoal = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+
+        if(!req.user || !['parent', 'admin', 'owner'].includes(req.user.role)){
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+
+        const { familyId, goalId, title, description, type, dueDate, rewards } = req.body;
+
+        if(!checkId({id: familyId, res})) return;
+        if(!checkId({id: goalId, res})) return;
+
+        const family = await Family.findById(familyId);
+        if (!family) {
+            return throwError({ message: "Family not found", res, status: 404 });
+        }
+        if (req.user.role !== 'admin' && req.user.email !== family.email){
+            return throwError({ message: "Forbidden", res, status: 400 });
+        }
+
+        const goal = family.goals.find(goal => goal._id.toString() === goalId);
+        if (!goal) {
+            return throwError({ message: "Goal not found", res, status: 404 });
+        }
+
+        if (rewards?.achievementId) {
+            const achievement = await Achievement.findById(rewards.achievementId);
+            if (!achievement) {
+                return throwError({ message: "Achievement not found.", res, status: 404 });
+            }
+            rewards.achievementName = achievement.title;
+        }
+
+        goal.title = title || goal.title;
+        goal.description = description || goal.description;
+        goal.type = type || goal.type;
+        goal.dueDate = dueDate || goal.dueDate;
+        if (rewards) {
+            goal.rewards.stars = rewards.stars || goal.rewards.stars;
+            goal.rewards.coins = rewards.coins || goal.rewards.coins;
+            goal.rewards.achievementName = rewards.achievementName || goal.rewards.achievementName;
+            goal.rewards.achievementId = rewards.achievementId || goal.rewards.achievementId;
+        }
+
+        await family.save();
 
         res.status(200).json({ message: "Goal updated", goal });
     } catch (error) {
