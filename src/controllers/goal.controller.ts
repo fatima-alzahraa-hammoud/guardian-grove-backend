@@ -20,7 +20,7 @@ export const createGoal = async (req: Request, res: Response): Promise<void> => 
         if(!type){
             type = 'personal';
         }
-        
+
         if (rewards?.achievementId) {
             const achievement = await Achievement.findById(rewards.achievementId);
             if (!achievement) {
@@ -92,22 +92,32 @@ export const getGoals = async (req: CustomRequest, res: Response): Promise<void>
                 return throwError({ message: "User not found", res, status: 404 });
             }
 
-            res.status(200).json({message: "Retrieving user goals successfully", goals: user.goals });
+            let goals = user.goals;
+            const family = await Family.findById(user.familyId).populate('goals');
+            if (family) {
+                goals = [...goals, ...family.goals];
+            }
+
+            res.status(200).json({message: "Retrieving user goals successfully", goals: goals });
             return;
         }
 
         if(!req.user || req.user.role !== 'admin'){
             return throwError({ message: "Unauthorized", res, status: 401 });
         }
+        const families = await Family.find().populate('goals');
         const users = await User.find();
         if (!users || users.length === 0) {
             return throwError({ message: "No users in the database", res, status: 404 });
         }
 
-        const allGoals = users.map(user => ({
-            userId: user._id,
-            goals: user.goals
-        }));
+        const allGoals = users.map(user => {
+            const familyGoals = families.find(family => family._id.toString() === user.familyId?.toString())?.goals || [];
+            return {
+                userId: user._id,
+                goals: [...user.goals, ...familyGoals],
+            };
+        });
 
 
         res.status(200).json({message: "Retrieving all users' goals successfully", goals: allGoals });
