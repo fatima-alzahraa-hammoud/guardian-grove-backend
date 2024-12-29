@@ -266,7 +266,7 @@ export const deleteGoal = async (req: CustomRequest, res: Response): Promise<voi
 // API to create task for personal goals
 export const createUserTask = async(req: Request, res: Response): Promise<void> => {
     try{
-        const {userId, goalId, title, description, type, rewards} = req.body;
+        const {userId, goalId, title, description, rewards} = req.body;
 
         if(!checkId({id: goalId, res})) return;
         if(!checkId({id: userId, res})) return;
@@ -280,9 +280,11 @@ export const createUserTask = async(req: Request, res: Response): Promise<void> 
         if (!goal) 
             return throwError({ message: "Goal not found", res, status: 404});
 
-        if (!title || !description || !type) {
+        if (!title || !description) {
             return throwError({ message: "All required fields must be filled.", res, status: 400});
         }
+
+        const type = goal.type;
 
         const newTask = ({
             title,

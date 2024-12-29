@@ -6,6 +6,7 @@ import { checkId } from "../utils/checkId";
 import { CustomRequest } from "../interfaces/customRequest";
 import { Achievement } from "../models/achievements.model";
 import { ITask } from "../interfaces/ITask";
+import { recalculateFamilyMemberRanks } from "../utils/recalculateFamilyMemberRanks";
 
 //API get all families
 export const getAllFamilies = async (req: Request, res: Response): Promise<void> => {
@@ -70,7 +71,7 @@ export const getFamilyMembers = async (req: Request, res: Response): Promise<voi
 export const updateFamily = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
 
-        if(!req.user || (req.user.role !== 'parent' && req.user.role !== 'admin' && req.user.role !== 'owner')){
+        if(!req.user || !['parent', 'admin', 'owner'].includes(req.user.role)){
             return throwError({ message: "Unauthorized", res, status: 401 });
         }
 
@@ -110,7 +111,7 @@ export const updateFamily = async (req: CustomRequest, res: Response): Promise<v
 export const deleteFamily = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
         // Check for authorized user roles
-        if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'parent')) {
+        if (!req.user ||  !['parent', 'admin', 'owner'].includes(req.user.role)) {
             return throwError({ message: "Unauthorized", res, status: 401 });
         }
 
@@ -243,7 +244,7 @@ export const deleteFamilyGoal = async (req: Request, res: Response) => {
 // API to create task for family goals
 export const createFamilyTasks = async(req: Request, res: Response): Promise<void> => {
     try{
-        const {familyId, goalId, title, description, type, rewards} = req.body;
+        const {familyId, goalId, title, description, rewards} = req.body;
 
         if(!checkId({id: goalId, res})) return;
         if(!checkId({id: familyId, res})) return;
@@ -257,14 +258,14 @@ export const createFamilyTasks = async(req: Request, res: Response): Promise<voi
         if (!goal) 
             return throwError({ message: "Goal not found", res, status: 404});
 
-        if (!title || !description || !type) {
+        if (!title || !description) {
             return throwError({ message: "All required fields must be filled.", res, status: 400});
         }
 
         const newTask = ({
             title,
             description,
-            type,
+            type: 'family',
             rewards : rewards || {stars: 2, coins: 1},
         } as ITask);
 
@@ -281,7 +282,7 @@ export const createFamilyTasks = async(req: Request, res: Response): Promise<voi
 // API to update task
 export const updateFamilyTask = async(req: Request, res: Response): Promise<void> => {
     try{
-        const {familyId, taskId, goalId, title, description, type, rewards } = req.body;
+        const {familyId, taskId, goalId, title, description, rewards } = req.body;
         if(!checkId({id: taskId, res})) return;
         if(!checkId({id: goalId, res})) return;
         if(!checkId({id: familyId, res})) return;
@@ -303,7 +304,6 @@ export const updateFamilyTask = async(req: Request, res: Response): Promise<void
 
         task.title = title || task.title;
         task.description = description || task.description;
-        task.type = type || task.type;
         if (rewards) {
             task.rewards.stars = rewards.stars || task.rewards.stars;
             task.rewards.coins = rewards.coins || task.rewards.coins;
@@ -420,12 +420,17 @@ export const completeFamilyTask = async (req: CustomRequest, res: Response): Pro
             return throwError({ message: "Task already completed", res, status: 400 });
         }
         task.isCompleted = true;
+        family.tasks += 1;
 
+        
+        let totalStars = 0;
         for (const member of family.members) {
             const user = await User.findById(member._id);
             if (user) {
+                totalStars += task.rewards.stars;
                 user.coins += task.rewards.coins;
                 user.stars += task.rewards.stars;
+                user.nbOfTasksCompleted += 1;
                 await user.save();
             }
         }
@@ -441,6 +446,7 @@ export const completeFamilyTask = async (req: CustomRequest, res: Response): Pro
             for (const member of family.members) {
                 const user = await User.findById(member._id);
                 if (user) {
+                    totalStars += goal.rewards.stars
                     user.coins += goal.rewards.coins;
                     user.stars += goal.rewards.stars;
                     await user.save();
@@ -459,6 +465,7 @@ export const completeFamilyTask = async (req: CustomRequest, res: Response): Pro
             }
         }
 
+        family.totalStars += totalStars;
         await family.save();
 
         res.status(200).json({ message: "Task marked as done", task, goal });
@@ -552,7 +559,7 @@ export const updateAllFamilyMembersStars = async (req: CustomRequest, res: Respo
         }
 
         const { stars } = req.body;  // Stars to add to each member
-        if (!Number.isInteger(stars) || stars < 0) {
+        if (!Number.isInteger(stars)) {
             return throwError({ message: "Invalid stars value", res, status: 400 });
         }
 
