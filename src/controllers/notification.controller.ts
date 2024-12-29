@@ -6,6 +6,7 @@ import { User } from "../models/user.model";
 import { checkId } from "../utils/checkId";
 import { Types } from "mongoose";
 import { Family } from "../models/family.model";
+import { INotification } from "../interfaces/INotification";
 
 //API to get notifications based on category
 export const getNotifications = async (req: CustomRequest, res: Response): Promise<void> => {
@@ -43,13 +44,27 @@ export const getNotifications = async (req: CustomRequest, res: Response): Promi
     }
 };
 
+// Helper function to find notification by ID
+const findNotificationById = async (user: any, notificationId: string): Promise<INotification | undefined> => {
+    let notification = user.notifications.find((notif: INotification) => notif._id.toString() === notificationId);
+
+    if (!notification && user.familyId) {
+        const family = await Family.findById(user.familyId);
+        if (family) {
+            notification = family.notifications.find((notif: INotification) => notif._id.toString() === notificationId);
+        }
+    }
+
+    return notification;
+};
+
 // API to create notifications (personal or shared)
 export const sendNotification = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
         const { userId, familyId, title, message, category, type } = req.body;
 
-        if (type==='personal' && !checkId({ id: userId, res })) return;
-        if (type==='family' && !checkId({ id: familyId, res })) return;
+        if (type === 'personal' && !checkId({ id: userId, res })) return;
+        if (type === 'family' && !checkId({ id: familyId, res })) return;
 
         if (!category || !message || !title) {
             return throwError({ message: "All required fields (category, message, title) must be filled", res, status: 400 });
@@ -59,7 +74,7 @@ export const sendNotification = async (req: CustomRequest, res: Response): Promi
             return throwError({ message: "Invalid notification type", res, status: 400 });
         }
 
-        const newNotification = ({
+        const newNotification = {
             title,
             message,
             category,
@@ -67,9 +82,9 @@ export const sendNotification = async (req: CustomRequest, res: Response): Promi
             timestamp: new Date(),
             isRead: false,
             isReadBy: []
-        });
+        };
 
-        if (type==='personal') {
+        if (type === 'personal') {
             const user = await User.findById(userId);
             if (!user) {
                 return throwError({ message: "User not found", res, status: 404 });
@@ -82,7 +97,7 @@ export const sendNotification = async (req: CustomRequest, res: Response): Promi
             );
 
             res.status(201).json({ message: 'Notification created successfully', notification: newNotification });
-        } else if (type==='family' ) {
+        } else if (type === 'family') {
             const family = await Family.findById(familyId);
             if (!family) {
                 return throwError({ message: "Family not found", res, status: 404 });
@@ -109,17 +124,17 @@ export const deleteNotification = async (req: CustomRequest, res: Response): Pro
     try {
         const { notificationId, userId } = req.body;
 
-        if(!checkId({id: notificationId, res})) return;
-        if(!checkId({id: userId, res})) return;
+        if (!checkId({ id: notificationId, res })) return;
+        if (!checkId({ id: userId, res })) return;
 
         const user = await User.findById(userId);
 
         if (!user) {
             return throwError({ message: "User not found", res, status: 404 });
         }
-    
+
         let notificationIndex = user.notifications.findIndex(
-            (notification) => (notification._id as Types.ObjectId).toString() === notificationId
+            (notification: INotification) => (notification._id as Types.ObjectId).toString() === notificationId
         );
 
         if (notificationIndex !== -1) {
@@ -134,14 +149,14 @@ export const deleteNotification = async (req: CustomRequest, res: Response): Pro
             const family = await Family.findById(user.familyId);
             if (family) {
                 notificationIndex = family.notifications.findIndex(
-                    (notification) => (notification._id as Types.ObjectId).toString() === notificationId
+                    (notification: INotification) => (notification._id as Types.ObjectId).toString() === notificationId
                 );
 
                 if (notificationIndex !== -1) {
                     const [deletedNotification] = family.notifications.splice(notificationIndex, 1);
                     await family.save();
                     res.status(200).json({ message: 'Notification deleted from family successfully', DeletedNotification: deletedNotification });
-                    return
+                    return;
                 }
             }
         }
@@ -149,7 +164,7 @@ export const deleteNotification = async (req: CustomRequest, res: Response): Pro
         return throwError({ message: "Notification not found", res, status: 404 });
     } catch (error) {
         console.error(error);
-        return throwError({message: "Error deleting notification", res, status: 500});
+        return throwError({ message: "Error deleting notification", res, status: 500 });
     }
 };
 
@@ -158,15 +173,15 @@ export const updateNotification = async (req: Request, res: Response): Promise<v
     try {
         const { userId, notificationId, title, message, isRead, category } = req.body;
 
-        if(!checkId({id: notificationId, res})) return;
-        if(!checkId({id: userId, res})) return;
+        if (!checkId({ id: notificationId, res })) return;
+        if (!checkId({ id: userId, res })) return;
 
         const user = await User.findById(userId);
         if (!user) {
             return throwError({ message: "User not found", res, status: 404 });
         }
 
-        let notification = user.notifications.find(notif => notif._id.toString() === notificationId);
+        let notification = user.notifications.find((notif: INotification) => notif._id.toString() === notificationId);
         if (notification) {
             if (title) notification.title = title;
             if (message) notification.message = message;
@@ -182,7 +197,7 @@ export const updateNotification = async (req: Request, res: Response): Promise<v
         if (user.familyId) {
             const family = await Family.findById(user.familyId);
             if (family) {
-                notification = family.notifications.find(notif => notif._id.toString() === notificationId);
+                notification = family.notifications.find((notif: INotification) => notif._id.toString() === notificationId);
                 if (notification) {
                     if (title) notification.title = title;
                     if (message) notification.message = message;
@@ -206,7 +221,7 @@ export const updateNotification = async (req: Request, res: Response): Promise<v
 export const markNotificationAsRead = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
         const { notificationId } = req.body;
-        if(!checkId({id: notificationId, res})) return;
+        if (!checkId({ id: notificationId, res })) return;
 
         if (!req.user) {
             return throwError({ message: "Unauthorized", res, status: 401 });
@@ -215,31 +230,20 @@ export const markNotificationAsRead = async (req: CustomRequest, res: Response):
         const user = req.user;
 
         // Find the notification by ID in user notifications
-        let notification = user.notifications.find(notif => notif._id.toString() === notificationId);
-
-        // If not found in user notifications, check family notifications
-        if (!notification && user.familyId) {
-            const family = await Family.findById(user.familyId);
-            if (family) {            
-                notification = family.notifications.find(notif => notif._id.toString() === notificationId);
-                if (notification) {
-                    console.log(notification);
-
-                    // Mark as read in family notifications
-                    notification.isRead = true;
-                    notification.isReadBy.push(user._id);
-                    await family.save();
-                }
-            }
-        } else if (notification) {
-            // Mark as read in user notifications
-            notification.isRead = true;
-            notification.isReadBy.push(user._id);
-            await user.save();
-        }
+        let notification = await findNotificationById(user, notificationId);
 
         if (!notification) {
             return throwError({ message: "Notification not found", res, status: 404 });
+        }
+
+        // Mark as read
+        notification.isRead = true;
+        notification.isReadBy.push(user._id);
+
+        if (notification.type === 'family') {
+            await Family.findByIdAndUpdate(user.familyId, { $set: { 'notifications.$[elem].isRead': true, 'notifications.$[elem].isReadBy': notification.isReadBy } }, { arrayFilters: [{ 'elem._id': notification._id }] });
+        } else {
+            await user.save();
         }
 
         res.status(200).json({
@@ -263,7 +267,7 @@ export const markAllNotificationsAsRead = async (req: CustomRequest, res: Respon
         const user = req.user;
 
         // Mark all notifications as read
-        user.notifications.forEach(notification => {
+        user.notifications.forEach((notification: INotification) => {
             notification.isRead = true;
         });
 
@@ -283,7 +287,7 @@ export const markAllNotificationsAsRead = async (req: CustomRequest, res: Respon
 export const getNotificationById = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
         const { notificationId } = req.body;
-        if(!checkId({id: notificationId, res})) return;
+        if (!checkId({ id: notificationId, res })) return;
 
         if (!req.user) {
             return throwError({ message: "Unauthorized", res, status: 401 });
@@ -292,15 +296,7 @@ export const getNotificationById = async (req: CustomRequest, res: Response): Pr
         const user = req.user;
 
         // Find the notification by ID in user notifications
-        let notification = user.notifications.find(notif => notif._id.toString() === notificationId);
-
-        // If not found in user notifications, check family notifications
-        if (!notification && user.familyId) {
-            const family = await Family.findById(user.familyId);
-            if (family) {
-                notification = family.notifications.find(notif => notif._id.toString() === notificationId);
-            }
-        }
+        let notification = await findNotificationById(user, notificationId);
 
         if (!notification) {
             return throwError({ message: "Notification not found", res, status: 404 });
