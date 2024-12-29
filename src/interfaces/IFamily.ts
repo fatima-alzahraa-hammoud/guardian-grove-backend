@@ -15,6 +15,8 @@ export interface IFamily extends Document {
     }>;
     email: string;
     createdAt: Date;
+    totalStars: number;
+    tasks: number;
     notifications: INotification[];
     goals: IGoal[];
     achievements: IUnlockedAchievement[];  

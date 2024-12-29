@@ -467,3 +467,36 @@ export const completeFamilyTask = async (req: CustomRequest, res: Response): Pro
         return throwError({ message: "Error marking task as done", res, status: 500 });
     }
 };
+
+export const getLeaderboard = async (req: Request, res: Response): Promise<void> => {
+    try {
+
+        const { familyId } = req.body;
+
+        const families = await Family.find().select("totalStars tasks familyName").sort({ totalStars: -1, tasks: -1 }).exec();
+
+        let rank = 1;
+        let previousStars = 0;
+        let previousTasks = 0;
+        const leaderboard = families.map((family, index) => {
+            if (previousStars !== family.totalStars || previousTasks !== family.tasks) {
+                rank = index + 1;
+            }
+            previousStars = family.totalStars;
+            previousTasks = family.tasks;
+            return { ...family.toObject(), rank };
+        });
+
+        const top10 = leaderboard.slice(0, 10);
+        const familyRank = leaderboard.find(family => family._id.toString() === familyId);
+
+        res.status(200).json({
+            message: 'Leaderboard fetched successfully',
+            top10,
+            familyRank: familyRank ? familyRank.rank : null
+        });
+    } catch (error) {
+        console.error('Error fetching leaderboard:', error);
+        res.status(500).json({ message: 'Error fetching leaderboard' });
+    }
+};

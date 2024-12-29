@@ -18,16 +18,11 @@ const familySchema = new Schema<IFamily>({
 
     email: { type: String, required:true, unique: true},
     createdAt: {type: Date, required: true},
-
+    totalStars: { type: Number, default: 0 },
+    tasks: { type: Number, default: 0 },
     notifications: { type: [notificationSchema], default: [] },
     goals: { type: [goalSchema], default: [] },
     achievements: { type: [unlockedAchievementSchema], default: [] },
-});
-
-// Virtual for calculating total stars
-familySchema.virtual("totalStars").get(async function () {
-    const members = await User.find({ _id: { $in: this.members } });
-    return members.reduce((sum, user) => sum + (user.stars || 0), 0);
 });
 
 // Ensure virtuals are included in JSON response
