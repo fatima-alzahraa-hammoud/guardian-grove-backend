@@ -54,6 +54,7 @@ const userSchema = new Schema<IUser>({
     currentLocation:{type: String, required: true, default: "not specified"},
     stars: {type: Number, required: true, default: 0},
     coins: {type: Number, required: true, default: 0},
+    nbOfTasksCompleted: {type: Number, required: true, default: 0},
     rankInFamily: {type: Number, required: true, default: 0},
     familyId: { type: Types.ObjectId, ref: "Family", default: null },
     adventures: { type: [adventureProgressSchema], default: [] },

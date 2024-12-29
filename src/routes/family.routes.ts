@@ -1,7 +1,7 @@
 import express from "express";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { adminMiddleware } from "../middlewares/adminMiddleware";
-import { completeFamilyTask, createFamilyTasks, deleteFamily, deleteFamilyGoal, deleteFamilyTask, getAllFamilies, getFamily, getFamilyGoals, getFamilyMembers, getFamilyTaskById, updateFamily, updateFamilyGoal, updateFamilyTask } from "../controllers/family.controller";
+import { completeFamilyTask, createFamilyTasks, deleteFamily, deleteFamilyGoal, deleteFamilyTask, getAllFamilies, getFamily, getFamilyGoals, getFamilyMembers, getFamilyTaskById, getLeaderboard, updateFamily, updateFamilyGoal, updateFamilyTask } from "../controllers/family.controller";
 
 const router =  express.Router();
 
@@ -22,5 +22,8 @@ router.put("/goal/task", authMiddleware, updateFamilyTask);
 router.delete("/goal/task", authMiddleware, deleteFamilyTask);
 router.get("/goal/task", authMiddleware, getFamilyTaskById);
 router.put("/goal/completeTask", authMiddleware, completeFamilyTask);
+
+//routes for families leaderboard
+router.get("/leaderboard", authMiddleware, getLeaderboard);
 
 export default router;

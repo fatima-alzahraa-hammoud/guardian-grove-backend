@@ -20,6 +20,7 @@ export interface IUser extends Document{
     currentLocation?: string;
     stars: number;
     coins: number;
+    nbOfTasksCompleted: number;
     rankInFamily: number;
     familyId: Types.ObjectId | null;
     adventures: IAdventureProgress[];
