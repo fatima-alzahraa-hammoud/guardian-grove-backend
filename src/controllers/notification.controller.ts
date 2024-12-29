@@ -7,7 +7,7 @@ import { checkId } from "../utils/checkId";
 import { Types } from "mongoose";
 import { Family } from "../models/family.model";
 
-//API to get notifications based on type
+//API to get notifications based on category
 export const getNotifications = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
 
@@ -57,7 +57,7 @@ export const sendNotification = async (req: CustomRequest, res: Response): Promi
         }
 
         if (!category || !message || !title) {
-            return throwError({message: "All required fields (type, message, title) must be filled", res, status: 400});
+            return throwError({message: "All required fields (category, message, title) must be filled", res, status: 400});
         }
 
         if (!['tip', 'alert', 'suggestion', 'notification'].includes(category)) {
@@ -69,9 +69,10 @@ export const sendNotification = async (req: CustomRequest, res: Response): Promi
             category,
             message,
             title,
-            type : type || 'personal',
+            type: type || 'personal',
             timestamp: new Date(),
             isRead: false,
+            isReadBy: []
         });
 
         await User.findOneAndUpdate(
@@ -100,7 +101,6 @@ export const sendSharedNotification = async (req: CustomRequest, res: Response):
         }
 
         const newNotification = ({
-            _id: new Types.ObjectId(),
             title,
             message,
             category,
@@ -121,7 +121,6 @@ export const sendSharedNotification = async (req: CustomRequest, res: Response):
         return throwError({ message: "Error creating shared notification", res, status: 500 });
     }
 };
-
 
 //API to delete notification
 export const deleteNotification = async (req: CustomRequest, res: Response): Promise<void> => {
@@ -192,36 +191,54 @@ export const updateNotification = async (req: Request, res: Response): Promise<v
 };
 
 // API to mark a notification as done (read)
-export const markNotificationAsDone = async (req: CustomRequest, res: Response): Promise<void> => {
+export const markNotificationAsRead = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
-        const {notificationId } = req.body;
+        const { notificationId } = req.body;
+        if(!checkId({id: notificationId, res})) return;
 
-        // Find user
         if (!req.user) {
             return throwError({ message: "Unauthorized", res, status: 401 });
         }
 
         const user = req.user;
-        
-        // Find the notification by ID
-        const notification = user.notifications.find(notif => notif._id.toString() === notificationId);
+
+        // Find the notification by ID in user notifications
+        let notification = user.notifications.find(notif => notif._id.toString() === notificationId);
+
+        // If not found in user notifications, check family notifications
+        if (!notification && user.familyId) {
+            const family = await Family.findById(user.familyId);
+            if (family) {            
+                notification = family.notifications.find(notif => notif._id.toString() === notificationId);
+                if (notification) {
+                    console.log(notification);
+
+                    // Mark as read in family notifications
+                    notification.isRead = true;
+                    notification.isReadBy.push(user._id);
+                    await family.save();
+                }
+            }
+        } else if (notification) {
+            // Mark as read in user notifications
+            notification.isRead = true;
+            notification.isReadBy.push(user._id);
+            await user.save();
+        }
+
         if (!notification) {
             return throwError({ message: "Notification not found", res, status: 404 });
         }
 
-        // Mark as read
-        notification.isRead = true;
-        await user.save();
-
         res.status(200).json({
             message: "Notification marked as done",
-            notification
+            notification: notification
         });
+
     } catch (error) {
         return throwError({ message: "Error marking notification as done", res, status: 500 });
     }
 };
-
 
 // API to mark all notifications as read
 export const markAllNotificationsAsRead = async (req: CustomRequest, res: Response): Promise<void> => {
