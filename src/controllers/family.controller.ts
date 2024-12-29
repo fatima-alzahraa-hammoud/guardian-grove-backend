@@ -543,3 +543,46 @@ export const getFamilyLeaderboard = async (req: Request, res: Response): Promise
         res.status(500).json({ message: 'Error fetching leaderboard' });
     }
 };
+
+// API to update stars for all family members and recalculate total stars
+export const updateAllFamilyMembersStars = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+        if (!req.user || !req.user.familyId) {
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+
+        const { stars } = req.body;  // Stars to add to each member
+        if (!Number.isInteger(stars) || stars < 0) {
+            return throwError({ message: "Invalid stars value", res, status: 400 });
+        }
+
+        const family = await Family.findById(req.user.familyId);
+        if (!family) {
+            return throwError({ message: "Family not found", res, status: 404 });
+        }
+
+        // Update stars for all family members
+        const membersIds = family.members.map((member) => member._id);
+        await User.updateMany(
+            { _id: { $in: membersIds } },
+            { $inc: { stars } }
+        );
+
+        // Recalculate total stars for family
+        const totalStars = await User.aggregate([
+            { $match: { _id: { $in: membersIds } } },
+            { $group: { _id: null, totalStars: { $sum: "$stars" } } }
+        ]);
+
+        // Update the family document
+        family.totalStars = totalStars[0]?.totalStars || 0;
+        await family.save();
+
+        res.status(200).json({
+            message: "All family members' stars updated successfully",
+            totalStars: family.totalStars,
+        });
+    } catch (error) {
+        return throwError({ message: "Error updating family members' stars", res, status: 500 });
+    }
+};

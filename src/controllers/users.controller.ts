@@ -342,8 +342,11 @@ export const updateUserStars = async(req:CustomRequest, res: Response): Promise<
             return throwError({ message: "Stars must be a valid number.", res, status: 400});
         }
 
-        req.user.stars = stars;
+        req.user.stars += stars;
         await req.user.save();
+
+        // Update family total stars
+        await Family.findByIdAndUpdate(req.user.familyId, { $inc: { totalStars: stars } });
 
         res.status(200).send({ message: "User stars updated successfully", user: req.user });
     }catch(error){
