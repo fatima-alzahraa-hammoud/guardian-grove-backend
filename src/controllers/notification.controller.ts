@@ -43,82 +43,64 @@ export const getNotifications = async (req: CustomRequest, res: Response): Promi
     }
 };
 
-//API to create notifications
+// API to create notifications (personal or shared)
 export const sendNotification = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
+        const { userId, familyId, title, message, category, type } = req.body;
 
-        const { userId, title, message, category, type } = req.body;
-        
-        if(!checkId({id: userId, res})) return;
-
-        const user = await User.findById(userId);
-        if (!user) {
-            return throwError({ message: "User not found", res, status: 404 });
-        }
+        if (type==='personal' && !checkId({ id: userId, res })) return;
+        if (type==='family' && !checkId({ id: familyId, res })) return;
 
         if (!category || !message || !title) {
-            return throwError({message: "All required fields (category, message, title) must be filled", res, status: 400});
+            return throwError({ message: "All required fields (category, message, title) must be filled", res, status: 400 });
         }
 
         if (!['tip', 'alert', 'suggestion', 'notification'].includes(category)) {
-            return throwError({message: "Invalid notification type", res, status: 400});
-        }
-
-        const newNotification = ({
-            userId,
-            category,
-            message,
-            title,
-            type: type || 'personal',
-            timestamp: new Date(),
-            isRead: false,
-            isReadBy: []
-        });
-
-        await User.findOneAndUpdate(
-            { _id: userId },
-            { $push: { notifications: newNotification } },
-            { new: true } 
-        );
-
-        res.status(201).json({ message: 'Notification created successfully', notification: newNotification });
-    } catch (error) {
-        console.error(error); 
-        return throwError({message: "An unknown error occurred while creating notification", res, status: 500});
-    }
-};
-
-//API to send shared notification
-export const sendSharedNotification = async (req: CustomRequest, res: Response): Promise<void> => {
-    try {
-        const { familyId, title, message, category } = req.body;
-
-        if(!checkId({id: familyId, res})) return;
-
-        const family = await Family.findById(familyId);
-        if (!family) {
-            return throwError({ message: "Family not found", res, status: 404 });
+            return throwError({ message: "Invalid notification type", res, status: 400 });
         }
 
         const newNotification = ({
             title,
             message,
             category,
-            type: 'family',
+            type: type || (familyId ? 'family' : 'personal'),
             timestamp: new Date(),
             isRead: false,
             isReadBy: []
         });
 
-        await Family.findOneAndUpdate(
-            { _id: familyId },
-            { $push: { notifications: newNotification } },
-            { new: true } 
-        );
-        
-        res.status(201).json({ message: "Shared notification created successfully", notification: newNotification });
+        if (type==='personal') {
+            const user = await User.findById(userId);
+            if (!user) {
+                return throwError({ message: "User not found", res, status: 404 });
+            }
+
+            await User.findOneAndUpdate(
+                { _id: userId },
+                { $push: { notifications: newNotification } },
+                { new: true }
+            );
+
+            res.status(201).json({ message: 'Notification created successfully', notification: newNotification });
+        } else if (type==='family' ) {
+            const family = await Family.findById(familyId);
+            if (!family) {
+                return throwError({ message: "Family not found", res, status: 404 });
+            }
+
+            await Family.findOneAndUpdate(
+                { _id: familyId },
+                { $push: { notifications: newNotification } },
+                { new: true }
+            );
+
+            res.status(201).json({ message: "Shared notification created successfully", notification: newNotification });
+        } else {
+            return throwError({ message: "Either userId or familyId must be provided", res, status: 400 });
+        }
     } catch (error) {
-        return throwError({ message: "Error creating shared notification", res, status: 500 });
+        console.error(error);
+        return throwError({ message: "An unknown error occurred while creating notification", res, status: 500 });
     }
 };
 
