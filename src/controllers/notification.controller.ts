@@ -221,3 +221,32 @@ export const markNotificationAsDone = async (req: CustomRequest, res: Response):
         return throwError({ message: "Error marking notification as done", res, status: 500 });
     }
 };
+
+
+// API to mark all notifications as read
+export const markAllNotificationsAsRead = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+        // Find user
+        if (!req.user) {
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+
+        const user = req.user;
+
+        // Mark all notifications as read
+        user.notifications.forEach(notification => {
+            notification.isRead = true;
+        });
+
+        await user.save();
+
+        res.status(200).json({
+            message: "All notifications marked as read",
+            notifications: user.notifications
+        });
+    } catch (error) {
+        console.log(error)
+        return throwError({ message: "Error marking all notifications as read", res, status: 500 });
+    }
+};
+
