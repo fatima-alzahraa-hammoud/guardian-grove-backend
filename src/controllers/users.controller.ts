@@ -9,6 +9,7 @@ import { IAdventureProgress } from '../interfaces/IAdventureProgress';
 import { Family } from '../models/family.model';
 import { Types } from 'mongoose';
 import { IUser } from '../interfaces/IUser';
+import { recalculateFamilyMemberRanks } from '../utils/recalculateFamilyMemberRanks';
 
 // API to get all users
 export const getUsers = async(req: Request, res: Response): Promise<void> => {
@@ -34,7 +35,7 @@ export const getUserById = async (req: CustomRequest, res: Response): Promise<vo
 
         if(userId){
             if(!checkId({id: userId, res})) return;
-            if (req.user._id.toString() !== userId && ['parent', 'admin', 'owner'].includes(req.user.role)) {
+            if (req.user._id.toString() !== userId && !['parent', 'admin', 'owner'].includes(req.user.role)) {
                 return throwError({ message: "Forbidden", res, status: 403 });
             }
             const user = await User.findById(userId);
@@ -142,7 +143,7 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
 
         // Recalculate the ranks after adding the new user
         await recalculateFamilyMemberRanks(family._id, user);
-        
+
         res.status(200).send({message: "Creating user successfully", user: user });
 
     }catch(error){
@@ -383,41 +384,6 @@ export const updateUserStars = async(req:CustomRequest, res: Response): Promise<
         return throwError({ message: "Error updating user stars", res, status: 500});
     }
 } 
-
-// Helper function to recalculate ranks within the family
-const recalculateFamilyMemberRanks = async (familyId: Types.ObjectId, updatedUser: IUser): Promise<void> => {
-    try {
-        const familyMembers = await User.find({ familyId })
-            .sort({ stars: -1, nbOfTasksCompleted: -1 })
-            .exec();
-
-        let rank = 0;
-        let prevStars = 0;
-        let prevTasks = 0;
-
-        const savePromises = familyMembers.map((member, index) => {
-            if (prevStars !== member.stars || prevTasks !== member.nbOfTasksCompleted) {
-                rank++;
-            }
-
-            member.rankInFamily = rank;
-            
-            // Update req.user directly if it's the same member
-            if (updatedUser._id.equals(member._id)) {
-                updatedUser.rankInFamily = rank;
-            }
-
-            prevStars = member.stars;
-            prevTasks = member.nbOfTasksCompleted;
-
-            return member.save();  // Save all members
-        });
-
-        await Promise.all(savePromises);  // Save all members in parallel
-    } catch (error) {
-        console.error("Error recalculating ranks:", error);
-    }
-};
 
 // API to get user's coins
 export const getUserCoins = async(req:CustomRequest, res: Response): Promise<void> => {
