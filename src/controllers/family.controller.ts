@@ -420,8 +420,6 @@ export const completeFamilyTask = async (req: CustomRequest, res: Response): Pro
             return throwError({ message: "Task already completed", res, status: 400 });
         }
         task.isCompleted = true;
-        family.tasks += 1;
-
         
         let totalStars = 0;
         for (const member of family.members) {
@@ -466,6 +464,16 @@ export const completeFamilyTask = async (req: CustomRequest, res: Response): Pro
         }
 
         family.totalStars += totalStars;
+        family.stars.daily += totalStars;
+        family.stars.weekly += totalStars;
+        family.stars.monthly += totalStars;
+        family.stars.yearly += totalStars;
+        family.tasks += 1;
+        family.taskCounts.daily += 1;
+        family.taskCounts.weekly += 1;
+        family.taskCounts.monthly += 1;
+        family.taskCounts.yearly += 1;
+
         await family.save();
 
         res.status(200).json({ message: "Task marked as done", task, goal });
@@ -478,9 +486,40 @@ export const completeFamilyTask = async (req: CustomRequest, res: Response): Pro
 export const getLeaderboard = async (req: Request, res: Response): Promise<void> => {
     try {
 
-        const { familyId } = req.body;
+        const { period, familyId } = req.body;
 
-        const families = await Family.find().select("totalStars tasks familyName").sort({ totalStars: -1, tasks: -1 }).exec();
+        if (!period) {
+            return throwError({ message: 'Period is required', res, status: 400 });
+        }
+
+        let sortField = 'totalStars';
+        let taskField = 'tasks';
+        switch (period) {
+            case 'daily':
+                sortField = 'stars.daily';
+                taskField = 'taskCounts.daily';
+                break;
+            case 'weekly':
+                sortField = 'stars.weekly';
+                taskField = 'taskCounts.weekly';
+                break;
+            case 'monthly':
+                sortField = 'stars.monthly';
+                taskField = 'taskCounts.monthly';
+                break;
+            case 'yearly':
+                sortField = 'stars.yearly';
+                taskField = 'taskCounts.yearly';
+                break;
+            default:
+                return throwError({ message: 'Invalid period', res, status: 400 });
+        }
+
+        const families = await Family.find()
+            .select(`${sortField} ${taskField} familyName`)
+            .sort({ [sortField]: -1, [taskField]: -1 })
+            .exec();
+
 
         if (!families) {
             return throwError({ message: "Families not found", res, status: 404 });
@@ -490,11 +529,14 @@ export const getLeaderboard = async (req: Request, res: Response): Promise<void>
         let previousStars = 0;
         let previousTasks = 0;
         const leaderboard = families.map((family, index) => {
-            if (previousStars !== family.totalStars || previousTasks !== family.tasks) {
+            const stars = family.get(sortField);
+            const tasks = family.get(taskField);
+
+            if (previousStars !== stars || previousTasks !== tasks) {
                 rank = index + 1;
             }
-            previousStars = family.totalStars;
-            previousTasks = family.tasks;
+            previousStars = stars;
+            previousTasks = tasks;
             return { ...family.toObject(), rank };
         });
 

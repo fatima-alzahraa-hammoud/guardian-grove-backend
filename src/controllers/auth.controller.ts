@@ -54,10 +54,10 @@ export const login = async ( req: Request, res: Response) : Promise<void> => {
 export const register = async (req: Request, res: Response) : Promise<void> => {
     try{
         const data = req.body;
-        const { name, email, password, confirmPassword, birthday, gender, role, avatar, interests, familyName } = data;
+        const { name, email, password, confirmPassword, birthday, gender, role, avatar, interests, familyName, familyAvatar } = data;
         
         // verify all fields are filled
-        if (!name || !email || !password || !confirmPassword || !birthday || !gender || !role || !avatar || !interests || !familyName) {
+        if (!name || !email || !password || !confirmPassword || !birthday || !gender || !role || !avatar || !interests || !familyName || !familyAvatar) {
             return throwError({ message: "All required fields must be filled.", res, status: 400});
         }
 
@@ -114,6 +114,7 @@ export const register = async (req: Request, res: Response) : Promise<void> => {
             family = new Family({
                 familyName: familyName,
                 email,
+                familyAvatar: familyAvatar,
                 members: [],
                 createdAt: new Date()
             });

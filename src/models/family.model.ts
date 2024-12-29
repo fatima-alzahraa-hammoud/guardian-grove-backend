@@ -22,6 +22,19 @@ const familySchema = new Schema<IFamily>({
     notifications: { type: [notificationSchema], default: [] },
     goals: { type: [goalSchema], default: [] },
     achievements: { type: [unlockedAchievementSchema], default: [] },
+    stars: {
+        daily: { type: Number, default: 0 },
+        weekly: { type: Number, default: 0 },
+        monthly: { type: Number, default: 0 },
+        yearly: { type: Number, default: 0 }
+    },
+    taskCounts: {
+        daily: { type: Number, default: 0 },
+        weekly: { type: Number, default: 0 },
+        monthly: { type: Number, default: 0 },
+        yearly: { type: Number, default: 0 }
+    },
+    familyAvatar: { type: String, required: true },
 });
 
 // Ensure virtuals are included in JSON response
