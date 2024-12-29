@@ -475,6 +475,10 @@ export const getLeaderboard = async (req: Request, res: Response): Promise<void>
 
         const families = await Family.find().select("totalStars tasks familyName").sort({ totalStars: -1, tasks: -1 }).exec();
 
+        if (!families) {
+            return throwError({ message: "Families not found", res, status: 404 });
+        }
+
         let rank = 1;
         let previousStars = 0;
         let previousTasks = 0;
@@ -494,6 +498,45 @@ export const getLeaderboard = async (req: Request, res: Response): Promise<void>
             message: 'Leaderboard fetched successfully',
             top10,
             familyRank: familyRank ? familyRank.rank : null
+        });
+    } catch (error) {
+        console.error('Error fetching leaderboard:', error);
+        res.status(500).json({ message: 'Error fetching leaderboard' });
+    }
+};
+
+export const getFamilyLeaderboard = async (req: Request, res: Response): Promise<void> => {
+    try {
+
+        const { familyId } = req.body;
+
+        if (!checkId({ id: familyId, res })) return;
+
+        const family = await Family.findById(familyId);
+        if (!family) {
+            return throwError({ message: "Family not found", res, status: 404 });
+        }
+
+        const members = await User.find({ familyId }).select("stars nbOfTasksCompleted").sort({ totalStars: -1, tasks: -1 }).exec();
+        if (!members) {
+            return throwError({ message: "Members not found", res, status: 404 });
+        }
+
+        let rank = 1;
+        let previousStars = 0;
+        let previousTasks = 0;
+        const leaderboard = members.map((member, index) => {
+            if (previousStars !== member.stars || previousTasks !== member.nbOfTasksCompleted) {
+                rank = index + 1;
+            }
+            previousStars = member.stars;
+            previousTasks = member.nbOfTasksCompleted;
+            return { ...member.toObject(), rank };
+        });
+
+        res.status(200).send({
+            message: 'Leaderboard fetched successfully',
+            familyLeaderboard: leaderboard,
         });
     } catch (error) {
         console.error('Error fetching leaderboard:', error);
