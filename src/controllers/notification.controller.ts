@@ -250,3 +250,39 @@ export const markAllNotificationsAsRead = async (req: CustomRequest, res: Respon
     }
 };
 
+// API to get a notification by ID
+export const getNotificationById = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+        const { notificationId } = req.body;
+        if(!checkId({id: notificationId, res})) return;
+
+        if (!req.user) {
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+
+        const user = req.user;
+
+        // Find the notification by ID in user notifications
+        let notification = user.notifications.find(notif => notif._id.toString() === notificationId);
+
+        // If not found in user notifications, check family notifications
+        if (!notification && user.familyId) {
+            const family = await Family.findById(user.familyId);
+            if (family) {
+                notification = family.notifications.find(notif => notif._id.toString() === notificationId);
+            }
+        }
+
+        if (!notification) {
+            return throwError({ message: "Notification not found", res, status: 404 });
+        }
+
+        res.status(200).json({
+            message: "Notification retrieved successfully",
+            notification
+        });
+    } catch (error) {
+        return throwError({ message: "Error retrieving notification", res, status: 500 });
+    }
+};
+
