@@ -122,7 +122,7 @@ export const sendSharedNotification = async (req: CustomRequest, res: Response):
     }
 };
 
-//API to delete notification
+// API to delete notification
 export const deleteNotification = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
         const { notificationId, userId } = req.body;
@@ -136,20 +136,35 @@ export const deleteNotification = async (req: CustomRequest, res: Response): Pro
             return throwError({ message: "User not found", res, status: 404 });
         }
     
-        const notificationIndex = user.notifications.findIndex(
+        let notificationIndex = user.notifications.findIndex(
             (notification) => (notification._id as Types.ObjectId).toString() === notificationId
         );
 
-        if (notificationIndex === -1) {
-            return throwError({ message: "Notification not found", res, status: 404 });
+        if (notificationIndex !== -1) {
+            const [deletedNotification] = user.notifications.splice(notificationIndex, 1);
+            await user.save();
+            res.status(200).json({ message: 'Notification deleted from user successfully', DeletedNotification: deletedNotification });
+            return;
         }
 
-        const [deletedNotification] = user.notifications.splice(notificationIndex, 1);
+        // If not found in user notifications, check family notifications
+        if (user.familyId) {
+            const family = await Family.findById(user.familyId);
+            if (family) {
+                notificationIndex = family.notifications.findIndex(
+                    (notification) => (notification._id as Types.ObjectId).toString() === notificationId
+                );
 
-        await user.save();
+                if (notificationIndex !== -1) {
+                    const [deletedNotification] = family.notifications.splice(notificationIndex, 1);
+                    await family.save();
+                    res.status(200).json({ message: 'Notification deleted from family successfully', DeletedNotification: deletedNotification });
+                    return
+                }
+            }
+        }
 
-    
-        res.status(200).json({ message: 'Notification deleted successfully', DeletedNotification: deletedNotification });
+        return throwError({ message: "Notification not found", res, status: 404 });
     } catch (error) {
         console.error(error);
         return throwError({message: "Error deleting notification", res, status: 500});
@@ -169,22 +184,37 @@ export const updateNotification = async (req: Request, res: Response): Promise<v
             return throwError({ message: "User not found", res, status: 404 });
         }
 
-        const notification = user.notifications.find(notif => notif._id.toString() === notificationId);
-        if (!notification) {
-            return throwError({ message: "Notification not found", res, status: 404 });
+        let notification = user.notifications.find(notif => notif._id.toString() === notificationId);
+        if (notification) {
+            if (title) notification.title = title;
+            if (message) notification.message = message;
+            if (typeof isRead !== "undefined") notification.isRead = isRead;
+            if (category) notification.category = category;
+
+            await user.save();
+            res.status(200).json({ message: "Notification updated successfully", notification });
+            return;
         }
 
-        if (title) notification.title = title;
-        if (message) notification.message = message;
-        if (typeof isRead !== "undefined") notification.isRead = isRead;
-        if (category) notification.category = category;
+        // If not found in user notifications, check family notifications
+        if (user.familyId) {
+            const family = await Family.findById(user.familyId);
+            if (family) {
+                notification = family.notifications.find(notif => notif._id.toString() === notificationId);
+                if (notification) {
+                    if (title) notification.title = title;
+                    if (message) notification.message = message;
+                    if (typeof isRead !== "undefined") notification.isRead = isRead;
+                    if (category) notification.category = category;
 
-        await user.save();
+                    await family.save();
+                    res.status(200).json({ message: "Notification updated successfully", notification });
+                    return;
+                }
+            }
+        }
 
-        res.status(200).json({
-            message: "Notification updated successfully",
-            notification,
-        });
+        return throwError({ message: "Notification not found", res, status: 404 });
     } catch (error) {
         return throwError({ message: "Error updating notification", res, status: 500 });
     }
