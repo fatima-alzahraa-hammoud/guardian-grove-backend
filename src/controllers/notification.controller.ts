@@ -47,7 +47,7 @@ export const getNotifications = async (req: CustomRequest, res: Response): Promi
 export const sendNotification = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
 
-        const { userId, title, message, category } = req.body;
+        const { userId, title, message, category, type } = req.body;
         
         if(!checkId({id: userId, res})) return;
 
@@ -69,6 +69,7 @@ export const sendNotification = async (req: CustomRequest, res: Response): Promi
             category,
             message,
             title,
+            type : type || 'personal',
             timestamp: new Date(),
             isRead: false,
         });
@@ -85,6 +86,42 @@ export const sendNotification = async (req: CustomRequest, res: Response): Promi
         return throwError({message: "An unknown error occurred while creating notification", res, status: 500});
     }
 };
+
+//API to send shared notification
+export const sendSharedNotification = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+        const { familyId, title, message, category } = req.body;
+
+        if(!checkId({id: familyId, res})) return;
+
+        const family = await Family.findById(familyId);
+        if (!family) {
+            return throwError({ message: "Family not found", res, status: 404 });
+        }
+
+        const newNotification = ({
+            _id: new Types.ObjectId(),
+            title,
+            message,
+            category,
+            type: 'family',
+            timestamp: new Date(),
+            isRead: false,
+            isReadBy: []
+        });
+
+        await Family.findOneAndUpdate(
+            { _id: familyId },
+            { $push: { notifications: newNotification } },
+            { new: true } 
+        );
+        
+        res.status(201).json({ message: "Shared notification created successfully", notification: newNotification });
+    } catch (error) {
+        return throwError({ message: "Error creating shared notification", res, status: 500 });
+    }
+};
+
 
 //API to delete notification
 export const deleteNotification = async (req: CustomRequest, res: Response): Promise<void> => {
