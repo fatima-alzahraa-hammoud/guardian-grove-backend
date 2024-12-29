@@ -15,9 +15,8 @@ const familySchema = new Schema<IFamily>({
             role: { type: String, required: true, enum: ['parent', 'grandparent', 'admin', 'child'] },
         },
     ],
-
-    email: { type: String, required:true, unique: true},
-    createdAt: {type: Date, required: true},
+    email: { type: String, required: true, unique: true },
+    createdAt: { type: Date, required: true },
     totalStars: { type: Number, default: 0 },
     tasks: { type: Number, default: 0 },
     notifications: { type: [notificationSchema], default: [] },
@@ -28,6 +27,5 @@ const familySchema = new Schema<IFamily>({
 // Ensure virtuals are included in JSON response
 familySchema.set("toJSON", { virtuals: true });
 familySchema.set("toObject", { virtuals: true });
-
 
 export const Family = model<IFamily>("Family", familySchema);

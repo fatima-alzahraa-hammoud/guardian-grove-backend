@@ -75,6 +75,7 @@ export const createGoal = async (req: Request, res: Response): Promise<void> => 
         
         res.status(201).json({ message: 'Goal created successfully', goal: newGoal});
     } catch (err) {
+        console.error("Error creating goal:", err);
         return throwError({message: "An unknown error occurred while creating goal", res, status: 500});
     }
 }
@@ -256,7 +257,7 @@ export const deleteGoal = async (req: CustomRequest, res: Response): Promise<voi
 
         res.status(200).json({ message: 'Goal deleted successfully', DeletedGoal: deletedGoal });
     } catch (error) {
-        console.error(error);
+        console.error("Error deleting goal:", error);
         return throwError({message: "Error deleting goal", res, status: 500});
     }
 };

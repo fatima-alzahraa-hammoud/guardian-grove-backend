@@ -11,14 +11,12 @@ import { INotification } from "../interfaces/INotification";
 //API to get notifications based on category
 export const getNotifications = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
-
         if (!req.user) {
             throwError({ message: "Unauthorized", res, status: 401 });
             return;
         }
 
         const user = req.user;
-
         const { category } = req.query;
 
         let notifications = user.notifications;
@@ -36,11 +34,11 @@ export const getNotifications = async (req: CustomRequest, res: Response): Promi
         }
 
         if (notifications.length === 0) {
-            return throwError({message: "No notifications found", res, status: 404});
+            return throwError({ message: "No notifications found", res, status: 404 });
         }
-        res.status(200).json({message: "get notifications successfully",  notifications });
+        res.status(200).json({ message: "get notifications successfully", notifications });
     } catch (error) {
-        return throwError({message: "Error fetching notifications", res, status: 400});
+        return throwError({ message: "Error fetching notifications", res, status: 400 });
     }
 };
 

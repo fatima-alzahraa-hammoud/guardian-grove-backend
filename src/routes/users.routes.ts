@@ -2,7 +2,7 @@ import express from "express";
 import { 
   getUsers, getUserById, createUser, getUserStars, 
   updateUserStars, getUserCoins, updateUserCoins, 
-  getLocation, updateLocation, getUserRank, updateUserRank,
+  getLocation, updateLocation, getUserRank,
   editUserProfile, deleteUser,
   getUserInterests, updatePassword,
   startAdventure,
@@ -37,7 +37,7 @@ router.put("/location", authMiddleware, updateLocation);
 
 // Routes for managing user's rank 
 router.get("/rank", authMiddleware, getUserRank); 
-router.put("/rank", authMiddleware, updateUserRank); 
+//router.put("/rank", authMiddleware, updateUserRank); 
 
 // Routes for user's interests 
 router.get("/interests", authMiddleware, getUserInterests); 

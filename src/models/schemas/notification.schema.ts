@@ -9,4 +9,4 @@ export const notificationSchema: Schema = new Schema<INotification>({
     timestamp: { type: Date, default: Date.now },
     isRead: { type: Boolean, default: false },
     isReadBy: [{ type: Schema.Types.ObjectId, ref: 'User' }]
-});  
+});

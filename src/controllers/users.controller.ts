@@ -7,6 +7,8 @@ import { checkId } from '../utils/checkId';
 import { Adventure } from '../models/adventure.model';
 import { IAdventureProgress } from '../interfaces/IAdventureProgress';
 import { Family } from '../models/family.model';
+import { Types } from 'mongoose';
+import { IUser } from '../interfaces/IUser';
 
 // API to get all users
 export const getUsers = async(req: Request, res: Response): Promise<void> => {
@@ -14,6 +16,7 @@ export const getUsers = async(req: Request, res: Response): Promise<void> => {
         const users = await User.find();
         res.status(200).send(users);
     }catch(error){
+        console.error("Error retrieving users:", error);
         return throwError({ message: "Error retrieving users", res, status: 500});
     }
 };
@@ -31,7 +34,7 @@ export const getUserById = async (req: CustomRequest, res: Response): Promise<vo
 
         if(userId){
             if(!checkId({id: userId, res})) return;
-            if (req.user._id.toString() !== userId && req.user.role !== "admin" && req.user.role !== "owner"  && req.user.role !== "parent") {
+            if (req.user._id.toString() !== userId && ['parent', 'admin', 'owner'].includes(req.user.role)) {
                 return throwError({ message: "Forbidden", res, status: 403 });
             }
             const user = await User.findById(userId);
@@ -96,7 +99,7 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
         }
 
         // Role validation
-        const validRoles = ['owner', 'parent', 'child', 'grandfather', 'grandmother', 'admin'];
+        const validRoles = ['owner', 'parent', 'child', 'grandparent', 'admin'];
         if (!validRoles.includes(role)) {
             return throwError({ message: "Invalid role.", res, status: 400});
         }
@@ -136,6 +139,10 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
             family.members.push({_id: user.id, role, name});
             await family.save();
         }
+
+        // Recalculate the ranks after adding the new user
+        await recalculateFamilyMemberRanks(family._id, user);
+        
         res.status(200).send({message: "Creating user successfully", user: user });
 
     }catch(error){
@@ -148,9 +155,11 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
                     status: 409 
                 });
             } else {
+                console.error("Error creating user:", error);
                 return throwError({ message: error.message, res, status: 500 });
             }
         } else {
+            console.error("Unknown error creating user:", error);
             return throwError({ message: "An unknown error occurred.", res, status: 500 });
         }    
     } 
@@ -165,7 +174,7 @@ export const editUserProfile = async(req: CustomRequest, res: Response):Promise<
             return throwError({ message: "Unauthorized", res, status: 401 });
         }
 
-        if ((role || email) && req.user.role !== "admin"&& req.user.role !== "owner"  && req.user.role !== "parent") {
+        if ((role || email) && !['parent', 'admin', 'owner'].includes(req.user.role)) {
             return throwError({ message: "Forbidden: You cannot change role nor email", res, status: 403 });
         }
 
@@ -173,7 +182,7 @@ export const editUserProfile = async(req: CustomRequest, res: Response):Promise<
 
         if(userId){
             if(!checkId({id: userId, res})) return;
-            if (req.user._id.toString() !== userId && req.user.role !== "admin" && req.user.role !== "owner"  && req.user.role !== "parent") {
+            if (req.user._id.toString() !== userId && !['parent', 'admin', 'owner'].includes(req.user.role)) {
                 return throwError({ message: "Forbidden", res, status: 403 });
             }
 
@@ -219,7 +228,7 @@ export const deleteUser = async(req: CustomRequest, res:Response):Promise<void> 
         let user;
         if(userId){
             if(!checkId({id: userId, res})) return;
-            if (req.user._id.toString() !== userId && req.user.role !== "admin" && req.user.role !== "owner"  && req.user.role !== "parent") {
+            if (req.user._id.toString() !== userId && !['parent', 'admin', 'owner'].includes(req.user.role)) {
                 return throwError({ message: "Forbidden", res, status: 403 });
             }
 
@@ -236,6 +245,23 @@ export const deleteUser = async(req: CustomRequest, res:Response):Promise<void> 
         else{
             user = req.user;
         }
+
+
+        // Prevent deleting the last parent in a family
+        const family = await Family.findById(user.familyId);
+        if (family) {
+            const parentsCount = await User.countDocuments({ familyId: family._id, role: 'parent' });
+            if (user.role === 'parent' && parentsCount <= 1) {
+                return throwError({ message: "Cannot delete the last parent in the family", res, status: 400 });
+            }
+
+            // Remove user from the family members list
+            family.members = family.members.filter((member) => member._id.toString() !== user._id.toString());
+            await family.save();
+        }
+
+        // Delete the user
+        await User.findByIdAndDelete(user._id);
       
         res.status(200).send({message: "User deleted successfully", user});
     }catch(error){
@@ -300,14 +326,13 @@ export const updatePassword = async (req: CustomRequest, res: Response): Promise
             });
         }
 
-
         // Hash new password
         const hashedPassword = await bcrypt.hash(newPassword, 10);
         user.password = hashedPassword;
         await user.save();
 
         // Return success response
-        res.status(200).json({ message: "Password updated successfully.", password: newPassword });
+        res.status(200).send({ message: "Password updated successfully.", password: newPassword });
 
     } catch (error) {
         console.error("Error updating password: ", error);
@@ -322,7 +347,7 @@ export const getUserStars = async(req:CustomRequest, res: Response): Promise<voi
             return throwError({ message: "Unauthorized", res, status: 401});
         }
 
-        res.status(200).send({stars: req.user.stars});
+        res.status(200).send({message:"Stars retrieved successfully", stars: req.user.stars});
 
     }catch(error){
         return throwError({ message: "Error retrieving user stars", res, status: 500});
@@ -338,21 +363,61 @@ export const updateUserStars = async(req:CustomRequest, res: Response): Promise<
             return throwError({ message: "Unauthorized", res, status: 401});
         }
 
-        if (stars === undefined || typeof stars !== "number"){
+        if (stars === undefined || typeof stars !== "number" || stars < 0){
             return throwError({ message: "Stars must be a valid number.", res, status: 400});
         }
 
         req.user.stars += stars;
         await req.user.save();
 
-        // Update family total stars
+        if(!req.user.familyId){
+            return throwError({ message: "No family id", res, status: 400});
+        }
         await Family.findByIdAndUpdate(req.user.familyId, { $inc: { totalStars: stars } });
+        
+        await recalculateFamilyMemberRanks(req.user.familyId, req.user);
 
         res.status(200).send({ message: "User stars updated successfully", user: req.user });
     }catch(error){
+        console.error('Error updating user stars:', error);
         return throwError({ message: "Error updating user stars", res, status: 500});
     }
 } 
+
+// Helper function to recalculate ranks within the family
+const recalculateFamilyMemberRanks = async (familyId: Types.ObjectId, updatedUser: IUser): Promise<void> => {
+    try {
+        const familyMembers = await User.find({ familyId })
+            .sort({ stars: -1, nbOfTasksCompleted: -1 })
+            .exec();
+
+        let rank = 0;
+        let prevStars = 0;
+        let prevTasks = 0;
+
+        const savePromises = familyMembers.map((member, index) => {
+            if (prevStars !== member.stars || prevTasks !== member.nbOfTasksCompleted) {
+                rank++;
+            }
+
+            member.rankInFamily = rank;
+            
+            // Update req.user directly if it's the same member
+            if (updatedUser._id.equals(member._id)) {
+                updatedUser.rankInFamily = rank;
+            }
+
+            prevStars = member.stars;
+            prevTasks = member.nbOfTasksCompleted;
+
+            return member.save();  // Save all members
+        });
+
+        await Promise.all(savePromises);  // Save all members in parallel
+    } catch (error) {
+        console.error("Error recalculating ranks:", error);
+    }
+};
 
 // API to get user's coins
 export const getUserCoins = async(req:CustomRequest, res: Response): Promise<void> => {
@@ -361,7 +426,7 @@ export const getUserCoins = async(req:CustomRequest, res: Response): Promise<voi
             return throwError({ message: "Unauthorized", res, status: 401});
         }
 
-        res.status(200).send({coins: req.user.coins});
+        res.status(200).send({message:"Coins retrieved successfully", coins: req.user.coins});
     }catch(error){
         return throwError({ message: "Error retrieving user coins", res, status: 500});
     }
@@ -380,7 +445,7 @@ export const updateUserCoins = async(req:CustomRequest, res: Response): Promise<
             return throwError({ message: "Stars must be a valid number.", res, status: 400});
         }
 
-        req.user.coins = coins;
+        req.user.coins += coins;
         await req.user.save();
 
         res.status(200).send({ message: "User coins updated successfully", user: req.user });
@@ -397,7 +462,7 @@ export const getLocation = async(req:CustomRequest, res: Response): Promise<void
             return throwError({ message: "Unauthorized", res, status: 401});
         }
 
-        res.status(200).send({location: req.user.currentLocation});
+        res.status(200).send({message:"Location retrieved successfully", location: req.user.currentLocation});
 
     }catch(error){
         return throwError({ message: "Error retrieving user location", res, status: 500});
@@ -424,7 +489,7 @@ export const updateLocation = async(req:CustomRequest, res: Response): Promise<v
     }catch(error){
         return throwError({ message: "Error updating user location", res, status: 500});
     }
-} 
+}  
 
 // API to get user's rank
 export const getUserRank = async(req:CustomRequest, res: Response): Promise<void> => {
@@ -433,14 +498,14 @@ export const getUserRank = async(req:CustomRequest, res: Response): Promise<void
             return throwError({ message: "Unauthorized", res, status: 401});
         }
 
-        res.status(200).send({Rank: req.user.rankInFamily});
+        res.status(200).send({message:"Rank retrieved successfully", Rank: req.user.rankInFamily});
     }catch(error){
         return throwError({ message: "Error retrieving user rank", res, status: 500});
     }
 };
 
 // API to update user's rank
-export const updateUserRank = async(req:CustomRequest, res: Response): Promise<void> => {
+/*export const updateUserRank = async(req:CustomRequest, res: Response): Promise<void> => {
     try{
         const { rank }: { rank: number } = req.body;
 
@@ -459,7 +524,7 @@ export const updateUserRank = async(req:CustomRequest, res: Response): Promise<v
     }catch(error){
         return throwError({ message: "Error updating user rank", res, status: 500});
     }
-};
+};*/
 
 // API to get user's interesets
 export const getUserInterests = async(req:CustomRequest, res: Response): Promise<void> => {
@@ -468,7 +533,7 @@ export const getUserInterests = async(req:CustomRequest, res: Response): Promise
             return throwError({ message: "Unauthorized", res, status: 401});
         }
 
-        res.status(200).send({Interests: req.user.interests});
+        res.status(200).send({ message: "Interests retrieved successfully", Interests: req.user.interests});
     }catch(error){
         throwError({ message: "Error retrieving user interests", res, status: 500});
     }
@@ -519,65 +584,94 @@ export const startAdventure = async (req: CustomRequest, res: Response): Promise
         req.user.adventures.push(newAdventureProgress);
         await req.user.save();
 
-        res.status(200).json({ message: "Adventure started successfully", user: req.user });
+        res.status(200).send({ message: "Adventure started successfully", user: req.user });
 
     } catch (error) {
         return throwError({ message: "An unknown error occurred while starting the adventure.", res, status: 500 });
     }
 };
 
-// API to complete a challenge
 export const completeChallenge = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
         const { adventureId, challengeId } = req.body;
 
-        if(!checkId({id: adventureId, res})) return;
-        if(!checkId({id: challengeId, res})) return;
+        if (!checkId({ id: adventureId, res })) return;
+        if (!checkId({ id: challengeId, res })) return;
 
         if (!req.user) {
             return throwError({ message: "Unauthorized", res, status: 401 });
         }
 
         const user = req.user;
-        // Challenge Progress Check
-        const adventureProgress = req.user.adventures.find(
-            adventure => adventure.adventureId.equals(adventureId)
+        const adventureProgress = user.adventures.find(
+            (adventure) => adventure.adventureId.equals(adventureId)
         );
         if (!adventureProgress) {
             return throwError({ message: "Adventure not found in user's profile", res, status: 404 });
         }
-        
+
         const challenge = adventureProgress.challenges.find(
-            challenge => challenge.challengeId.equals(challengeId)
+            (challenge) => challenge.challengeId.equals(challengeId)
         );
         if (!challenge) {
             return throwError({ message: "Challenge not found in adventure", res, status: 404 });
         }
 
-        // Mark the challenge as completed
+        // Fetch the full adventure to get challenge rewards
+        const adventure = await Adventure.findById(adventureId).lean();
+
+        if (!adventure) {
+            return throwError({ message: "Adventure not found", res, status: 404 });
+        }
+
+        const targetChallenge = adventure.challenges.find(ch =>
+            ch._id.equals(challengeId)
+        );
+
+        if (!targetChallenge) {
+            return throwError({ message: "Challenge data not found in adventure", res, status: 404 });
+        }
+
+        // Mark challenge as complete and add rewards
         challenge.isCompleted = true;
         challenge.completedAt = new Date();
 
-        // Calculate progress 
+        const starsReward = targetChallenge.starsReward;
+        const coinsReward = targetChallenge.coinsReward;
+
+        user.stars += starsReward;
+        user.coins += coinsReward;
+
         adventureProgress.progress = (adventureProgress.challenges.filter(challenge => challenge.isCompleted).length / adventureProgress.challenges.length) * 100;
 
-        // Check if all challenges are completed and mark the adventure as completed
-        if (adventureProgress.challenges.every(challenge => challenge.isCompleted)) {
+        let adventureStars = 0;
+        if (adventureProgress.progress === 100) {
             adventureProgress.isAdventureCompleted = true;
             adventureProgress.status = 'completed';
-            user.coins += adventureProgress.starsReward;
-            user.stars += adventureProgress.coinsReward;
+            adventureStars = adventureProgress.starsReward;
+
+            user.coins += adventureProgress.coinsReward;
+            user.stars += adventureStars;
         }
 
-        // Save the user's updated adventure progress
+        // Update the family total stars
+        if (user.familyId) {
+            const totalStars = starsReward + adventureStars;
+            await Family.findByIdAndUpdate(user.familyId, {
+                $inc: { totalStars: totalStars }
+            });
+            await recalculateFamilyMemberRanks(user.familyId, user);
+        }
+
         await user.save();
 
         res.status(200).json({ message: "Challenge completed successfully", adventureProgress });
 
     } catch (error) {
+        console.error("Error completing challenge:", error);
         return throwError({ message: "An unknown error occurred while completing the challenge.", res, status: 500 });
     }
-}
+};
 
 // API to get user's adventures
 export const getUserAdventures = async(req:CustomRequest, res: Response): Promise<void> => {
@@ -586,7 +680,7 @@ export const getUserAdventures = async(req:CustomRequest, res: Response): Promis
             return throwError({ message: "Unauthorized", res, status: 401});
         }
 
-        res.status(200).send({Adventure: req.user.adventures});
+        res.status(200).send({ message: "User adventures retrieved successfully", Adventure: req.user.adventures});
     }catch(error){
         return throwError({ message: "Error retrieving user adventures", res, status: 500});
     }
@@ -602,7 +696,7 @@ export const getUserPurchasedItems = async (req: CustomRequest, res: Response) =
 
         const user = req.user;
 
-        res.status(200).json({message: "Get purchased items successfully", purchasedItems: user.purchasedItems });
+        res.status(200).json({message: "Purchased items retrieved successfully", purchasedItems: user.purchasedItems });
     } catch (error) {
         return throwError({ message: "Error fetching purchased items", res, status: 500});
     }
