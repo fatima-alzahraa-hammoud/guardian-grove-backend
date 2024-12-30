@@ -5,6 +5,8 @@ import { v2 as cloudinary } from 'cloudinary';
 import { IBook } from "../interfaces/IBook";
 import { Types } from "mongoose";
 import path from "path";
+import { User } from "../models/user.model";
+import { checkId } from "../utils/checkId";
 
 /*const sanitizePublicId = (filename: string): string => {
     return filename.replace(/[^a-zA-Z0-9-_]/g, '_');
@@ -163,5 +165,58 @@ export const getUserBooks = async (req: CustomRequest, res: Response): Promise<v
     } catch (error) {
         console.error('Error retrieving books:', error);
         return throwError({ message: 'Error retrieving books', res, status: 500 });
+    }
+};
+
+export const deleteBook = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+        if (!req.user) {
+            return throwError({ message: 'Unauthorized', res, status: 401 });
+        }
+
+        const { bookId, userId } = req.body;
+
+        if(!checkId({id: bookId, res})) return;
+
+        let user;
+
+        if(userId && userId !== req.user._id && req.user.role !== "admin"){
+            return throwError({ message: 'Forbidden', res, status: 401 });
+        }
+
+        if (userId){
+            if(!checkId({id: userId, res})) return;
+            user = await User.findById(userId);
+
+            if (!user){
+                return throwError({ message: "User not found", res, status: 404});
+            }
+        }
+        else{
+            user = req.user;
+        }
+
+        const bookIndex = req.user.books.findIndex(book => book.id.toString() === bookId);
+
+        if (bookIndex === -1) {
+            return throwError({ message: 'Book not found', res, status: 404 });
+        }
+
+        const book = req.user.books[bookIndex];
+
+        // Delete cover image from Cloudinary
+        await cloudinary.uploader.destroy(book.coverImage, { resource_type: 'image' });
+
+        // Delete book file from Cloudinary
+        await cloudinary.uploader.destroy(book.bookFile, { resource_type: 'raw' });
+
+        // Remove book from user's collection
+        req.user.books.splice(bookIndex, 1);
+        await req.user.save();
+
+        res.status(200).json({ message: 'Book deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting book:', error);
+        return throwError({ message: 'Error deleting book', res, status: 500 });
     }
 };
