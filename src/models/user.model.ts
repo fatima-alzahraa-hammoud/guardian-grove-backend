@@ -8,6 +8,7 @@ import { INote } from "../interfaces/INote";
 import { goalSchema } from "./schemas/goal.schema";
 import { notificationSchema } from "./schemas/notification.schema";
 import { unlockedAchievementSchema } from "./schemas/unlockedAchievementSchema.schema";
+import { bookSchema } from "./schemas/book.schema";
 
 const noteSchema: Schema = new Schema<INote>({
     _id: { type: Schema.Types.ObjectId, auto: true },
@@ -64,6 +65,7 @@ const userSchema = new Schema<IUser>({
     notifications: { type: [notificationSchema], default: [] },
     notes: { type: [noteSchema], default: [] },
     goals: { type: [goalSchema], default: [] },
+    books: { type: [bookSchema], default: [] }, 
 });
 
 userSchema.index({ name: 1, email: 1 }, { unique: true });

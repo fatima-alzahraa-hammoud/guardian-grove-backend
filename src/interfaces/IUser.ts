@@ -5,6 +5,7 @@ import { IPurchasedItem } from "./IPurschasedItem";
 import { INotification } from "./INotification";
 import { INote } from "./INote";
 import { IGoal } from "./IGoal";
+import { IBook } from "./IBook";
 
 export interface IUser extends Document{
     _id: Types.ObjectId;
@@ -29,4 +30,5 @@ export interface IUser extends Document{
     notifications: INotification[];
     notes: INote[];
     goals: IGoal[];
+    books: IBook[];
 }
