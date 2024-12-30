@@ -77,6 +77,7 @@ const sanitizePublicId = (filename: string): string => {
     return filename.replace(/[^a-zA-Z0-9-_أ-ي]/g, '_');
 };
 
+// API to upload book
 export const uploadBook = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
         if (!req.user) {
@@ -147,5 +148,20 @@ export const uploadBook = async (req: CustomRequest, res: Response): Promise<voi
     } catch (error) {
         console.error('Error uploading book:', error);
         return throwError({ message: 'Error uploading book', res, status: 500 });
+    }
+};
+
+// API to get user books
+export const getUserBooks = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+        if (!req.user) {
+            return throwError({ message: 'Unauthorized', res, status: 401 });
+        }
+
+        const books = req.user.books;
+        res.status(200).json({ message: 'Books retrieved successfully', books });
+    } catch (error) {
+        console.error('Error retrieving books:', error);
+        return throwError({ message: 'Error retrieving books', res, status: 500 });
     }
 };
