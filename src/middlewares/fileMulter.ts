@@ -4,7 +4,7 @@ import path from "path";
 // Configure storage for PDFs and Word files
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, "uploads/");  // Store files in "uploads" folder
+        cb(null, "uploads/books");  // Store files in "uploads" folder
     },
     filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
