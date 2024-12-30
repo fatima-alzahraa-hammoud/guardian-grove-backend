@@ -5,6 +5,6 @@ export interface IBook extends Document {
     coverImage: string;
     description: string;
     author:string;
-    filePath: string;
+    bookFile: string;
     uploadedAt: Date;
 }
