@@ -75,6 +75,13 @@ export const uploadBook = async (req: CustomRequest, res:Response): Promise<void
     }
 }*/
 
+const extractPublicId = (url: string): string => {
+    const parts = url.split('/');
+    const publicIdWithExtension = parts[parts.length - 1];
+    const publicId = publicIdWithExtension.split('.')[0];
+    return publicId;
+};
+
 const sanitizePublicId = (filename: string): string => {
     return filename.replace(/[^a-zA-Z0-9-_أ-ي]/g, '_');
 };
@@ -196,25 +203,29 @@ export const deleteBook = async (req: CustomRequest, res: Response): Promise<voi
             user = req.user;
         }
 
-        const bookIndex = req.user.books.findIndex(book => book.id.toString() === bookId);
+        const bookIndex = user.books.findIndex(book => book.id.toString() === bookId);
 
         if (bookIndex === -1) {
             return throwError({ message: 'Book not found', res, status: 404 });
         }
 
-        const book = req.user.books[bookIndex];
+        const book = user.books[bookIndex];
+
+        // Extract public_id from URLs
+        const coverImagePublicId = extractPublicId(book.coverImage);
+        const bookFilePublicId = extractPublicId(book.bookFile);
 
         // Delete cover image from Cloudinary
-        await cloudinary.uploader.destroy(book.coverImage, { resource_type: 'image' });
+        await cloudinary.uploader.destroy(coverImagePublicId, { resource_type: 'image' });
 
         // Delete book file from Cloudinary
-        await cloudinary.uploader.destroy(book.bookFile, { resource_type: 'raw' });
+        await cloudinary.uploader.destroy(bookFilePublicId, { resource_type: 'raw' });
 
         // Remove book from user's collection
-        req.user.books.splice(bookIndex, 1);
-        await req.user.save();
+        user.books.splice(bookIndex, 1);
+        await user.save();
 
-        res.status(200).json({ message: 'Book deleted successfully' });
+        res.status(200).json({ message: 'Book deleted successfully', DeletedBook: book });
     } catch (error) {
         console.error('Error deleting book:', error);
         return throwError({ message: 'Error deleting book', res, status: 500 });
