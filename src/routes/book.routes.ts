@@ -1,5 +1,5 @@
 import express from "express";
-import { deleteBook, getUserBooks, updateBook, uploadBook } from "../controllers/book.controller";
+import { deleteBook, downloadBook, getUserBooks, updateBook, uploadBook } from "../controllers/book.controller";
 import { bookUploadMiddleware } from "../middlewares/bookUploadMiddleware";
 import { authMiddleware } from "../middlewares/auth.middleware";
 
@@ -9,5 +9,6 @@ router.post('/upload', authMiddleware, bookUploadMiddleware, uploadBook);
 router.get('/', authMiddleware, getUserBooks);
 router.delete('/', authMiddleware, deleteBook);
 router.put('/:bookId/:userId?', bookUploadMiddleware, authMiddleware, updateBook);
+router.get('/download', authMiddleware, downloadBook);
 
 export default router;
