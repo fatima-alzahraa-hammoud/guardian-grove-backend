@@ -328,3 +328,24 @@ export const updateBook = async (req: CustomRequest, res: Response): Promise<voi
         return throwError({ message: 'Error updating book', res, status: 500 });
     }
 };
+
+// API to download book
+export const downloadBook = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+        const { bookId } = req.body;
+
+        if (!req.user) {
+            return throwError({ message: 'Unauthorized', res, status: 401 });
+        }
+
+        const book = req.user.books.find(book => book.id.toString() === bookId);
+        if (!book) {
+            return throwError({ message: 'Book not found', res, status: 404 });
+        }
+
+        res.redirect(book.bookFile);
+    } catch (error) {
+        console.error('Error downloading book:', error);
+        return throwError({ message: 'Error downloading book', res, status: 500 });
+    }
+};
