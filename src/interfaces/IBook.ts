@@ -1,10 +1,13 @@
-import { Document } from "mongoose";
+import { Date, Document } from "mongoose";
 
-export interface Book extends Document {
+export interface IBook extends Document {
     title: string;
     coverImage: string;
     description: string;
-    filePath: string;
-    userId: string;
+    author:string,
+    fileUrl: string,
+    fileName: string,
+    fileType: string,
+    uploadedAt: Date,
 }
   
