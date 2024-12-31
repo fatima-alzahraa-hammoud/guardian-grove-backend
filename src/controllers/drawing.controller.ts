@@ -4,6 +4,7 @@ import { CustomRequest } from "../interfaces/customRequest";
 import { throwError } from "../utils/error";
 import { IDrawing } from "../interfaces/IDrawing";
 import path from "path";
+import { checkId } from "../utils/checkId";
 
 const sanitizePublicId = (filename: string): string => {
     return filename.replace(/[^a-zA-Z0-9-_أ-ي]/g, '_');
@@ -73,5 +74,28 @@ export const getDrawings = async (req: CustomRequest, res: Response): Promise<vo
     } catch (error) {
         console.error('Error retrieving drawings:', error);
         return throwError({ message: 'Error retrieving drawings', res, status: 500 });
+    }
+};
+
+// API to get a drawing by ID
+export const getDrawingById = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+        if (!req.user) {
+            return throwError({ message: 'Unauthorized', res, status: 401 });
+        }
+
+        const { drawingId } = req.params;
+        if(!checkId({id: drawingId, res})) return;
+        
+        const drawing = req.user.drawings.find(drawing => drawing.id.toString() === drawingId);
+
+        if (!drawing) {
+            return throwError({ message: 'Drawing not found', res, status: 404 });
+        }
+
+        res.status(200).json({ message: 'Drawing retrieved successfully', drawing });
+    } catch (error) {
+        console.error('Error retrieving drawing:', error);
+        return throwError({ message: 'Error retrieving drawing', res, status: 500 });
     }
 };
