@@ -281,7 +281,7 @@ export const updateBook = async (req: CustomRequest, res: Response): Promise<voi
         if (coverImage) {
             // Delete old cover image from Cloudinary
             const coverImagePublicId = extractPublicId(book.coverImage);
-            await cloudinary.uploader.destroy(coverImagePublicId, { resource_type: 'image' });
+            const image = await cloudinary.api.delete_resources([coverImagePublicId]);
 
             // Upload new cover image to Cloudinary
             const sanitizedCoverImagePublicId = `covers/${Date.now()}-${sanitizePublicId(path.basename(coverImage.originalname, path.extname(coverImage.originalname)))}`;
@@ -302,7 +302,7 @@ export const updateBook = async (req: CustomRequest, res: Response): Promise<voi
         if (bookFile) {
             // Delete old book file from Cloudinary
             const bookFilePublicId = extractPublicId(book.bookFile);
-            await cloudinary.uploader.destroy(bookFilePublicId, { resource_type: 'raw' });
+            await cloudinary.uploader.destroy(bookFilePublicId);
 
             // Upload new book file to Cloudinary
             const sanitizedPublicId = `books/${Date.now()}-${sanitizePublicId(path.basename(bookFile.originalname, path.extname(bookFile.originalname)))}${path.extname(bookFile.originalname)}`;
