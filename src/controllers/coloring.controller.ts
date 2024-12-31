@@ -59,3 +59,18 @@ export const createColoring = async (req: CustomRequest, res: Response): Promise
         return throwError({ message: 'Error creating coloring image', res, status: 500 });
     }
 }
+
+//API to get coloring images
+export const getColorings = async (req: CustomRequest, res: Response): Promise<void> =>{
+    try{
+        if(!req.user){
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+
+        res.status(200).json({ message: 'Colorings retrieved successfully', colorings: req.user.colorings });
+
+    }catch(error){
+        console.error('Error getting colorings:', error);
+        return throwError({ message: 'Error getting colorings', res, status: 500 });
+    }
+}
