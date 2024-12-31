@@ -84,7 +84,7 @@ export const getDrawingById = async (req: CustomRequest, res: Response): Promise
             return throwError({ message: 'Unauthorized', res, status: 401 });
         }
 
-        const { drawingId } = req.params;
+        const { drawingId } = req.body;
         if(!checkId({id: drawingId, res})) return;
         
         const drawing = req.user.drawings.find(drawing => drawing.id.toString() === drawingId);
