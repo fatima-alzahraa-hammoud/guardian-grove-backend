@@ -5,6 +5,7 @@ import { throwError } from "../utils/error";
 import path from "path";
 import { IColoring } from "../interfaces/IColoring";
 import { sanitizePublicId } from "../utils/sanitizePublicId";
+import { checkId } from "../utils/checkId";
 
 //API to create and save coloring
 export const createColoring = async (req: CustomRequest, res: Response): Promise<void> =>{
@@ -74,3 +75,27 @@ export const getColorings = async (req: CustomRequest, res: Response): Promise<v
         return throwError({ message: 'Error getting colorings', res, status: 500 });
     }
 }
+
+
+// API to get a coloring by ID
+export const getColoringById = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+        if (!req.user) {
+            return throwError({ message: 'Unauthorized', res, status: 401 });
+        }
+
+        const { coloringId } = req.body;
+        if(!checkId({id: coloringId, res})) return;
+        
+        const coloring = req.user.colorings.find(coloring => coloring.id.toString() === coloringId);
+
+        if (!coloring) {
+            return throwError({ message: 'Coloring not found', res, status: 404 });
+        }
+
+        res.status(200).json({ message: 'Coloring retrieved successfully', coloring });
+    } catch (error) {
+        console.error('Error retrieving coloring:', error);
+        return throwError({ message: 'Error retrieving coloring', res, status: 500 });
+    }
+};
