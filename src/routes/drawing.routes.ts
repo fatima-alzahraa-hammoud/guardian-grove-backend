@@ -1,14 +1,14 @@
 import express from "express";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { createDrawing, deleteDrawing, getDrawingById, getDrawings, updateDrawing } from "../controllers/drawing.controller";
-import { drawingUploadMiddleware } from "../middlewares/drawingUploadMiddleware";
+import {imageUploadMiddleware } from "../middlewares/imageUploadMiddleware";
 
 const router =  express.Router();
 
-router.post("/", authMiddleware, drawingUploadMiddleware, createDrawing);
+router.post("/", authMiddleware, imageUploadMiddleware, createDrawing);
 router.get("/", authMiddleware, getDrawings);
 router.get("/drawing", authMiddleware, getDrawingById);
 router.delete("/", authMiddleware, deleteDrawing);
-router.put("/:userId/:drawingId", authMiddleware, drawingUploadMiddleware, updateDrawing);
+router.put("/:userId/:drawingId", authMiddleware, imageUploadMiddleware, updateDrawing);
 
 export default router;
