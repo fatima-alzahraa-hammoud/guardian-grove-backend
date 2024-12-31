@@ -36,5 +36,5 @@ export interface IUser extends Document{
     books: IBook[];
     drawings: IDrawing[];
     colorings: IColoring[];
-    personalStories: IStory;
+    personalStories: IStory[];
 }

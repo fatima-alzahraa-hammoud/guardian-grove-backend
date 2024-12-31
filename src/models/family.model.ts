@@ -4,6 +4,7 @@ import { User } from "./user.model";
 import { goalSchema } from "./schemas/goal.schema";
 import { notificationSchema } from "./schemas/notification.schema";
 import { unlockedAchievementSchema } from "./schemas/unlockedAchievementSchema.schema";
+import { storySchema } from "./schemas/story.schema";
 
 const familySchema = new Schema<IFamily>({
     _id: { type: Schema.Types.ObjectId, auto: true },
@@ -35,6 +36,7 @@ const familySchema = new Schema<IFamily>({
         yearly: { type: Number, default: 0 }
     },
     familyAvatar: { type: String, required: true },
+    sharedStories: { type: [storySchema], default: [] },
 });
 
 // Ensure virtuals are included in JSON response

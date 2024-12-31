@@ -4,6 +4,7 @@ import { INotification } from "./INotification";
 import { IGoal } from "./IGoal";
 import { IAchievement } from "./IAchievements";
 import { IUnlockedAchievement } from "./IUnlockedAchievement";
+import { IStory } from "./IStory";
 
 type TimePeriod = 'daily' | 'weekly' | 'monthly' | 'yearly';
 export interface IFamily extends Document {
@@ -24,4 +25,5 @@ export interface IFamily extends Document {
     stars: Record<TimePeriod, number>;
     taskCounts: Record<TimePeriod, number>;
     familyAvatar: string;
+    sharedStories: IStory[];
 }

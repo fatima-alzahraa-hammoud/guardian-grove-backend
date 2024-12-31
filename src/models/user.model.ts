@@ -71,7 +71,8 @@ const userSchema = new Schema<IUser>({
     books: { type: [bookSchema], default: [] }, 
     drawings: { type: [drawingSchema], default: [] }, 
     colorings: { type: [coloringSchema], default: [] }, 
-    personalStories: [storySchema]
+    personalStories: { type: [storySchema], default: [] },
+
 });
 
 userSchema.index({ name: 1, email: 1 }, { unique: true });
