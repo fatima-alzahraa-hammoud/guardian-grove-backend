@@ -7,6 +7,8 @@ import { Types } from "mongoose";
 import path from "path";
 import { User } from "../models/user.model";
 import { checkId } from "../utils/checkId";
+import { sanitizePublicId } from "../utils/sanitizePublicId";
+import { extractPublicId } from "../utils/extractPublicId";
 
 /*const sanitizePublicId = (filename: string): string => {
     return filename.replace(/[^a-zA-Z0-9-_]/g, '_');
@@ -74,17 +76,6 @@ export const uploadBook = async (req: CustomRequest, res:Response): Promise<void
         return throwError({ message: 'Error uploading book', res, status: 500 });
     }
 }*/
-
-const extractPublicId = (url: string): string => {
-    const parts = url.split('/');
-    const publicIdWithExtension = parts[parts.length - 1];
-    const publicId = publicIdWithExtension.split('.')[0];
-    return publicId;
-};
-
-const sanitizePublicId = (filename: string): string => {
-    return filename.replace(/[^a-zA-Z0-9-_أ-ي]/g, '_');
-};
 
 // API to upload book
 export const uploadBook = async (req: CustomRequest, res: Response): Promise<void> => {

@@ -6,17 +6,8 @@ import { IDrawing } from "../interfaces/IDrawing";
 import path from "path";
 import { checkId } from "../utils/checkId";
 import { User } from "../models/user.model";
-
-const extractPublicId = (url: string): string => {
-    const parts = url.split('/');
-    const publicIdWithExtension = parts[parts.length - 1];
-    const publicId = publicIdWithExtension.split('.')[0];
-    return publicId;
-};
-
-const sanitizePublicId = (filename: string): string => {
-    return filename.replace(/[^a-zA-Z0-9-_أ-ي]/g, '_');
-};
+import { sanitizePublicId } from "../utils/sanitizePublicId";
+import { extractPublicId } from "../utils/extractPublicId";
 
 //API to create and save drawing
 export const createDrawing = async (req: CustomRequest, res: Response): Promise<void> =>{
@@ -28,7 +19,7 @@ export const createDrawing = async (req: CustomRequest, res: Response): Promise<
         const { title } = req.body;
 
         if (!title) {
-            return throwError({ message: "Title and drawing are required", res, status: 400});
+            return throwError({ message: "Title is required", res, status: 400});
         }
 
         const files = req.files as { [fieldname: string]: Express.Multer.File[] };
