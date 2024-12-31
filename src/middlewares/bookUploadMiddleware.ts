@@ -35,6 +35,19 @@ const fileFilter = (req: Request, file: Express.Multer.File, cb: FileFilterCallb
             return cb(null, false);
         }
     }
+
+    if (file.fieldname === 'coverImage') {
+        const allowedMimeTypes = [
+            'image/jpeg',
+            'image/png',
+            'image/gif'
+        ];
+        if (!allowedMimeTypes.includes(file.mimetype)) {
+            (req as any).fileValidationError = 'Only JPEG, PNG, and GIF files are allowed for coverImage';
+            return cb(null, false);
+        }
+    }
+
     cb(null, true);
 };
 
