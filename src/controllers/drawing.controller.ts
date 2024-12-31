@@ -193,7 +193,7 @@ export const updateDrawing = async (req: CustomRequest, res: Response): Promise<
             const image = await cloudinary.api.delete_resources([drawingImagePublicId]);
 
             // Upload new cover image to Cloudinary
-            const sanitizedDrawingImagePublicId = `covers/${Date.now()}-${sanitizePublicId(path.basename(drawingImage.originalname, path.extname(drawingImage.originalname)))}`;
+            const sanitizedDrawingImagePublicId = `drawings/${Date.now()}-${sanitizePublicId(path.basename(drawingImage.originalname, path.extname(drawingImage.originalname)))}`;
             const drawingImageResult = await new Promise((resolve, reject) => {
                 const stream = cloudinary.uploader.upload_stream({
                     resource_type: 'image',
