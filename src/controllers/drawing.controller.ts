@@ -61,3 +61,17 @@ export const createDrawing = async (req: CustomRequest, res: Response): Promise<
         return throwError({ message: 'Error creating drawing', res, status: 500 });
     }
 }
+
+// API to get all drawings
+export const getDrawings = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+        if (!req.user) {
+            return throwError({ message: 'Unauthorized', res, status: 401 });
+        }
+
+        res.status(200).json({ message: 'Drawings retrieved successfully', drawings: req.user.drawings });
+    } catch (error) {
+        console.error('Error retrieving drawings:', error);
+        return throwError({ message: 'Error retrieving drawings', res, status: 500 });
+    }
+};
