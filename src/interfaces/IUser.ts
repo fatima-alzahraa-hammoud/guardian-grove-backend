@@ -6,6 +6,7 @@ import { INotification } from "./INotification";
 import { INote } from "./INote";
 import { IGoal } from "./IGoal";
 import { IBook } from "./IBook";
+import { IDrawing } from "./IDrawing";
 
 export interface IUser extends Document{
     _id: Types.ObjectId;
@@ -31,4 +32,5 @@ export interface IUser extends Document{
     notes: INote[];
     goals: IGoal[];
     books: IBook[];
+    drawings: IDrawing[];
 }
