@@ -6,6 +6,7 @@ import path from "path";
 import { IColoring } from "../interfaces/IColoring";
 import { sanitizePublicId } from "../utils/sanitizePublicId";
 import { checkId } from "../utils/checkId";
+import { extractPublicId } from "../utils/extractPublicId";
 
 //API to create and save coloring
 export const createColoring = async (req: CustomRequest, res: Response): Promise<void> =>{
@@ -97,5 +98,40 @@ export const getColoringById = async (req: CustomRequest, res: Response): Promis
     } catch (error) {
         console.error('Error retrieving coloring:', error);
         return throwError({ message: 'Error retrieving coloring', res, status: 500 });
+    }
+};
+
+
+// API to delete a coloring
+export const deleteColoring = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+        if (!req.user) {
+            return throwError({ message: 'Unauthorized', res, status: 401 });
+        }
+
+        const { coloringId } = req.body;
+        if(!checkId({id: coloringId, res})) return;
+
+        const coloringIndex = req.user.colorings.findIndex(
+            (coloring) => coloring.id.toString() === coloringId
+        );        
+        if (coloringIndex === -1) {
+            return throwError({ message: "Coloring not found", res, status: 404 });
+        }
+
+        const coloring = req.user.colorings[coloringIndex];
+
+        const coloringImagePublicId = `colorings/${extractPublicId(coloring.imageUrl)}`;
+        
+        // Delete drawing image from Cloudinary
+        await cloudinary.api.delete_resources([coloringImagePublicId], { resource_type: 'image' });
+
+        const [deletedDColoring] = req.user.colorings.splice(coloringIndex, 1);
+        await req.user.save();
+
+        res.status(200).json({ message: 'Coloring deleted successfully', deletedColoring: deletedDColoring });
+    } catch (error) {
+        console.error('Error deleting coloring:', error);
+        return throwError({ message: 'Error deleting coloring', res, status: 500 });
     }
 };
