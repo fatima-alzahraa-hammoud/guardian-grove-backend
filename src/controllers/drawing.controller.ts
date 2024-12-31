@@ -6,6 +6,13 @@ import { IDrawing } from "../interfaces/IDrawing";
 import path from "path";
 import { checkId } from "../utils/checkId";
 
+const extractPublicId = (url: string): string => {
+    const parts = url.split('/');
+    const publicIdWithExtension = parts[parts.length - 1];
+    const publicId = publicIdWithExtension.split('.')[0];
+    return publicId;
+};
+
 const sanitizePublicId = (filename: string): string => {
     return filename.replace(/[^a-zA-Z0-9-_أ-ي]/g, '_');
 };
@@ -31,7 +38,7 @@ export const createDrawing = async (req: CustomRequest, res: Response): Promise<
         }
 
         // Sanitize the public_id for the drawing image
-        const sanitizedDrawingImagePublicId = `covers/${Date.now()}-${sanitizePublicId(path.basename(drawingImage.originalname, path.extname(drawingImage.originalname)))}`;
+        const sanitizedDrawingImagePublicId = `drawings/${Date.now()}-${sanitizePublicId(path.basename(drawingImage.originalname, path.extname(drawingImage.originalname)))}`;
 
 
         const result = await new Promise((resolve, reject) => {
@@ -97,5 +104,41 @@ export const getDrawingById = async (req: CustomRequest, res: Response): Promise
     } catch (error) {
         console.error('Error retrieving drawing:', error);
         return throwError({ message: 'Error retrieving drawing', res, status: 500 });
+    }
+};
+
+
+// API to delete a drawing
+export const deleteDrawing = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+        if (!req.user) {
+            return throwError({ message: 'Unauthorized', res, status: 401 });
+        }
+
+        const { drawingId } = req.body;
+        if(!checkId({id: drawingId, res})) return;
+
+        const drawingIndex = req.user.drawings.findIndex(
+            (drawing) => drawing.id.toString() === drawingId
+        );        
+        if (drawingIndex === -1) {
+            return throwError({ message: "Drawing not found", res, status: 404 });
+        }
+
+        const drawing = req.user.drawings[drawingIndex];
+
+        const drawingImagePublicId = `drawings/${extractPublicId(drawing.drawing)}`;
+        console.log(drawingImagePublicId);
+        
+        // Delete drawing image from Cloudinary
+        await cloudinary.api.delete_resources([drawingImagePublicId], { resource_type: 'image' });
+
+        const [deletedDrawing] = req.user.drawings.splice(drawingIndex, 1);
+        await req.user.save();
+
+        res.status(200).json({ message: 'Drawing deleted successfully', deletedDrawing: deletedDrawing });
+    } catch (error) {
+        console.error('Error deleting drawing:', error);
+        return throwError({ message: 'Error deleting drawing', res, status: 500 });
     }
 };
