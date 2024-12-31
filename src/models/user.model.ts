@@ -11,6 +11,7 @@ import { unlockedAchievementSchema } from "./schemas/unlockedAchievementSchema.s
 import { bookSchema } from "./schemas/book.schema";
 import { drawingSchema } from "./schemas/drawing.schema";
 import { coloringSchema } from "./schemas/coloring.schema";
+import { storySchema } from "./schemas/story.schema";
 
 const noteSchema: Schema = new Schema<INote>({
     _id: { type: Schema.Types.ObjectId, auto: true },
@@ -70,6 +71,7 @@ const userSchema = new Schema<IUser>({
     books: { type: [bookSchema], default: [] }, 
     drawings: { type: [drawingSchema], default: [] }, 
     colorings: { type: [coloringSchema], default: [] }, 
+    personalStories: [storySchema]
 });
 
 userSchema.index({ name: 1, email: 1 }, { unique: true });

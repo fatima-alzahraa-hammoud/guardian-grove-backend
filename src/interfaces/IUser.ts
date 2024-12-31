@@ -8,6 +8,7 @@ import { IGoal } from "./IGoal";
 import { IBook } from "./IBook";
 import { IDrawing } from "./IDrawing";
 import { IColoring } from "./IColoring";
+import { IStory } from "./IStory";
 
 export interface IUser extends Document{
     _id: Types.ObjectId;
@@ -35,4 +36,5 @@ export interface IUser extends Document{
     books: IBook[];
     drawings: IDrawing[];
     colorings: IColoring[];
+    personalStories: IStory;
 }
