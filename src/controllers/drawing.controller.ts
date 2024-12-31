@@ -136,7 +136,7 @@ export const deleteDrawing = async (req: CustomRequest, res: Response): Promise<
 };
 
 
-//API to update book
+//API to update drawings
 export const updateDrawing = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
         if (!req.user) {
