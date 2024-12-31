@@ -17,5 +17,5 @@ const upload = multer({ storage, fileFilter });
 
 // Multer middleware for handling multipart form data
 export const imageUploadMiddleware = upload.fields([
-    { name: 'imagUrl', maxCount: 1 },
+    { name: 'imageUrl', maxCount: 1 },
 ]);

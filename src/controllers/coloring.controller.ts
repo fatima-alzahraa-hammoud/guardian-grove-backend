@@ -20,7 +20,7 @@ export const createColoring = async (req: CustomRequest, res: Response): Promise
         }
 
         const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-        const coloringImage = files.imagUrl?.[0];
+        const coloringImage = files.imageUrl?.[0];
 
         if (!coloringImage) {
             return throwError({ message: 'Coloring image is required.', res, status: 400 });

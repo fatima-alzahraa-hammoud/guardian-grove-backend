@@ -23,7 +23,7 @@ export const createDrawing = async (req: CustomRequest, res: Response): Promise<
         }
 
         const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-        const drawingImage = files.imagUrl?.[0];
+        const drawingImage = files.imageUrl?.[0];
 
         if (!drawingImage) {
             return throwError({ message: 'Drawing image is required.', res, status: 400 });
@@ -168,7 +168,7 @@ export const updateDrawing = async (req: CustomRequest, res: Response): Promise<
         const { title } = req.body;
 
         const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-        const drawingImage = files?.imagUrl?.[0];
+        const drawingImage = files?.imageUrl?.[0];
 
         const drawing = user.drawings.find(draw => draw.id.toString() === drawingId);
 
