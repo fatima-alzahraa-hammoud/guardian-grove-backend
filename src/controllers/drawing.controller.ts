@@ -5,6 +5,7 @@ import { throwError } from "../utils/error";
 import { IDrawing } from "../interfaces/IDrawing";
 import path from "path";
 import { checkId } from "../utils/checkId";
+import { User } from "../models/user.model";
 
 const extractPublicId = (url: string): string => {
     const parts = url.split('/');
@@ -140,5 +141,78 @@ export const deleteDrawing = async (req: CustomRequest, res: Response): Promise<
     } catch (error) {
         console.error('Error deleting drawing:', error);
         return throwError({ message: 'Error deleting drawing', res, status: 500 });
+    }
+};
+
+
+//API to update book
+export const updateDrawing = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+        if (!req.user) {
+            return throwError({ message: 'Unauthorized', res, status: 401 });
+        }
+
+        const { drawingId, userId } = req.params;
+
+        if(!checkId({id: drawingId, res})) return;
+
+        let user;
+
+        if(userId && userId !== req.user._id.toString() && req.user.role !== "admin"){
+            return throwError({ message: 'Forbidden', res, status: 401 });
+        }
+
+        if (userId){
+            if(!checkId({id: userId, res})) return;
+            user = await User.findById(userId);
+
+            if (!user){
+                return throwError({ message: "User not found", res, status: 404});
+            }
+        }
+        else{
+            user = req.user;
+        }
+
+        const { title } = req.body;
+
+        const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+        const drawingImage = files?.drawing?.[0];
+
+        const drawing = user.drawings.find(draw => draw.id.toString() === drawingId);
+
+        if (!drawing) {
+            return throwError({ message: 'Drawing not found', res, status: 404 });
+        }
+
+        if (title) drawing.title = title;
+
+        if (drawingImage) {
+            // Delete old drawing image from Cloudinary
+            const drawingImagePublicId = `drawings/${extractPublicId(drawing.drawing)}`;
+            const image = await cloudinary.api.delete_resources([drawingImagePublicId]);
+
+            // Upload new cover image to Cloudinary
+            const sanitizedDrawingImagePublicId = `covers/${Date.now()}-${sanitizePublicId(path.basename(drawingImage.originalname, path.extname(drawingImage.originalname)))}`;
+            const drawingImageResult = await new Promise((resolve, reject) => {
+                const stream = cloudinary.uploader.upload_stream({
+                    resource_type: 'image',
+                    public_id: sanitizedDrawingImagePublicId
+                }, (error, result) => {
+                    if (error) reject(error);
+                    else resolve(result);
+                });
+                stream.end(drawingImage.buffer);
+            });
+
+            drawing.drawing = (drawingImageResult as any).secure_url;
+        }
+
+        await user.save();
+
+        res.status(200).json({ message: 'Drawing updated successfully', updatedDrawing: drawing });
+    } catch (error) {
+        console.error('Error updating drawing:', error);
+        return throwError({ message: 'Error updating drawing', res, status: 500 });
     }
 };
