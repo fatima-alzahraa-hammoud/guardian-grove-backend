@@ -15,6 +15,7 @@ import chatRoutes from "./routes/chat.routes";
 import bookRoutes from "./routes/book.routes";
 import drawingRoutes from "./routes/drawing.routes";
 import coloringRoutes from "./routes/coloring.routes";
+import storyRoutes from "./routes/story.routes";
 
 dotenv.config();
 
@@ -43,6 +44,7 @@ app.use("/chats", chatRoutes);
 app.use("/books", bookRoutes);
 app.use("/drawings", drawingRoutes);
 app.use("/colorings", coloringRoutes);
+app.use("/stories", storyRoutes);
 
 app.listen(port, () =>{
     console.log("server is running on port 8080");
