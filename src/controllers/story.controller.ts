@@ -13,7 +13,7 @@ export const createStory = async (req: CustomRequest, res: Response): Promise<vo
             return throwError({ message: 'Unauthorized', res, status: 401 });
         }
 
-        let { title, content, type, familyId } = req.body;
+        let { title, content, type } = req.body;
 
         if (!title || !content) {
             return throwError({ message: "All required fields must be filled.", res, status: 400});
@@ -35,10 +35,9 @@ export const createStory = async (req: CustomRequest, res: Response): Promise<vo
             await req.user.save();
         } 
         
-        else if (type === 'family') {
-            if(!checkId({ id: familyId, res })) return;
+        else if (type === 'family' && req.user.familyId) {
 
-            const family = await Family.findById(familyId);
+            const family = await Family.findById(req.user.familyId);
 
             if (!family) {
                 return throwError({ message: 'Family not found', res, status: 404 });
@@ -47,7 +46,7 @@ export const createStory = async (req: CustomRequest, res: Response): Promise<vo
             family.sharedStories.push(story);
             await family.save();
         } else {
-            return throwError({ message: 'Invalid story type or missing family ID', res, status: 400 });
+            return throwError({ message: 'Invalid story type or no family for the user', res, status: 400 });
         }
 
         res.status(201).json({ message: 'Story created successfully', story });
