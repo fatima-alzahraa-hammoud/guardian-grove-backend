@@ -161,3 +161,57 @@ export const deleteStory = async (req: CustomRequest, res: Response): Promise<vo
         return throwError({ message: 'Error deleting story', res, status: 500 });
     }
 };
+
+//API to update stories
+export const updateStory = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+        if (!req.user) {
+            return throwError({ message: 'Unauthorized', res, status: 401 });
+        }
+
+        const { storyId, title, content } = req.body;
+        if(!checkId({id: storyId, res})) return;
+
+        if (!title || !content) {
+            return throwError({ message: "All required fields must be filled.", res, status: 400});
+        }
+
+        let story: IStory | undefined;
+
+        const personalStoryIndex = req.user.personalStories.findIndex(
+            (story) => story.id.toString() === storyId
+        );
+
+        if (personalStoryIndex !== -1) {
+            story = req.user.personalStories[personalStoryIndex];
+            story.title = title;
+            story.content = content;
+            await req.user.save();
+            res.status(200).json({ message: 'Personal story updated successfully', story });
+            return;
+        }
+
+        const family = req.user.familyId ? (await Family.findById(req.user.familyId)) : null;
+        if (!family) {
+            return throwError({ message: 'Family not found', res, status: 404 });
+        }
+
+        const familyStoryIndex = family.sharedStories.findIndex(
+            (story) => story.id.toString() === storyId
+        );
+
+        if (familyStoryIndex !== -1) {
+            story = family.sharedStories[familyStoryIndex];
+            story.title = title;
+            story.content = content;
+            await family.save();
+            res.status(200).json({ message: 'Family story updated successfully', story });
+            return;
+        }
+
+        return throwError({ message: 'Story not found', res, status: 404 });
+    } catch (error) {
+        console.error('Error updating story:', error);
+        return throwError({ message: 'Error updating story', res, status: 500 });
+    }
+};
