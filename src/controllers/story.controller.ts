@@ -55,3 +55,28 @@ export const createStory = async (req: CustomRequest, res: Response): Promise<vo
         return throwError({ message: 'Error creating story', res, status: 500 });
     }
 };
+
+// API to get all stories
+export const getStories = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+        if (!req.user) {
+            return throwError({ message: 'Unauthorized', res, status: 401 });
+        }
+
+        const personalStories = req.user.personalStories;
+        if (!personalStories) {
+            return throwError({ message: 'Personal stories not found', res, status: 404 });
+        }
+        const family = req.user.familyId ? (await Family.findById(req.user.familyId)) : null;
+        if (!family) {
+            return throwError({ message: 'Family not found', res, status: 404 });
+        }
+
+        const familyStories = family.sharedStories;
+
+        res.status(200).json({ message: 'Story retrieved successfully', personalStories, familyStories });
+    } catch (error) {
+        console.error('Error getting stories:', error);
+        return throwError({ message: 'Error getting stories', res, status: 500 });
+    }
+};
