@@ -117,3 +117,47 @@ export const getStoryById = async (req: CustomRequest, res: Response): Promise<v
         return throwError({ message: 'Error getting story', res, status: 500 });
     }
 };
+
+// API to delete a story
+export const deleteStory = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+        if (!req.user) {
+            return throwError({ message: 'Unauthorized', res, status: 401 });
+        }
+
+        const { storyId } = req.body;
+        if(!checkId({id: storyId, res})) return;
+
+        const personalStoryIndex = req.user.personalStories.findIndex(
+            (story) => story.id.toString() === storyId
+        );
+
+        if (personalStoryIndex !== -1) {
+            const [deletedStory] = req.user.personalStories.splice(personalStoryIndex, 1);            ;
+            await req.user.save();
+            res.status(200).send({ message: 'Personal story deleted successfully', deletedStory });
+            return;
+        }
+
+        const family = req.user.familyId ? (await Family.findById(req.user.familyId)) : null;
+        if (!family) {
+            return throwError({ message: 'Family not found', res, status: 404 });
+        }
+
+        const familyStoryIndex = family.sharedStories.findIndex(
+            (story) => story.id.toString() === storyId
+        );
+
+        if (familyStoryIndex !== -1) {
+            const [deletedStory] =family.sharedStories.splice(familyStoryIndex, 1);
+            await family.save();
+            res.status(200).json({ message: 'Family story deleted successfully', deletedStory });
+            return;
+        }
+
+        return throwError({ message: 'Story not found', res, status: 404 });
+    } catch (error) {
+        console.error('Error deleting story:', error);
+        return throwError({ message: 'Error deleting story', res, status: 500 });
+    }
+};
