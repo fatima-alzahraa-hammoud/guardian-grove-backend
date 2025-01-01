@@ -80,3 +80,40 @@ export const getStories = async (req: CustomRequest, res: Response): Promise<voi
         return throwError({ message: 'Error getting stories', res, status: 500 });
     }
 };
+
+// API to get a story by id
+export const getStoryById = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+        if (!req.user) {
+            return throwError({ message: 'Unauthorized', res, status: 401 });
+        }
+
+        const { storyId } = req.params;
+
+        if(!checkId({id: storyId, res})) return;
+
+
+        const personalStory = req.user.personalStories.find((story) => story.id.toString() === storyId);
+
+        if (personalStory) {
+            res.status(200).json({ message: 'Personal story retrieved successfully', story: personalStory });
+            return;
+        }
+
+        const family = req.user.familyId ? (await Family.findById(req.user.familyId)) : null;
+        if (!family) {
+            return throwError({ message: 'Family not found', res, status: 404 });
+        }
+
+        const familyStory = family.sharedStories.find((story) => story.id.toString() === storyId);
+        if (familyStory) {
+            res.status(200).json({ message: 'Family story retrieved successfully', story: familyStory });
+            return;
+        }
+
+        return throwError({ message: 'Story not found', res, status: 404 });
+    } catch (error) {
+        console.error('Error getting story:', error);
+        return throwError({ message: 'Error getting story', res, status: 500 });
+    }
+};
