@@ -43,6 +43,7 @@ export const createStory = async (req: CustomRequest, res: Response): Promise<vo
                 return throwError({ message: 'Family not found', res, status: 404 });
             }
 
+            story.collaborators = family.members.map(member => member._id);
             family.sharedStories.push(story);
             await family.save();
         } else {
@@ -215,3 +216,5 @@ export const updateStory = async (req: CustomRequest, res: Response): Promise<vo
         return throwError({ message: 'Error updating story', res, status: 500 });
     }
 };
+
+//API to add collaborator
