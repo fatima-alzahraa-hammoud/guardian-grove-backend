@@ -44,7 +44,7 @@ export const login = async ( req: Request, res: Response) : Promise<void> => {
 
         const token = await jwt.sign({ userId: user.id }, JWT_SECRET_KEY);
 
-        res.status(200).send({user, token});
+        res.status(200).send({user: user, token: token});
     }catch(error){
         return throwError({ message: "Something went wrong while logging in.", res, status: 500});
     }

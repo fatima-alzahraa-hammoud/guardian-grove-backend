@@ -16,6 +16,7 @@ import bookRoutes from "./routes/book.routes";
 import drawingRoutes from "./routes/drawing.routes";
 import coloringRoutes from "./routes/coloring.routes";
 import storyRoutes from "./routes/story.routes";
+import cors from "cors";
 
 dotenv.config();
 
@@ -27,6 +28,14 @@ cloudinary.config({
 });
 
 const app: Express= express();
+
+// Use CORS middleware
+app.use(cors({
+    origin: 'http://localhost:5173',
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 const port: number = parseInt(process.env.PORT || "8080");
 
 app.use(express.json());
