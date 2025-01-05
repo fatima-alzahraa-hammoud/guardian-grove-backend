@@ -667,3 +667,19 @@ export const getUserPurchasedItems = async (req: CustomRequest, res: Response) =
         return throwError({ message: "Error fetching purchased items", res, status: 500});
     }
 };
+
+//API to get user's avatar
+export const getUserAvatar = async (req: CustomRequest, res: Response) => {
+    try {
+
+        if (!req.user) {
+            return throwError({ message: "Unauthorized", res, status: 401});
+        }
+
+        const user = req.user;
+
+        res.status(200).json({message: "Avatar retrieved successfully", avatar: user.avatar });
+    } catch (error) {
+        return throwError({ message: "Error fetching avatar", res, status: 500});
+    }
+};
