@@ -42,7 +42,7 @@ export const login = async ( req: Request, res: Response) : Promise<void> => {
             return throwError({ message: "JWT_SECRET_KEY is not defined", res, status: 500 });
         }
 
-        const token = await jwt.sign({ userId: user.id }, JWT_SECRET_KEY);
+        const token = await jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET_KEY);
 
         res.status(200).send({user: user, token: token});
     }catch(error){
@@ -146,7 +146,7 @@ export const register = async (req: Request, res: Response) : Promise<void> => {
             return throwError({ message: "JWT_SECRET_KEY is not defined", res, status: 500 });
         }
 
-        const token = await jwt.sign({ userId: newUser.id }, JWT_SECRET_KEY);
+        const token = await jwt.sign({ userId: newUser.id, role: newUser.role  }, JWT_SECRET_KEY);
 
         res.status(200).send({newUser, token});
 
