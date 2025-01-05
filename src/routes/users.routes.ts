@@ -8,7 +8,8 @@ import {
   startAdventure,
   completeChallenge,
   getUserAdventures,
-  getUserPurchasedItems
+  getUserPurchasedItems,
+  getUserAvatar
 } from "../controllers/users.controller";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { adminMiddleware } from "../middlewares/adminMiddleware";
@@ -50,5 +51,9 @@ router.get("/adventures", authMiddleware, getUserAdventures);
 
 // Routes for user's purchased items 
 router.get("/purchasedItems", authMiddleware, getUserPurchasedItems); 
+
+// Routes for user's avatar 
+router.get("/user/avatar", authMiddleware, getUserAvatar); 
+
 
 export default router;
