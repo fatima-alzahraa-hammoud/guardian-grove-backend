@@ -650,18 +650,36 @@ export const getUserAdventures = async(req:CustomRequest, res: Response): Promis
 };
 
 //API to get user's purchased items
-export const getUserPurchasedItems = async (req: CustomRequest, res: Response) => {
+export const getUserPurchasedItems = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
+        const { userId } = req.body;
 
         if (!req.user) {
-            return throwError({ message: "Unauthorized", res, status: 401});
+            return throwError({ message: "Unauthorized", res, status: 401 });
         }
 
-        const user = req.user;
+        const targetUserId = userId || req.user._id;
 
-        res.status(200).json({message: "Purchased items retrieved successfully", purchasedItems: user.purchasedItems });
+        if (!checkId({ id: targetUserId, res })) return;
+
+        const isAuthorized = req.user._id.toString() === targetUserId.toString();
+        if (!isAuthorized) {
+            return throwError({ message: "Forbidden", res, status: 403 });
+        }
+
+        // Fetch only itemIds from purchasedItems
+        const user = await User.findById(targetUserId).select('purchasedItems.itemId');
+
+        if (!user) {
+            return throwError({ message: "User not found", res, status: 404 });
+        }
+
+        const purchasedItemIds = user.purchasedItems.map((item: any) => item.itemId);
+
+        res.status(200).json({ message: "Purchased items retrieved successfully", purchasedItems: purchasedItemIds });
     } catch (error) {
-        return throwError({ message: "Error fetching purchased items", res, status: 500});
+        console.error("Error retrieving purchased items:", error);
+        return throwError({ message: "Error retrieving purchased items", res, status: 500 });
     }
 };
 
