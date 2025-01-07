@@ -24,39 +24,36 @@ export const getUsers = async(req: Request, res: Response): Promise<void> => {
 
 // API to get a user based on his Id
 export const getUserById = async (req: CustomRequest, res: Response): Promise<void> => {
-    try{
-
-        // if there is id in the body so it is trying to get its data, while if no he need his data
-        const {userId} = req.body;
+    try {
+        const { userId } = req.body;
 
         if (!req.user) {
             return throwError({ message: "Unauthorized", res, status: 401 });
         }
 
-        if(userId){
-            if(!checkId({id: userId, res})) return;
-            if (req.user._id.toString() !== userId && !['parent', 'admin', 'owner'].includes(req.user.role)) {
-                return throwError({ message: "Forbidden", res, status: 403 });
-            }
-            const user = await User.findById(userId);
+        const targetUserId = userId || req.user._id;
 
-            if (!user){
-                return throwError({ message: "User not found", res, status: 404});
-            }
+        if (!checkId({ id: targetUserId, res })) return;
 
-            if(req.user.role !== "admin" && req.user.email !== user.email){
-                return throwError({ message: "Forbidden", res, status: 403 });
-            }
-
-            res.status(200).json({message: "Retrieving user successfully", user: user });
-            return;
+        const isAuthorized = req.user._id.toString() === targetUserId.toString() || ['parent', 'admin', 'owner'].includes(req.user.role);
+        if (!isAuthorized) {
+            return throwError({ message: "Forbidden", res, status: 403 });
         }
-         
-        const user = req.user;
 
-        res.status(200).send({message: "Retrieving user successfully", user: user });
-    }catch(error){
-        return throwError({ message: "Error retrieving user", res, status: 500});
+        let projection = '_id name email birthday role avatar gender stars coins interests nbOfTasksCompleted rankInFamily familyId';  // Basic user info
+
+        // Fetch the user with specific fields
+        const user = await User.findById(targetUserId).select(projection);
+
+        // If user not found, return 404
+        if (!user) {
+            return throwError({ message: "User not found", res, status: 404 });
+        }
+
+        res.status(200).json({ message: "Retrieving user successfully", user });
+    } catch (error) {
+        console.error("Error retrieving user:", error);
+        return throwError({ message: "Error retrieving user", res, status: 500 });
     }
 };
 

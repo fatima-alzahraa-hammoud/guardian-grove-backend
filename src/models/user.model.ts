@@ -53,7 +53,7 @@ const userSchema = new Schema<IUser>({
     birthday:{type: Date, required: true},
     gender:{type: String, enum: ['female', 'male'], required: true},
     role: {type: String, enum: ['user', 'owner', 'parent', 'child', 'grandfather', 'grandmother', 'admin'],required: true},
-    avatar: {type: String, required: true},
+    avatar: {type: String, required: true, default:"src/assets/images/avatars/parent/avatar1.png"},
     interests: {type: [String], required: true, default: []},
     memberSince: {type: Date, required: true, default: Date.now},
     currentLocation:{type: String, required: true, default: "not specified"},
