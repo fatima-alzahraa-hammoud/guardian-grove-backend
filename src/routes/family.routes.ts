@@ -1,14 +1,14 @@
 import express from "express";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { adminMiddleware } from "../middlewares/adminMiddleware";
-import { completeFamilyTask, createFamilyTasks, deleteFamily, deleteFamilyGoal, deleteFamilyTask, getAllFamilies, getFamily, getFamilyGoals, getFamilyLeaderboard, getFamilyMembers, getFamilyNameAndNbMembers, getFamilyTaskById, getLeaderboard, updateAllFamilyMembersStars, updateFamily, updateFamilyGoal, updateFamilyTask } from "../controllers/family.controller";
+import { completeFamilyTask, createFamilyTasks, deleteFamily, deleteFamilyGoal, deleteFamilyTask, getAllFamilies, getFamily, getFamilyGoals, getFamilyLeaderboard, getFamilyMembers, getFamilyNameNbMembersStars, getFamilyTaskById, getLeaderboard, updateAllFamilyMembersStars, updateFamily, updateFamilyGoal, updateFamilyTask } from "../controllers/family.controller";
 
 const router =  express.Router();
 
 router.get("/", authMiddleware, adminMiddleware, getAllFamilies);
 router.get("/getFamily", authMiddleware, getFamily);
 router.get("/FamilyMembers", authMiddleware, getFamilyMembers);
-router.get("/FamilyNameAndNbMembers", authMiddleware, getFamilyNameAndNbMembers);
+router.get("/someFamilydetails", authMiddleware, getFamilyNameNbMembersStars);
 router.put("/", authMiddleware, updateFamily);
 router.delete("/", authMiddleware, deleteFamily);
 

@@ -637,7 +637,7 @@ export const updateAllFamilyMembersStars = async (req: CustomRequest, res: Respo
 };
 
 //API to get family name and number of members
-export const getFamilyNameAndNbMembers = async (req: CustomRequest, res: Response): Promise<void> => {
+export const getFamilyNameNbMembersStars = async (req: CustomRequest, res: Response): Promise<void> => {
     try{
 
         if (!req.user || !req.user.familyId) {
@@ -652,7 +652,8 @@ export const getFamilyNameAndNbMembers = async (req: CustomRequest, res: Respons
         res.status(200).json({
             message: "Retrieving family name and number of members successfully",
             familyName: family.familyName,
-            numberOfMembers: family.members.length
+            numberOfMembers: family.members.length,
+            stars: family.totalStars,
         });
     }catch(error){
         return throwError({ message: "Error retrieving family name and number of members", res, status: 500 });
