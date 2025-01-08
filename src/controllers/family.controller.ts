@@ -635,3 +635,26 @@ export const updateAllFamilyMembersStars = async (req: CustomRequest, res: Respo
         return throwError({ message: "Error updating family members' stars", res, status: 500 });
     }
 };
+
+//API to get family name and number of members
+export const getFamilyNameAndNbMembers = async (req: CustomRequest, res: Response): Promise<void> => {
+    try{
+
+        if (!req.user || !req.user.familyId) {
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+
+        const family = await Family.findById(req.user.familyId);
+        if (!family) {
+            return throwError({ message: "Family not found", res, status: 404 });
+        }
+
+        res.status(200).json({
+            message: "Retrieving family name and number of members successfully",
+            familyName: family.familyName,
+            numberOfMembers: family.members.length
+        });
+    }catch(error){
+        return throwError({ message: "Error retrieving family name and number of members", res, status: 500 });
+    }
+}
