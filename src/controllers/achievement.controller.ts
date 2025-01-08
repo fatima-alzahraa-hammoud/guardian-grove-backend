@@ -177,10 +177,6 @@ export const getUnLockedAchievements = async (req: CustomRequest, res: Response)
             _id: { $in: unlockedAchievementIds }
         });
 
-        if (unlockedAchievements.length === 0) {
-            return throwError({ message: "No unlocked achievements found", res, status: 404 });
-        }
-
         res.status(200).json({message: "Getting locked achievements Successfully", achievements: unlockedAchievements });
     } catch (error) {
         throwError({ message: "An error occurred while fetching locked achievements.", res, status: 500 });

@@ -40,7 +40,7 @@ export const getUserById = async (req: CustomRequest, res: Response): Promise<vo
             return throwError({ message: "Forbidden", res, status: 403 });
         }
 
-        let projection = '_id name email birthday role avatar gender stars coins interests nbOfTasksCompleted rankInFamily familyId';  // Basic user info
+        let projection = '_id name email birthday role avatar gender stars coins interests nbOfTasksCompleted rankInFamily familyId memberSince';  // Basic user info
 
         // Fetch the user with specific fields
         const user = await User.findById(targetUserId).select(projection);
