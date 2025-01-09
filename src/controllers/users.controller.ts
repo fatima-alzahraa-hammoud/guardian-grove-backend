@@ -197,6 +197,15 @@ export const editUserProfile = async(req: CustomRequest, res: Response):Promise<
             user = req.user;
         }
 
+        // Check if a user with the same email and name exists
+        if (name) {
+            const existingUser = await User.findOne({ email: user.email, name, _id: { $ne: user._id } });
+            if (existingUser) {
+                return throwError({ message: "A user with the same email and name already exists.", res, status: 400 });
+            }
+            user.name = name;
+        }
+
         if (name) user.name = name;
         if (birthday) user.birthday = birthday;
         if (gender) user.gender = gender;
