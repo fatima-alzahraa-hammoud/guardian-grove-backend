@@ -92,6 +92,22 @@ export const updateFamily = async (req: CustomRequest, res: Response): Promise<v
             return throwError({ message: "Forbidden", res, status: 401 });
         }
 
+        // Check if a family with the same email or familyName exists
+        if (email) {
+            const existingFamilyWithEmail = await Family.findOne({ email, _id: { $ne: family._id } });
+            if (existingFamilyWithEmail) {
+                return throwError({ message: "A family with the same email already exists.", res, status: 400 });
+            }
+        }
+
+        if (familyName) {
+            const existingFamilyWithName = await Family.findOne({ familyName, _id: { $ne: family._id } });
+            if (existingFamilyWithName) {
+                return throwError({ message: "A family with the same name already exists.", res, status: 400 });
+            }
+        }
+
+
         family.familyName = familyName || family.familyName;
         family.email = email || family.email;
         family.familyAvatar = familyAvatar || family.familyAvatar;
