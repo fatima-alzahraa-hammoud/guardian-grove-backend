@@ -75,11 +75,14 @@ export const updateFamily = async (req: CustomRequest, res: Response): Promise<v
             return throwError({ message: "Unauthorized", res, status: 401 });
         }
 
-        const { familyId, familyName, email } = req.body;
-        if(!checkId({id: familyId, res})) return;
+        const { familyId, familyName, email, familyAvatar } = req.body;
+
+        const targetFamilyId = familyId || req.user.familyId;
+
+        if(!checkId({id: targetFamilyId, res})) return;
 
         
-        const family = await Family.findById(familyId);
+        const family = await Family.findById(targetFamilyId);
 
         if (!family) {
             return throwError({ message: "Family not found.", res, status: 404 });
@@ -91,10 +94,11 @@ export const updateFamily = async (req: CustomRequest, res: Response): Promise<v
 
         family.familyName = familyName || family.familyName;
         family.email = email || family.email;
+        family.familyAvatar = familyAvatar || family.familyAvatar;
 
         if (email) {
             await User.updateMany(
-                { familyId: familyId }, 
+                { familyId: targetFamilyId }, 
                 { $set: { email: email } }
             );
         }

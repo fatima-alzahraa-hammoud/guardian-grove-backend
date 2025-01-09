@@ -329,7 +329,6 @@ export const getLastUnlockedAchievement = async (req: CustomRequest, res: Respon
         }
 
         if (user.achievements.length === 0) {
-            res.status(404).json({ message: "No achievements unlocked yet." });
             return;
         }
 

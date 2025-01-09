@@ -166,13 +166,13 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
 // API to edit user profile
 export const editUserProfile = async(req: CustomRequest, res: Response):Promise<void> => {
     try{
-        const {userId, name, birthday, gender, avatar, role, email, interests} = req.body;
+        const {userId, name, birthday, gender, avatar, role} = req.body;
 
         if (!req.user) {
             return throwError({ message: "Unauthorized", res, status: 401 });
         }
 
-        if ((role || email) && !['parent', 'admin', 'owner'].includes(req.user.role)) {
+        if ((role) && !['parent', 'admin', 'owner'].includes(req.user.role)) {
             return throwError({ message: "Forbidden: You cannot change role nor email", res, status: 403 });
         }
 
@@ -203,8 +203,6 @@ export const editUserProfile = async(req: CustomRequest, res: Response):Promise<
         if (gender) user.gender = gender;
         if (avatar) user.avatar = avatar;
         if (role) user.role = role; 
-        if (email) user.email = email; 
-        if (interests) user.interests = interests;
 
         await user.save();
 
