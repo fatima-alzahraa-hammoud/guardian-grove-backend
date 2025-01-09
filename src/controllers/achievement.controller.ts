@@ -319,7 +319,7 @@ export const getLastUnlockedAchievement = async (req: CustomRequest, res: Respon
             return throwError({ message: "Forbidden", res, status: 403 });
         }
 
-        const user = await User.findById(userId).populate({
+        const user = await User.findById(targetUserId).populate({
             path: "achievements.achievementId",
             select: "title photo description"
         });
@@ -332,8 +332,17 @@ export const getLastUnlockedAchievement = async (req: CustomRequest, res: Respon
             res.status(404).json({ message: "No achievements unlocked yet." });
             return;
         }
+
+        const lastUnlocked = user.achievements[user.achievements.length - 1];
+
+        const achievementDetails = {
+            title: (lastUnlocked.achievementId as any).title,
+            photo: (lastUnlocked.achievementId as any).photo,
+            description: (lastUnlocked.achievementId as any).description,
+            unlockedAt: lastUnlocked.unlockedAt,
+        };
         
-        res.status(200).send({message: 'Retrieve unlocked achievement successfully', lastUnlockedAchievement: user.achievements[user.achievements.length - 1]});
+        res.status(200).send({message: 'Retrieve unlocked achievement successfully', lastUnlockedAchievement: achievementDetails});
     } catch (error) {
         console.error("Error fetching last unlocked achievement:", error);
         res.status(500).json({ message: "Server error" });
