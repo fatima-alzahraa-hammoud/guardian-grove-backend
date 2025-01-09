@@ -97,7 +97,7 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
         }
 
         // Role validation
-        const validRoles = ['owner', 'parent', 'child', 'grandparent', 'admin'];
+        const validRoles = ['owner', 'parent', 'child', 'admin'];
         if (!validRoles.includes(role)) {
             return throwError({ message: "Invalid role.", res, status: 400});
         }

@@ -13,7 +13,7 @@ const familySchema = new Schema<IFamily>({
         {
             _id: { type: Types.ObjectId, ref: "User", required: true },
             name: { type: String, required: true },
-            role: { type: String, required: true, enum: ['parent', 'grandparent', 'admin', 'child'] },
+            role: { type: String, required: true, enum: ['parent', 'admin', 'child'] },
         },
     ],
     email: { type: String, required: true, unique: true },

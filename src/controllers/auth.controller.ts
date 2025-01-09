@@ -72,7 +72,7 @@ export const register = async (req: Request, res: Response) : Promise<void> => {
         }
 
         // Role validation
-        const validRoles = ['parent', 'grandparent', 'admin'];
+        const validRoles = ['parent', 'admin'];
         if (!validRoles.includes(role)) {
             if (role === "child"){
                 return throwError({ message: "Children must be added by a parent.", res, status: 400});
