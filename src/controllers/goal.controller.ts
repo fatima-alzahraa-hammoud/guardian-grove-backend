@@ -7,6 +7,7 @@ import { ITask } from "../interfaces/ITask";
 import { Achievement } from "../models/achievements.model";
 import { Family } from "../models/family.model";
 import { IGoal } from "../interfaces/IGoal";
+import { startOfMonth, endOfMonth } from "date-fns";
 import { recalculateFamilyMemberRanks } from "../utils/recalculateFamilyMemberRanks";
 
 //API to create goal
@@ -505,5 +506,65 @@ export const completeTask = async (req: CustomRequest, res: Response): Promise<v
     } catch (error) {
         console.error(error);
         return throwError({ message: "Error marking task as done", res, status: 500 });
+    }
+};
+
+//API to get monthly stats for goals and tasks
+
+export const getMonthlyStats = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+
+        const {userId} = req.body;
+
+        if (!req.user) {
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+
+        const targetUserId = userId || req.user._id;
+
+        if (!checkId({ id: targetUserId, res })) return;
+
+        const isAuthorized = req.user._id.toString() === targetUserId.toString() || ['parent', 'admin', 'owner'].includes(req.user.role);
+        if (!isAuthorized) {
+            return throwError({ message: "Forbidden", res, status: 403 });
+        }
+
+        
+        // Get the start and end dates of the current month
+        const startOfCurrentMonth = startOfMonth(new Date());
+        const endOfCurrentMonth = endOfMonth(new Date());
+
+        // Retrieve the user and filter tasks/goals for the current month
+        const user = await User.findById(targetUserId);
+        if (!user) {
+            return throwError({ message: "User not found", res, status: 404 });
+        }
+
+        const tasksForCurrentMonth = user.goals.flatMap(goal =>
+            goal.tasks.filter(task =>
+                task.createdAt &&
+                task.createdAt >= startOfCurrentMonth &&
+                task.createdAt <= endOfCurrentMonth
+            )
+        );
+
+        const completedTasksForCurrentMonth = tasksForCurrentMonth.filter(task => task.isCompleted);
+
+        const goalsForCurrentMonth = user.goals.filter(goal =>
+            goal.createdAt >= startOfCurrentMonth && goal.createdAt <= endOfCurrentMonth
+        );
+
+        const completedGoalsForCurrentMonth = goalsForCurrentMonth.filter(goal => goal.isCompleted);
+
+        // Return stats
+        res.status(200).json({
+            totalTasks: tasksForCurrentMonth.length,
+            completedTasks: completedTasksForCurrentMonth.length,
+            totalGoals: goalsForCurrentMonth.length,
+            completedGoals: completedGoalsForCurrentMonth.length,
+        });
+    } catch (error) {
+        console.error(error);
+        return throwError({ message: "Error retrieving monthly stats", res, status: 500 });
     }
 };
