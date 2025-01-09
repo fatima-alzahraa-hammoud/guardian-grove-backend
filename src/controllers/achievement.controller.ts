@@ -299,3 +299,43 @@ export const unlockFamilyAchievement = async (req: CustomRequest, res: Response)
         return throwError({ message: "An error occurred while unlocking the achievement.", res, status: 500 });
     }
 };
+
+//API to get last unlockedAchievement
+
+export const getLastUnlockedAchievement = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+        const {userId} = req.body;
+
+        if (!req.user) {
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+
+        const targetUserId = userId || req.user._id;
+
+        if (!checkId({ id: targetUserId, res })) return;
+
+        const isAuthorized = req.user._id.toString() === targetUserId.toString() || ['parent', 'admin', 'owner'].includes(req.user.role);
+        if (!isAuthorized) {
+            return throwError({ message: "Forbidden", res, status: 403 });
+        }
+
+        const user = await User.findById(userId).populate({
+            path: "achievements.achievementId",
+            select: "title photo description"
+        });
+
+        if (!user) {
+            return throwError({ message: "User not found", res, status: 404 });
+        }
+
+        if (user.achievements.length === 0) {
+            res.status(404).json({ message: "No achievements unlocked yet." });
+            return;
+        }
+        
+        res.status(200).send({message: 'Retrieve unlocked achievement successfully', lastUnlockedAchievement: user.achievements[user.achievements.length - 1]});
+    } catch (error) {
+        console.error("Error fetching last unlocked achievement:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+};
