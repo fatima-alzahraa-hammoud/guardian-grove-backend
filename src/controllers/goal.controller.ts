@@ -37,6 +37,7 @@ export const createGoal = async (req: Request, res: Response): Promise<void> => 
             dueDate,
             rewards,
             tasks: [],
+            createdAt: new Date()
         });
 
         if (type === "personal"){
@@ -291,6 +292,7 @@ export const createUserTask = async(req: Request, res: Response): Promise<void> 
             description,
             type,
             rewards : rewards || {stars: 2, coins: 1},
+            createdAt: new Date()
         } as ITask);
 
         if (goal.isCompleted){
@@ -468,6 +470,7 @@ export const completeTask = async (req: CustomRequest, res: Response): Promise<v
         // Check if all tasks in the goal are completed
         if (goal.progress === 100) {
             goal.isCompleted = true;
+            goal.completedAt =  new Date();
 
             starsGoalReward = goal.rewards.stars;
 

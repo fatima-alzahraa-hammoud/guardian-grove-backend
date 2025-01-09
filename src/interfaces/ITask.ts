@@ -7,5 +7,6 @@ export interface ITask extends Document{
     rewards: { stars: number; coins: number };
     type: 'personal' | 'family';
     isCompleted: boolean;
+    createdAt?: Date;
     completedAt?: Date;
 }

@@ -11,6 +11,8 @@ export const goalSchema = new Schema<IGoal>({
     tasks: { type: [taskSchema], default: [] },
     isCompleted: { type: Boolean, default: false },
     dueDate: { type: Date },
+    createdAt: { type: Date, required: true },
+    completedAt: {type: Date},
     rewards: {
         stars: { type: Number, default: 10 },
         coins: { type: Number, default: 5 },

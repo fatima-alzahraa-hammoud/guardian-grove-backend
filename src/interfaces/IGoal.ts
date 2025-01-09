@@ -8,6 +8,8 @@ export interface IGoal extends Document {
     type: 'personal' | 'family';
     tasks: ITask[];
     isCompleted: boolean;
+    createdAt: Date;
+    completedAt?: Date;
     dueDate: Date;
     rewards: { stars: number; coins: number, achievementName?: string; achievementId?: string;  };
     progress: number;
