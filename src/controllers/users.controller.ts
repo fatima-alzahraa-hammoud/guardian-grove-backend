@@ -35,11 +35,6 @@ export const getUserById = async (req: CustomRequest, res: Response): Promise<vo
 
         if (!checkId({ id: targetUserId, res })) return;
 
-        const isAuthorized = req.user._id.toString() === targetUserId.toString() || ['parent', 'admin', 'owner'].includes(req.user.role);
-        if (!isAuthorized) {
-            return throwError({ message: "Forbidden", res, status: 403 });
-        }
-
         let projection = '_id name email birthday role avatar gender stars coins interests nbOfTasksCompleted rankInFamily familyId memberSince';  // Basic user info
 
         // Fetch the user with specific fields
@@ -48,6 +43,10 @@ export const getUserById = async (req: CustomRequest, res: Response): Promise<vo
         // If user not found, return 404
         if (!user) {
             return throwError({ message: "User not found", res, status: 404 });
+        }
+
+        if (req.user._id.toString() !== targetUserId.toString() && ['parent', 'child'].includes(req.user.role) && req.user.email != user.email){
+            return throwError({ message: "Forbidden", res, status: 403 });
         }
 
         res.status(200).json({ message: "Retrieving user successfully", user });
