@@ -509,7 +509,7 @@ export const completeTask = async (req: CustomRequest, res: Response): Promise<v
     }
 };
 
-//API to get monthly stats for goals and tasks
+//API to get monthly stats for goals and tasks for user
 
 export const getMonthlyStats = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
