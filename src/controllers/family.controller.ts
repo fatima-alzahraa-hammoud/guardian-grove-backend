@@ -7,6 +7,7 @@ import { CustomRequest } from "../interfaces/customRequest";
 import { Achievement } from "../models/achievements.model";
 import { ITask } from "../interfaces/ITask";
 import { recalculateFamilyMemberRanks } from "../utils/recalculateFamilyMemberRanks";
+import { getTimePeriod } from "../utils/getTimePeriod";
 
 //API get all families
 export const getAllFamilies = async (req: Request, res: Response): Promise<void> => {
@@ -685,3 +686,62 @@ export const getFamilyNameNbMembersStars = async (req: CustomRequest, res: Respo
         return throwError({ message: "Error retrieving family name and number of members", res, status: 500 });
     }
 }
+
+//API to get famly progress stats for goals, tasks, and achievements
+
+export const getFamilyProgressStats = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+
+        const {familyId, timeFrame = "monthly" } = req.body;
+
+        if (!req.user) {
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+
+        const targetFamilyId = familyId || req.user.familyId;
+
+        if (!checkId({ id: targetFamilyId, res })) return;
+
+        const family = await Family.findById(familyId);
+        if (!family) {
+            return throwError({ message: "Family not found", res, status: 404 });
+        }
+
+        // Get the date range for the selected time frame
+        const { start, end } = getTimePeriod(timeFrame);
+
+        const tasksForCurrentPeriod = family.goals.flatMap(goal =>
+            goal.tasks.filter(task =>
+                task.createdAt &&
+                task.createdAt >= start &&
+                task.createdAt <= end
+            )
+        );
+
+        const completedTasksForCurrentPeriod = tasksForCurrentPeriod.filter(task => task.isCompleted);
+
+        const goalsForCurrentPeriod = family.goals.filter(goal =>
+            goal.createdAt >= start && goal.createdAt <= end
+        );
+
+        const completedGoalsForCurrentPeriod = goalsForCurrentPeriod.filter(goal => goal.isCompleted);
+
+        const totalAchievements = await Achievement.countDocuments();
+
+        const unlockedAchievements = family.achievements.length;
+        
+        // Return stats
+        res.status(200).json({
+            totalTasks: tasksForCurrentPeriod.length,
+            completedTasks: completedTasksForCurrentPeriod.length,
+            totalGoals: goalsForCurrentPeriod.length,
+            completedGoals: completedGoalsForCurrentPeriod.length,
+            totalAchievements: totalAchievements,
+            unlockedAchievements: unlockedAchievements
+        });
+
+    } catch (error) {
+        console.error(error);
+        return throwError({ message: "Error retrieving monthly stats", res, status: 500 });
+    }
+};
