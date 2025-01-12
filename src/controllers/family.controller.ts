@@ -534,7 +534,6 @@ export const getLeaderboard = async (req: Request, res: Response): Promise<void>
 
             // Calculate leaderboard and ranks
             let rank = 0;
-            let i = 0;
             let previousStars = 0;
             let previousTasks = 0;
 
@@ -544,7 +543,7 @@ export const getLeaderboard = async (req: Request, res: Response): Promise<void>
 
                 // Update rank only when stars/tasks change
                 if (familyStars !== previousStars || familyTasks !== previousTasks) {
-                    rank = ++i;
+                    rank++;
                     previousStars = familyStars;
                     previousTasks = familyTasks;
                 }
@@ -563,8 +562,8 @@ export const getLeaderboard = async (req: Request, res: Response): Promise<void>
                 return;
             }
 
-            // Extract top 10 for the period
-            results[`${period}Top10`] = leaderboard.slice(0, 10);
+            const top10 = leaderboard.filter(entry => entry.rank <= 10);
+            results[`${period}Top10`] = top10;
 
             // Find the rank of the specific family for the period
             if (familyId){
@@ -574,11 +573,7 @@ export const getLeaderboard = async (req: Request, res: Response): Promise<void>
             }   
         }
 
-        // Respond with aggregated results
-        res.status(200).json({
-            message: 'Leaderboard fetched successfully',
-            ...results,
-        });
+        res.status(200).json({ message: 'Leaderboard fetched successfully', ...results, });
     } catch (error) {
         console.error('Error fetching leaderboard:', error);
         res.status(500).json({ message: 'Error fetching leaderboard', error });
