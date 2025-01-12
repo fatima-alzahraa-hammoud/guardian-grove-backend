@@ -288,6 +288,7 @@ export const createFamilyTasks = async(req: Request, res: Response): Promise<voi
             description,
             type: 'family',
             rewards : rewards || {stars: 2, coins: 1},
+            createdAt: new Date()
         } as ITask);
 
         goal.tasks.push(newTask);
@@ -692,7 +693,7 @@ export const getFamilyNameNbMembersStars = async (req: CustomRequest, res: Respo
 export const getFamilyProgressStats = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
 
-        const {familyId, timeFrame = "monthly" } = req.body;
+        const {familyId, timeFrame = "yearly" } = req.body;
 
         if (!req.user) {
             return throwError({ message: "Unauthorized", res, status: 401 });
