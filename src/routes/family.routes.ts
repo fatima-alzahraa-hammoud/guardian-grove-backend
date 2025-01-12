@@ -33,6 +33,6 @@ router.get("/familyLeaderboard", authMiddleware, getFamilyLeaderboard);
 router.put("/stars", authMiddleware, updateAllFamilyMembersStars);
 
 //routes for family stats
-router.get("/familyProgressStats", authMiddleware, getFamilyProgressStats);
+router.post("/familyProgressStats", authMiddleware, getFamilyProgressStats);
 
 export default router;

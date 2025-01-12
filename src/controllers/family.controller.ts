@@ -693,7 +693,7 @@ export const getFamilyNameNbMembersStars = async (req: CustomRequest, res: Respo
 export const getFamilyProgressStats = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
 
-        const {familyId, timeFrame = "yearly" } = req.body;
+        const {familyId, timeFrame} = req.body;
 
         if (!req.user) {
             return throwError({ message: "Unauthorized", res, status: 401 });
@@ -703,7 +703,7 @@ export const getFamilyProgressStats = async (req: CustomRequest, res: Response):
 
         if (!checkId({ id: targetFamilyId, res })) return;
 
-        const family = await Family.findById(familyId);
+        const family = await Family.findById(targetFamilyId);
         if (!family) {
             return throwError({ message: "Family not found", res, status: 404 });
         }
