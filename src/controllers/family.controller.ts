@@ -504,10 +504,9 @@ export const completeFamilyTask = async (req: CustomRequest, res: Response): Pro
 };
 
 //API to get leaderboard
-export const getLeaderboard = async (req: Request, res: Response): Promise<void> => {
+export const getLeaderboard = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
-        const { familyId } = req.body;
-
+        const { familyId } = req.query;
         const periods = {
             daily: { stars: 'stars.daily', tasks: 'taskCounts.daily' },
             weekly: { stars: 'stars.weekly', tasks: 'taskCounts.weekly' },
@@ -522,7 +521,7 @@ export const getLeaderboard = async (req: Request, res: Response): Promise<void>
             const { stars, tasks } = fields;
 
             const families = await Family.find()
-                .select(`${stars} ${tasks} familyName`)
+                .select(`${stars} ${tasks} familyName familyAvatar`)
                 .sort({ [stars]: -1, [tasks]: -1 })
                 .exec();
 
@@ -550,6 +549,7 @@ export const getLeaderboard = async (req: Request, res: Response): Promise<void>
 
                 return {
                     familyName: family.familyName,
+                    familyAvatar: family.familyAvatar,
                     stars: familyStars,
                     tasks: familyTasks,
                     rank,

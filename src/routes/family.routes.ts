@@ -25,7 +25,7 @@ router.get("/goal/task", authMiddleware, getFamilyTaskById);
 router.put("/goal/completeTask", authMiddleware, completeFamilyTask);
 
 //routes for families leaderboard
-router.get("/leaderboard", authMiddleware, getLeaderboard);
+router.get("/leaderboard/:familyId?", authMiddleware, getLeaderboard);
 router.get("/familyLeaderboard", authMiddleware, getFamilyLeaderboard);
 
 
