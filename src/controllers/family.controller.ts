@@ -503,74 +503,85 @@ export const completeFamilyTask = async (req: CustomRequest, res: Response): Pro
     }
 };
 
+//API to get leaderboard
 export const getLeaderboard = async (req: Request, res: Response): Promise<void> => {
     try {
+        const { familyId } = req.body;
 
-        const { period, familyId } = req.body;
+        const periods = {
+            daily: { stars: 'stars.daily', tasks: 'taskCounts.daily' },
+            weekly: { stars: 'stars.weekly', tasks: 'taskCounts.weekly' },
+            monthly: { stars: 'stars.monthly', tasks: 'taskCounts.monthly' },
+            yearly: { stars: 'stars.yearly', tasks: 'taskCounts.yearly' },
+        };
 
-        if (!period) {
-            return throwError({ message: 'Period is required', res, status: 400 });
-        }
+        const results: any = {}; // Object to store top10 and familyRank for each period
 
-        let sortField = 'totalStars';
-        let taskField = 'tasks';
-        switch (period) {
-            case 'daily':
-                sortField = 'stars.daily';
-                taskField = 'taskCounts.daily';
-                break;
-            case 'weekly':
-                sortField = 'stars.weekly';
-                taskField = 'taskCounts.weekly';
-                break;
-            case 'monthly':
-                sortField = 'stars.monthly';
-                taskField = 'taskCounts.monthly';
-                break;
-            case 'yearly':
-                sortField = 'stars.yearly';
-                taskField = 'taskCounts.yearly';
-                break;
-            default:
-                return throwError({ message: 'Invalid period', res, status: 400 });
-        }
+        // Iterate through each period
+        for (const [period, fields] of Object.entries(periods)) {
+            const { stars, tasks } = fields;
 
-        const families = await Family.find()
-            .select(`${sortField} ${taskField} familyName`)
-            .sort({ [sortField]: -1, [taskField]: -1 })
-            .exec();
+            const families = await Family.find()
+                .select(`${stars} ${tasks} familyName`)
+                .sort({ [stars]: -1, [tasks]: -1 })
+                .exec();
 
-
-        if (!families) {
-            return throwError({ message: "Families not found", res, status: 404 });
-        }
-
-        let rank = 1;
-        let previousStars = 0;
-        let previousTasks = 0;
-        const leaderboard = families.map((family, index) => {
-            const stars = family.get(sortField);
-            const tasks = family.get(taskField);
-
-            if (previousStars !== stars || previousTasks !== tasks) {
-                rank = index + 1;
+            if (!families || families.length === 0) {
+                results[`${period}Top10`] = [];
+                results[`${period}FamilyRank`] = null;
+                continue;
             }
-            previousStars = stars;
-            previousTasks = tasks;
-            return { ...family.toObject(), rank };
-        });
 
-        const top10 = leaderboard.slice(0, 10);
-        const familyRank = leaderboard.find(family => family._id.toString() === familyId);
+            // Calculate leaderboard and ranks
+            let rank = 0;
+            let i = 0;
+            let previousStars = 0;
+            let previousTasks = 0;
 
+            const leaderboard = families.map((family, index) => {
+                const familyStars = family.get(stars) || 0;
+                const familyTasks = family.get(tasks) || 0;
+
+                // Update rank only when stars/tasks change
+                if (familyStars !== previousStars || familyTasks !== previousTasks) {
+                    rank = ++i;
+                    previousStars = familyStars;
+                    previousTasks = familyTasks;
+                }
+
+                return {
+                    familyName: family.familyName,
+                    stars: familyStars,
+                    tasks: familyTasks,
+                    rank,
+                    familyId: family._id.toString(),
+                };
+            });
+
+            if(!leaderboard){
+                res.status(200).send({message: "no leaderboard"});
+                return;
+            }
+
+            // Extract top 10 for the period
+            results[`${period}Top10`] = leaderboard.slice(0, 10);
+
+            // Find the rank of the specific family for the period
+            if (familyId){
+                results[`${period}FamilyRank`] = familyId
+                ? leaderboard.find((family) => family.familyId === familyId) || null
+                : null;
+            }   
+        }
+
+        // Respond with aggregated results
         res.status(200).json({
             message: 'Leaderboard fetched successfully',
-            top10,
-            familyRank: familyRank ? familyRank.rank : null
+            ...results,
         });
     } catch (error) {
         console.error('Error fetching leaderboard:', error);
-        res.status(500).json({ message: 'Error fetching leaderboard' });
+        res.status(500).json({ message: 'Error fetching leaderboard', error });
     }
 };
 
