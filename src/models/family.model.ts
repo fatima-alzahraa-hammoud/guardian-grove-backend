@@ -15,6 +15,7 @@ const familySchema = new Schema<IFamily>({
             name: { type: String, required: true },
             role: { type: String, required: true, enum: ['parent', 'admin', 'child'] },
             gender: { type: String, required: true, enum: ['female', 'male'] },
+            avatar: { type: String, required: true },
         },
     ],
     email: { type: String, required: true, unique: true },

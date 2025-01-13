@@ -15,6 +15,7 @@ export interface IFamily extends Document {
         name: string;
         role: string;
         gender: string;
+        avatar: string;
     }>;
     email: string;
     createdAt: Date;

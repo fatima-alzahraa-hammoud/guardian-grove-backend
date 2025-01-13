@@ -124,7 +124,7 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
 
         // Add the new user to the family's members list
         if (!family.members.includes(user.id)) {
-            family.members.push({_id: user.id, role, name, gender});
+            family.members.push({_id: user.id, role, name, gender, avatar});
             await family.save();
         }
 
