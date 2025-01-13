@@ -7,9 +7,8 @@ import { checkId } from '../utils/checkId';
 import { Adventure } from '../models/adventure.model';
 import { IAdventureProgress } from '../interfaces/IAdventureProgress';
 import { Family } from '../models/family.model';
-import { Types } from 'mongoose';
-import { IUser } from '../interfaces/IUser';
 import { recalculateFamilyMemberRanks } from '../utils/recalculateFamilyMemberRanks';
+import nodemailer from "nodemailer";
 
 // API to get all users
 export const getUsers = async(req: Request, res: Response): Promise<void> => {
@@ -61,7 +60,7 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
     try{
         const data = req.body;
 
-        const { name, password, birthday, gender, role, avatar, interests } = data;
+        const { name, birthday, gender, role, avatar, interests } = data;
 
         if (!req.user) {
             return  throwError({ message: "Unauthorized", res, status: 401 });
@@ -71,7 +70,7 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
         }
 
         // verify all fields are filled
-        if (!name || !password || !birthday || !gender || !role || !avatar || !interests) {
+        if (!name || !birthday || !gender || !role || !avatar || !interests) {
             return throwError({ message: "All required fields must be filled.", res, status: 400});
         }
 
@@ -106,16 +105,8 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
             return throwError({ message: "Invalid birthday format.", res, status: 400 });
         }
 
-        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-        if (!passwordRegex.test(password)) {
-            return throwError({
-                message: "Password must be at least 8 characters long, include an uppercase letter, lowercase letter, a number, and a special character.",
-                res,
-                status: 400
-            });
-        }
-
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const generatedPassword = Math.random().toString(36).slice(-10); // Generate a 10-character password
+        const hashedPassword = await bcrypt.hash(generatedPassword, 10);
 
         // Find the parent's family
         const family = await Family.findOne({ email: req.user.email });
@@ -140,8 +131,24 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
         // Recalculate the ranks after adding the new user
         await recalculateFamilyMemberRanks(family._id, user);
 
-        res.status(200).send({message: "Creating user successfully", user: user });
+        const transporter = nodemailer.createTransport({
+            host: 'smtp.gmail.com',
+            port: 465,
+            secure: true,
+            service: "Gmail",
+            auth: {
+                user: process.env.EMAIL_USERNAME,
+                pass: process.env.EMAIL_PASSWORD,
+            },
+        });
+        await transporter.sendMail({
+            from: `"Your App Name" <${process.env.EMAIL_USERNAME}>`,
+            to: email,
+            subject: "Your Account Password",
+            text: `Hello ${req.user.name},\n\nYour ${role} ${name} account has been created successfully. Here are their login details:\n\nUsername: ${name}\nPassword: ${generatedPassword}\n\nPlease change your password after logging in.\n\nThank you,\nYour App Team`,
+        });
 
+        res.status(200).send({ message: "User created successfully, password email sent.", user });
     }catch(error){
         if (error instanceof Error) {
             // Handle MongoDB duplicate key error (11000)
