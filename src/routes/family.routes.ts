@@ -6,7 +6,7 @@ import { completeFamilyTask, createFamilyTasks, deleteFamily, deleteFamilyGoal, 
 const router =  express.Router();
 
 router.get("/", authMiddleware, adminMiddleware, getAllFamilies);
-router.get("/getFamily", authMiddleware, getFamily);
+router.post("/getFamily", authMiddleware, getFamily);
 router.get("/FamilyMembers", authMiddleware, getFamilyMembers);
 router.get("/someFamilydetails", authMiddleware, getFamilyNameNbMembersStars);
 router.put("/", authMiddleware, updateFamily);

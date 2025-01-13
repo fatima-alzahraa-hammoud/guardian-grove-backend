@@ -28,7 +28,11 @@ export const getAllFamilies = async (req: Request, res: Response): Promise<void>
 export const getFamily = async (req: Request, res: Response): Promise<void> => {
     try {
         const { familyId } = req.body;
-        const family = await Family.findById(familyId);
+        if(!checkId({id: familyId, res})) return;
+
+        let projection = '_id familyName email familyAvatar totalStars tasks members';
+
+        const family = await Family.findById(familyId).select(projection).lean();;
         
         if (!family) {
             return throwError({ message: "Family not found.", res, status: 404 });

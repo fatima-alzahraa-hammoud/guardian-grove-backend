@@ -148,7 +148,7 @@ export const register = async (req: Request, res: Response) : Promise<void> => {
 
         const token = await jwt.sign({ userId: newUser.id, role: newUser.role  }, JWT_SECRET_KEY);
 
-        res.status(200).send({user: newUser, token: token});
+        res.status(200).send({user: newUser, token: token, family: family});
 
     }catch(error){
         console.error(error); 
