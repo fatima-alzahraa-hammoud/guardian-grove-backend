@@ -14,6 +14,7 @@ export interface IFamily extends Document {
         _id: Types.ObjectId;
         name: string;
         role: string;
+        gender: string;
     }>;
     email: string;
     createdAt: Date;

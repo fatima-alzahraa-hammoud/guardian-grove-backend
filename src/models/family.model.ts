@@ -14,6 +14,7 @@ const familySchema = new Schema<IFamily>({
             _id: { type: Types.ObjectId, ref: "User", required: true },
             name: { type: String, required: true },
             role: { type: String, required: true, enum: ['parent', 'admin', 'child'] },
+            gender: { type: String, required: true, enum: ['female', 'male'] },
         },
     ],
     email: { type: String, required: true, unique: true },

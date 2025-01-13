@@ -61,7 +61,8 @@ export const getFamilyMembers = async (req: Request, res: Response): Promise<voi
             ...family,
             members: family.members.map(member => ({
                 ...member._id,
-                role: member.role
+                role: member.role,
+                gender: member.gender
             }))
         };
 

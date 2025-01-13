@@ -137,7 +137,7 @@ export const register = async (req: Request, res: Response) : Promise<void> => {
 
         // Add user to the family members list if not already present
         if (!family.members.includes(newUser.id)) {
-            family.members.push({_id: newUser.id, role, name});
+            family.members.push({_id: newUser.id, role, name, gender});
             await family.save();
         }
 
