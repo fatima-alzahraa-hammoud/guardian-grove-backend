@@ -31,7 +31,7 @@ cloudinary.config({
 const app: Express= express();
 
 // OpenAI API Configuration
-const openai = new OpenAI({
+export const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
 });
 

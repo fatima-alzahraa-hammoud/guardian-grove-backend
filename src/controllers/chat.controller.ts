@@ -4,6 +4,7 @@ import { throwError } from "../utils/error";
 import { CustomRequest } from "../interfaces/customRequest";
 import { checkId } from "../utils/checkId";
 import { IMessage } from "../interfaces/IMessage";
+import { openai } from "..";
 
 //API to send messages and save (and create new chat if no chat exists)
 /*export const sendMessage = async (req: CustomRequest, res: Response) => {
@@ -55,6 +56,9 @@ import { IMessage } from "../interfaces/IMessage";
         return throwError({ message: "Error occured while sending message or creating chat", res, status: 500 });
     }
 };*/
+
+// helper function to generate a welcoming message:
+
 
 // Create a new chat
 export const startNewChat = async (req: CustomRequest, res: Response) => {
@@ -135,20 +139,37 @@ export const sendMessage = async (req: CustomRequest, res: Response) => {
 };
 
 //API to get all chats for user
-export const getUserChats = async (req: CustomRequest, res: Response) => {
+export const getUserChatsOrCreate = async (req: CustomRequest, res: Response) => {
     try {
         if(!req.user){
             return throwError({ message: "Unauthorized", res, status: 401 });
         }
         const userId = req.user._id;
 
-        const chats = await Chat.find({ userId }).select("title createdAt updatedAt");
+        const existingChats = await Chat.find({ userId });
 
-        res.status(200).send({ message: 'Chats retrieved successfully', chats: chats });
+        if (existingChats.length > 0) {
+            res.status(200).json({message: "Chats retrieved successfully", chats: existingChats });
+            return;
+        }
+
+        const newChat = new Chat({
+            title: "Welcome Chat",
+            messages: [],
+            userId,
+        });
+
+        await newChat.save();
+
+        res.status(201).json({message: 'Chat created successfully', chat: newChat });
 
     } catch (err) {
         console.error(err);
-        res.status(500).send("Error fetching chats!");
+        if (err instanceof Error) { 
+            res.status(500).json({ message: 'Error fetching chats!', error: err.message });
+            return;
+        }
+        return throwError({ message: "An unknown error occurred", res, status: 500 });
     }
 };
 
