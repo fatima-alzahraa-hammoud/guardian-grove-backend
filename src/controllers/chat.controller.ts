@@ -161,7 +161,7 @@ export const getUserChatsOrCreate = async (req: CustomRequest, res: Response) =>
 
         await newChat.save();
 
-        res.status(201).json({message: 'Chat created successfully', chat: newChat });
+        res.status(201).json({message: 'Chat created successfully', chats: newChat });
 
     } catch (err) {
         console.error(err);
@@ -214,9 +214,49 @@ export const deleteChat = async (req: CustomRequest, res: Response) => {
             return throwError({ message: "Chat not found!", res, status: 404 });
         }
 
+        if (chat.userId.toString() !== req.user.id) {
+            return throwError({ message: "Unauthorized to delete this chat.", res, status: 403 });
+        }
+
         res.status(200).send({ message: 'Chat deleted successfully!', chat: chat});
     } catch (err) {
         console.error(err);
         res.status(500).send("Error deleting chat!");
+    }
+};
+
+//API to rename a chat
+export const renameChat = async (req: CustomRequest, res: Response) => {
+
+    try{
+        if(!req.user){
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+
+        const { chatId, title } = req.body;
+
+        if (!checkId({id: chatId, res})) return;
+
+        if (!title || title.trim() === "") {
+            return throwError({ message: "Title is required.", res, status: 400 });
+        }
+
+        const chat = await Chat.findById(chatId);
+        if (!chat) {
+            return throwError({ message: "Chat not found.", res, status: 404 });
+        }
+
+        if (chat.userId.toString() !== req.user.id) {
+            return throwError({ message: "Unauthorized to rename this chat.", res, status: 403 });
+        }
+
+        // Update the chat title
+        chat.title = title;
+        await chat.save();
+
+        res.status(200).json({ message: "Chat renamed successfully.", chat });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Error renaming chat!");
     }
 };
