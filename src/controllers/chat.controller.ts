@@ -75,8 +75,10 @@ export const handleChat = async (req: CustomRequest, res: Response) => {
             } as IMessage);
         }
 
+        const sendedMessage = {sender, message};
+
         await chat.save();
-        res.status(200).send({ message: 'Message sent', aiResponse: response.choices[0].message });
+        res.status(200).send({ message: 'Message sent', chat: chat, sendedMessage, aiResponse: response.choices[0].message });
     
     }catch(error){
         return throwError({ message: "Error occured while sending message or creating chat", res, status: 500 });
@@ -96,7 +98,7 @@ export const startNewChat = async (req: CustomRequest, res: Response) => {
         }
     
         const userId = req.user._id;
-        const { sender, message, title, image } = req.body;
+        const { sender, message, image } = req.body;
 
         if (!sender || (!image && !message)) {
             return throwError({ message: "All required fields must be filled.", res, status: 400});
@@ -104,7 +106,7 @@ export const startNewChat = async (req: CustomRequest, res: Response) => {
 
         const newChat = new Chat({
             userId,
-            title: title || message.substring(0, 40),
+            title: "New chat",
             messages: [{ sender: sender, message: message , image: image}]
         });
 
