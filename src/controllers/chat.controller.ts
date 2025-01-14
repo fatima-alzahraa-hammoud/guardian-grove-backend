@@ -26,12 +26,14 @@ export const handleChat = async (req: CustomRequest, res: Response) => {
 
         let chat;
     
-        if (!checkId({id: chatId, res})) return;
-        chat = await Chat.findOne({ _id: chatId });
+        if(chatId){ 
+            if (!checkId({id: chatId, res})) return;
+            chat = await Chat.findOne({ _id: chatId });
+        }
             
         // If no id exists or no chat with that id, create a new one
-        if (!chat) {
-            return throwError({ message: "Chat not found", res, status: 404 });
+        if (!chatId || !chat) {
+            chat = new Chat({ userId, title: "New Chat", messages: [] });
         }    
 
         // Add user message to the chat
@@ -65,7 +67,7 @@ export const handleChat = async (req: CustomRequest, res: Response) => {
         });
 
         // Add AI response to chat
-        if (response.choices[0]?.message?.content) {
+        if (response.choices[0]?.message) {
             chat.messages.push({
             sender: "bot",
             message: response.choices[0].message.content,
@@ -73,8 +75,10 @@ export const handleChat = async (req: CustomRequest, res: Response) => {
             } as IMessage);
         }
 
+        const sendedMessage = {sender, message};
+
         await chat.save();
-        res.status(200).send({ message: 'Message sent', aiResponse: response.choices[0].message.content });
+        res.status(200).send({ message: 'Message sent', chat: chat, sendedMessage, aiResponse: response.choices[0].message });
     
     }catch(error){
         return throwError({ message: "Error occured while sending message or creating chat", res, status: 500 });
@@ -94,7 +98,7 @@ export const startNewChat = async (req: CustomRequest, res: Response) => {
         }
     
         const userId = req.user._id;
-        const { sender, message, image } = req.body;
+        const { sender, message, title, image } = req.body;
 
         if (!sender || (!image && !message)) {
             return throwError({ message: "All required fields must be filled.", res, status: 400});
@@ -102,7 +106,7 @@ export const startNewChat = async (req: CustomRequest, res: Response) => {
 
         const newChat = new Chat({
             userId,
-            title: "New chat",
+            title: title || message.substring(0, 40),
             messages: [{ sender: sender, message: message , image: image}]
         });
 
