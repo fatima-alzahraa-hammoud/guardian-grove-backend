@@ -17,6 +17,7 @@ import drawingRoutes from "./routes/drawing.routes";
 import coloringRoutes from "./routes/coloring.routes";
 import storyRoutes from "./routes/story.routes";
 import cors from "cors";
+import { OpenAI } from "openai";
 
 dotenv.config();
 
@@ -28,6 +29,11 @@ cloudinary.config({
 });
 
 const app: Express= express();
+
+// OpenAI API Configuration
+const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+});
 
 // Use CORS middleware
 app.use(cors({
