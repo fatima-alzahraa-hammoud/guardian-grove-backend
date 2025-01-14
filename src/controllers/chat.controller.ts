@@ -26,14 +26,12 @@ export const handleChat = async (req: CustomRequest, res: Response) => {
 
         let chat;
     
-        if(chatId){ 
-            if (!checkId({id: chatId, res})) return;
-            chat = await Chat.findOne({ _id: chatId });
-        }
+        if (!checkId({id: chatId, res})) return;
+        chat = await Chat.findOne({ _id: chatId });
             
         // If no id exists or no chat with that id, create a new one
-        if (!chatId || !chat) {
-            chat = new Chat({ userId, title: "New Chat", messages: [] });
+        if (!chat) {
+            return throwError({ message: "Chat not found", res, status: 404 });
         }    
 
         // Add user message to the chat
@@ -67,7 +65,7 @@ export const handleChat = async (req: CustomRequest, res: Response) => {
         });
 
         // Add AI response to chat
-        if (response.choices[0]?.message) {
+        if (response.choices[0]?.message?.content) {
             chat.messages.push({
             sender: "bot",
             message: response.choices[0].message.content,
@@ -75,10 +73,8 @@ export const handleChat = async (req: CustomRequest, res: Response) => {
             } as IMessage);
         }
 
-        const sendedMessage = {sender, message};
-
         await chat.save();
-        res.status(200).send({ message: 'Message sent', chat: chat, sendedMessage, aiResponse: response.choices[0].message });
+        res.status(200).send({ message: 'Message sent', aiResponse: response.choices[0].message.content });
     
     }catch(error){
         return throwError({ message: "Error occured while sending message or creating chat", res, status: 500 });
