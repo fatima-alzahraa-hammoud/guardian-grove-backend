@@ -6,6 +6,7 @@ import { checkId } from "../utils/checkId";
 import { IMessage } from "../interfaces/IMessage";
 import { openai } from "..";
 import { ChatCompletionMessageParam } from "openai/resources";
+import { generateChatTitle } from "../utils/generateChatTitle";
 
 //API to send messages and save (and create new chat if no chat exists)
 
@@ -44,6 +45,12 @@ export const handleChat = async (req: CustomRequest, res: Response) => {
             timestamp: new Date(),
         } as IMessage);
     
+        // Check if chat title is "New Chat" and there are 3 messages
+        if (chat.title === "New Chat" && chat.messages.length >= 3) {
+            const generatedTitle = await generateChatTitle(chat.messages);
+            chat.title = generatedTitle; // Update chat title
+        }
+
         // Prepare last 6 messages for AI context
         const lastMessages : ChatCompletionMessageParam[] = chat.messages.slice(-6).map((msg) => ({
             role: msg.sender === "bot" ? "assistant" : "user",
