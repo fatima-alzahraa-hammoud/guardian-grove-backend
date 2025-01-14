@@ -5,18 +5,22 @@ import { CustomRequest } from "../interfaces/customRequest";
 import { checkId } from "../utils/checkId";
 import { IMessage } from "../interfaces/IMessage";
 import { openai } from "..";
+import { ChatCompletionMessageParam } from "openai/resources";
 
 //API to send messages and save (and create new chat if no chat exists)
-/*export const sendMessage = async (req: CustomRequest, res: Response) => {
+
+export const handleChat = async (req: CustomRequest, res: Response) => {
 
     try{
         if(!req.user){
             return throwError({ message: "Unauthorized", res, status: 401 });
         }
     
-        const { chatId, sender, message, image, title } = req.body;
+        const userId = req.user._id;
+
+        const { chatId, message, sender, image } = req.body;
     
-        if (!sender || (!image && !message)) {
+        if (!sender || (!message && !image)) {
             return throwError({ message: "All required fields must be filled.", res, status: 400});
         }
 
@@ -27,35 +31,57 @@ import { openai } from "..";
             chat = await Chat.findOne({ _id: chatId });
         }
             
-        // If no id exists, create a new one with the provided title
+        // If no id exists or no chat with that id, create a new one
         if (!chatId || !chat) {
-            
-            if (!title) {
-                return throwError({ message: "Title is required when creating a new chat", res, status: 400 });
-            }
-    
-            // Create a new chat with a unique chatId and the provided title
-            chat = new Chat({
-                userId: req.user._id,
-                title,
-                messages: [{ sender, message, image, timestamp: new Date() }],
-            });
-    
-            await chat.save();
-            res.status(201).send({ message: 'Chat started and message sent', chat });
-            return;
+            chat = new Chat({ userId, title: "New Chat", messages: [] });
         }    
+
+        // Add user message to the chat
+        chat.messages.push({
+            sender: "user",
+            message: message,
+            image,
+            timestamp: new Date(),
+        } as IMessage);
     
-        // If chat exists, add the new message to the existing chat
-        chat.messages.push({ sender, message, image, timestamp: new Date() } as IMessage);
+        // Prepare last 6 messages for AI context
+        const lastMessages : ChatCompletionMessageParam[] = chat.messages.slice(-6).map((msg) => ({
+            role: msg.sender === "bot" ? "assistant" : "user",
+            content: msg.message || "",
+        }));
+
+        // Add instructions and conversation context to the prompt
+        const aiPrompt : ChatCompletionMessageParam[] = [
+            {
+                role: "system",
+                content: "You are a helpful assistant, providing relevant responses based on the conversation history. Make sure to remember context from previous messages and respond thoughtfully to the user's message.",
+            },
+            ...lastMessages,
+        ];
+
+        // Generate AI response
+        const response = await openai.chat.completions.create({
+            model: "gpt-3.5-turbo",
+            messages: aiPrompt,
+            max_tokens: 150,
+        });
+
+        // Add AI response to chat
+        if (response.choices[0]?.message) {
+            chat.messages.push({
+            sender: "bot",
+            message: response.choices[0].message.content,
+            timestamp: new Date(),
+            } as IMessage);
+        }
+
         await chat.save();
-    
-        res.status(200).send({ message: 'Message sent', chat });
+        res.status(200).send({ message: 'Message sent', aiResponse: response.choices[0].message });
     
     }catch(error){
         return throwError({ message: "Error occured while sending message or creating chat", res, status: 500 });
     }
-};*/
+};
 
 // helper function to generate a welcoming message:
 
