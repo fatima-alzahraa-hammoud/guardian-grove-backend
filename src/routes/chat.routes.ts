@@ -1,6 +1,6 @@
 import express from "express";
 import { authMiddleware } from "../middlewares/auth.middleware";
-import { deleteChat, getChatById, getUserChatsOrCreate, sendMessage, startNewChat } from "../controllers/chat.controller";
+import { deleteChat, getChatById, getUserChatsOrCreate, renameChat, sendMessage, startNewChat } from "../controllers/chat.controller";
 //import { sendMessage } from "../controllers/chat.controller";
 
 const router =  express.Router();
@@ -11,5 +11,6 @@ router.put("/", authMiddleware, sendMessage);
 router.get("/getChats", authMiddleware, getUserChatsOrCreate);
 router.get("/chat", authMiddleware, getChatById);
 router.delete("/", authMiddleware, deleteChat);
+router.put("/rename", authMiddleware, renameChat);
 
 export default router;

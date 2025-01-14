@@ -59,6 +59,7 @@ import { openai } from "..";
 
 // helper function to generate a welcoming message:
 
+//API to handle chat
 
 // Create a new chat
 export const startNewChat = async (req: CustomRequest, res: Response) => {
