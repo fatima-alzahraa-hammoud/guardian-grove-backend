@@ -149,7 +149,7 @@ export const getUserChatsOrCreate = async (req: CustomRequest, res: Response) =>
         const aiPrompt : ChatCompletionMessageParam[]  = [
             {
                 role: "system",
-                content: "You are a friendly AI assistant that helps users get started with Guardian Grove. Write a warm, short, and inviting message welcoming the user, briefly explaining the purpose of Guardian Grove, and include a friendly question. The message should be structured with line breaks '\n\n' for clarity."
+                content: "You are a friendly AI assistant that helps users get started with Guardian Grove. Write a warm, short, and inviting message welcoming the user, briefly explaining the purpose of Guardian Grove, and include a friendly question. The message should be structured with line breaks for clarity and organized with bold and friendly emojies."
             },
         ];
 
@@ -159,7 +159,8 @@ export const getUserChatsOrCreate = async (req: CustomRequest, res: Response) =>
             max_tokens: 200,
         });
 
-        const welcomingMessage = aiResponse.choices[0]?.message.content || "Welcome to Guardian Grove! 🌳💚";
+        let welcomingMessage = aiResponse.choices[0]?.message.content || "Welcome to Guardian Grove! 🌳💚";
+        welcomingMessage = welcomingMessage.replace(/\n\n/g, " ");
 
         // Add the generated welcoming message to the new chat
         newChat.messages.push({

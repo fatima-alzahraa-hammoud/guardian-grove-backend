@@ -7,7 +7,7 @@ const messageSchema = new Schema<IMessage>({
   message: { type: String },
   image: { type: String },
   timestamp: { type: Date, default: Date.now },
-}, { _id: false });
+});
 
 const chatSchema = new Schema<IChat>({
   userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
