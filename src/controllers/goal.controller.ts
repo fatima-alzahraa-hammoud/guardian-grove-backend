@@ -464,6 +464,7 @@ export const completeTask = async (req: CustomRequest, res: Response): Promise<v
         user.coins += task.rewards.coins;
         user.stars += starsTaskReward;
         user.nbOfTasksCompleted += 1;
+        goal.nbOfTasksCompleted += 1;
 
         let starsGoalReward = 0;
 

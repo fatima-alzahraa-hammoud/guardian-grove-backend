@@ -7,6 +7,7 @@ export interface IGoal extends Document {
     description: string;
     type: 'personal' | 'family';
     tasks: ITask[];
+    nbOfTasksCompleted: number;
     isCompleted: boolean;
     createdAt: Date;
     completedAt?: Date;

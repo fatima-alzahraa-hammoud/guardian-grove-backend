@@ -6,7 +6,7 @@ const router =  express.Router();
 
 //routes for goals
 router.post("/", authMiddleware, createGoal);
-router.get("/", authMiddleware, getGoals);
+router.post("/goals", authMiddleware, getGoals);
 router.get("/goal", authMiddleware, getGoalById);
 router.put("/", authMiddleware, updateUserGoal);
 router.delete("/", authMiddleware, deleteGoal);

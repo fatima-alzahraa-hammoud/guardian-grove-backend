@@ -9,6 +9,7 @@ export const goalSchema = new Schema<IGoal>({
     description: { type: String, required:true },
     type: { type: String, required: true, enum: ['personal', 'family'] },
     tasks: { type: [taskSchema], default: [] },
+    nbOfTasksCompleted: {type: Number, default: 0},
     isCompleted: { type: Boolean, default: false },
     dueDate: { type: Date },
     createdAt: { type: Date, required: true },
