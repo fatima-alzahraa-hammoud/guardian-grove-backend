@@ -125,55 +125,6 @@ export const startNewChat = async (req: CustomRequest, res: Response) => {
     }
 };
 
-//API to send message and receive bot response
-export const sendMessage = async (req: CustomRequest, res: Response) => {
-    try {
-
-        if(!req.user){
-            return throwError({ message: "Unauthorized", res, status: 401 });
-        }
-    
-        const userId = req.user._id;
-    
-        const { chatId, text, image } = req.body;
-        if (!checkId({id: chatId, res})) return;
-    
-        if (!image && !text) {
-            return throwError({ message: "All required fields must be filled.", res, status: 400});
-        }
-
-        const chat = await Chat.findOne({ _id: chatId, userId });
-        if (!chat){
-            return throwError({ message: "Chat not found!", res, status: 404 });
-        }
-
-        // Add user message
-        chat.messages.push({
-            sender: "user",
-            message: text,
-            image: image,
-            timestamp: new Date()
-        } as IMessage);
-
-        // Simulate bot response (you can integrate with OpenAI API here)
-        const botResponse = `AI: ${text}`;
-
-        chat.messages.push({
-            sender: "bot",
-            message: botResponse,
-            image: image,
-            timestamp: new Date()
-        } as IMessage);
-
-        await chat.save();
-        res.status(200).send({ message: 'AI response generated successfully and Chat saved', response: botResponse, chat: chat });
-        
-    } catch (err) {
-        console.error(err);
-        return throwError({ message: "Error sending message!", res, status: 500 });
-    }
-};
-
 //API to get all chats for user
 export const getUserChatsOrCreate = async (req: CustomRequest, res: Response) => {
     try {
@@ -194,6 +145,28 @@ export const getUserChatsOrCreate = async (req: CustomRequest, res: Response) =>
             messages: [],
             userId,
         });
+
+        const aiPrompt : ChatCompletionMessageParam[]  = [
+            {
+                role: "system",
+                content: "You are a friendly AI assistant that helps users get started with Guardian Grove. Write a warm, short, and inviting message welcoming the user, briefly explaining the purpose of Guardian Grove, and include a friendly question. The message should be structured with line breaks '\n\n' for clarity."
+            },
+        ];
+
+        const aiResponse = await openai.chat.completions.create({
+            model: "gpt-3.5-turbo",
+            messages: aiPrompt,
+            max_tokens: 200,
+        });
+
+        const welcomingMessage = aiResponse.choices[0]?.message.content || "Welcome to Guardian Grove! 🌳💚";
+
+        // Add the generated welcoming message to the new chat
+        newChat.messages.push({
+            sender: "bot",
+            message: welcomingMessage,
+            timestamp: new Date(),
+        } as IMessage);
 
         await newChat.save();
 

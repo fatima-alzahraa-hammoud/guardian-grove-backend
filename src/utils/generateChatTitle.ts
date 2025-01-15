@@ -13,7 +13,7 @@ export const generateChatTitle = async (messages: IMessage[]): Promise<string> =
         const response = await openai.chat.completions.create({
             model: "gpt-3.5-turbo",
             messages: [
-                { role: "system", content: "You are a helpful assistant that summarizes messages into concise titles of maximum three words without word title:." },
+                { role: "system", content: "You are a helpful assistant that summarizes messages into concise titles of maximum two three words without word title:." },
                 { role: "user", content: aiPrompt }
             ],
             max_tokens: 20,
