@@ -56,6 +56,6 @@ router.get("/purchasedItems", authMiddleware, getUserPurchasedItems);
 router.get("/user/avatar", authMiddleware, getUserAvatar); 
 
 // routes for generate AI
-router.get("/generateGoals", regenerateGoalsAndTasksRoute);
+router.post("/generateGoals", regenerateGoalsAndTasksRoute);
 
 export default router;

@@ -24,7 +24,9 @@ export const generateGoalsAndTasks = async (userId: string, lastChats: any[], co
 
         The tasks must be related to a specific goal. The goals may be about everything that may help the user in growing and developing.
         Be specific in the task!
-        
+
+        Please do not always generate same type of tasks!
+
         The goal should include:
         - Title: A concise name for the goal. 
         - Description: A brief description of this goal and its importance.

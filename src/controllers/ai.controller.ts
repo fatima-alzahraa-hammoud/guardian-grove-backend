@@ -20,6 +20,7 @@ export const regenerateGoalsAndTasks = async (userId: string) => {
         // Step 4: Regenerate new goals based on the data
         const regeneratedGoals = await generateGoalsAndTasks(userId, lastChats, completedTasks, interests);
         
+        return regeneratedGoals;
     } catch (error) {
       console.error('Error generating and saving goals and tasks:', error);
     }
@@ -34,7 +35,7 @@ export const regenerateGoalsAndTasksRoute = async (req: Request, res: Response) 
             return;
         }
 
-        const generatedTasksAndGoals =  regenerateGoalsAndTasks(userId);
+        const generatedTasksAndGoals =  await regenerateGoalsAndTasks(userId);
 
         res.status(200).json({ message: "Goals and tasks regenerated successfully.", goal: generatedTasksAndGoals });
     } catch (error) {
