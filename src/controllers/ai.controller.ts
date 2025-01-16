@@ -91,3 +91,66 @@ export const generateGrowthPlans = async (req: Request, res: Response) => {
         throw new Error('Failed to generate growth plan');
     }
 };  
+
+export const generateDailyMessage = async(userId: string) => {
+    try {
+        const user = await User.findById(userId);
+        if (!user){
+            return "User not found";
+        }
+
+        const aiPrompt = `
+            Generate a motivational daily message for the user ${user}.
+        `
+        const response = await openai.chat.completions.create({
+            model: "gpt-3.5-turbo",
+            messages: [{ role: "system", content: aiPrompt }],
+        });
+
+        const dailyMessage = response?.choices[0].message?.content;
+
+        user.dailyMessage = dailyMessage || "You are shining 💫";
+
+        await user.save();
+    } catch (error) {
+        console.log("Something went error", error);
+    }
+}
+
+// Function to calculate the time until 10:30 AM tomorrow
+const getTimeUntilNextRun = () => {
+    const now = new Date();
+    const nextRun = new Date();
+
+    nextRun.setHours(11, 5, 0, 0); 
+    if (now > nextRun) {
+        nextRun.setDate(nextRun.getDate() + 1);
+    }
+
+    return nextRun.getTime() - now.getTime(); 
+};
+
+// Function to start the interval and timeout for daily messages for all users
+const startDailyMessageSchedule = async () => {
+    const users = await User.find();
+    if (users.length === 0) {
+        console.log("No users found.");
+        return;
+    }
+
+    const timeUntilNextRun = getTimeUntilNextRun();
+
+    setTimeout(() => {
+        users.forEach(user => {
+            generateDailyMessage(user._id.toString());
+        });
+
+        setInterval(() => {
+            users.forEach(user => {
+                generateDailyMessage(user._id.toString());
+            });
+        }, 24 * 60 * 60 * 1000); 
+    }, timeUntilNextRun); 
+};
+
+startDailyMessageSchedule();

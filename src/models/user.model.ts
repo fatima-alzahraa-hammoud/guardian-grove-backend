@@ -51,6 +51,7 @@ const userSchema = new Schema<IUser>({
     email: {type: String, required: [true, "Email is required"],  match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, "Email is invalid",]},
     password: {type: String, required: true},
     birthday:{type: Date, required: true},
+    dailyMessage: {type: String, required: true, default: "You are shining💫!"},
     gender:{type: String, enum: ['female', 'male'], required: true},
     role: {type: String, enum: ['owner', 'parent', 'child', 'admin'],required: true},
     avatar: {type: String, required: true, default:"/assets/images/avatars/parent/avatar1.png"},

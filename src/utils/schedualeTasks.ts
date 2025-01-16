@@ -1,6 +1,6 @@
 import cron from "node-cron";
 import { User } from "../models/user.model";
-import { regenerateGoalsAndTasks } from "../controllers/ai.controller";
+import { generateDailyMessage, regenerateGoalsAndTasks } from "../controllers/ai.controller";
 
 // Run daily at midnight
 cron.schedule("0 8 * * *", async () => {
@@ -28,4 +28,14 @@ cron.schedule("0 8 * * *", async () => {
     } catch (error) {
         console.error("Error in scheduled task:", error);
     }
+});
+
+
+cron.schedule("0 9 * * *", async () => {
+    const users = await User.find();
+
+    for (const user of users) {
+        const message = await generateDailyMessage(user._id.toString());
+    }
+    console.log("Daily messages sent successfully.");
 });
