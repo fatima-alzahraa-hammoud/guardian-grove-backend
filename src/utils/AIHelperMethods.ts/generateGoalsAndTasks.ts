@@ -9,39 +9,29 @@ export const generateGoalsAndTasks = async (userId: string, lastChats: any[], co
         throw new Error("User not found");
     }
 
-    //specific AI prompt
+    // specific AI prompt
     const prompt = `
-        Given the following information, generate a goal for the user with multiple tasks:
+        Given the following information, generate a goal for the user with multiple tasks that ends in a specific period but do not generate hard tasks and tasks into consideration of the user's age.
+        Benefit from these to remember about the user personality, and not to generate the same as completed tasks:
         - Last 3 chats (provide context for interests, goals, and activities):
         ${JSON.stringify(lastChats)}
         - Completed tasks (provide insight into tasks that have already been finished by the user):
         ${JSON.stringify(completedTasks)}
         - User interests (provide a list of activities or hobbies the user enjoys):
         ${JSON.stringify(interests)}
+        - User birthday to get age:
+        ${JSON.stringify(user.birthday)}
 
+        The tasks must be related to a specific goal. The goals may be about everything that may help the user in growing and developing.
+        Be specific in the task!
+        
         The goal should include:
-        - Title: A concise name for the goal.
-        - Description: A detailed explanation of why this goal matters for the user.
+        - Title: A concise name for the goal. 
+        - Description: A brief description of this goal and its importance.
         - rewards: {stars, coins}
         - Type: Specify if the goal is personal or family.
         - If **family**, make sure that the goal and tasks involve all family members. The tasks should require collaboration and should be engaging for all ages within the family.
         - If **personal**, create tasks that are focused on the individual's growth and self-improvement.
-
-        For **family** goals:
-        - The tasks should be collaborative and designed for family involvement. Tasks should be achievable together, such as family games, outdoor activities, or learning challenges.
-        - Each task should be engaging and require the participation of multiple family members.
-        - Tasks can include rewards that will motivate everyone in the family to contribute.
-
-        For **personal** goals:
-        - Tasks should focus on the individual user’s growth, such as personal development, learning, fitness, or hobbies.
-        - Each task should be clear, focused, and motivating for the individual user.
-
-        Each task should have:
-        - Title: Short and motivational.
-        - Description: Detailed but concise.
-        - Rewards: Stars (default: 2) and coins (default: 1).
-        - Type: Specify if it's "personal" or "family".
-        - Status: All tasks start as incomplete.
 
         Example response format:
         Goal:
@@ -49,7 +39,7 @@ export const generateGoalsAndTasks = async (userId: string, lastChats: any[], co
             title: "Family Fitness Challenge",
             description: "A fun and healthy challenge for the whole family to participate in.",
             type: "family",
-            rewards: {stars: 20, coins: 7}
+            rewards: {stars: 20, coins: 7},
             tasks: [
                 { title: "Morning Yoga Session", description: "Start the day with a family yoga session.", rewards: { stars: 10, coins: 5 }, isCompleted: false },
                 { title: "Family Walk", description: "Go for a walk around the neighborhood together.", rewards: { stars: 8, coins: 4 }, isCompleted: false }
@@ -63,7 +53,7 @@ export const generateGoalsAndTasks = async (userId: string, lastChats: any[], co
             title: "Personal Reading Goal",
             description: "Focus on reading one new book every month to improve knowledge and relaxation.",
             type: "personal",
-            rewards: {stars: 16, coins: 4}
+            rewards: {stars: 16, coins: 4},
             tasks: [
                 { title: "Read a Chapter a Day", description: "Start with one chapter of your book daily.", rewards: { stars: 5, coins: 2 }, isCompleted: false },
                 { title: "Finish the Book", description: "Complete reading the book by the end of the month.", rewards: { stars: 20, coins: 10 }, isCompleted: false }
@@ -72,29 +62,42 @@ export const generateGoalsAndTasks = async (userId: string, lastChats: any[], co
     `;
 
     const response = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo", 
+        model: "gpt-3.5-turbo",
         messages: [{ role: "system", content: prompt }],
     });
 
     const generatedContent = response.choices[0].message.content;
+    console.log("Generated Content:", generatedContent);  // Log the raw response
 
     if (typeof generatedContent !== 'string') {
         throw new Error("Invalid response content. Expected a string.");
     }
-    
-    const generatedGoal = JSON.parse(generatedContent);
-    // Format the generated data according to the Goal schema
 
-    const goal =({
+    let cleanedContent = generatedContent
+    .trim()  // Remove any extra spaces at the beginning or end
+    .replace(/^Goal:\s*/, '')  // Remove the "Goal: " part at the beginning if present
+    .replace(/,\s*$/, '')      // Remove any trailing commas
+    .replace(/[\r\n]+/g, '')   // Remove any newline characters
+    .replace(/([a-zA-Z0-9_]+):/g, '"$1":') // Ensure keys are wrapped in double quotes
+
+
+    let generatedGoal;
+    try {
+        generatedGoal = JSON.parse(cleanedContent);  // Try parsing the cleaned content
+    } catch (error) {
+        throw new Error("Error parsing the generated content as JSON: " + error);
+    }
+
+    const goal = {
         title: generatedGoal.title,
         description: generatedGoal.description,
-        type: generatedGoal.type, 
-        tasks: generatedGoal.tasks.map((task: any) => ({
-        title: task.title,
-        description: task.description,
-        rewards: task.rewards,
         type: generatedGoal.type,
-        isCompleted: false,
+        tasks: generatedGoal.tasks.map((task: any) => ({
+            title: task.title,
+            description: task.description,
+            rewards: task.rewards,
+            type: generatedGoal.type,
+            isCompleted: false,
         })),
         nbOfTasksCompleted: 0,
         isCompleted: false,
@@ -102,7 +105,7 @@ export const generateGoalsAndTasks = async (userId: string, lastChats: any[], co
         dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),  // 1 week from now
         rewards: generatedGoal.rewards,
         progress: 0,
-    } as IGoal);
+    } as IGoal;
 
     // Add the generated goal to the user's goals array or family goals
     if (generatedGoal.type === 'personal') {
@@ -114,7 +117,7 @@ export const generateGoalsAndTasks = async (userId: string, lastChats: any[], co
             await family.save();
         }
     }
-    
+
     await user.save();  // Save user with the new goal if personal
 
     return goal;

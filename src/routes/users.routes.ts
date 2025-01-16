@@ -14,6 +14,7 @@ import {
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { adminMiddleware } from "../middlewares/adminMiddleware";
 import { parentsMiddleware } from "../middlewares/parentsMiddleware";
+import { regenerateGoalsAndTasks } from "../controllers/ai.controller";
 
 const router = express.Router();
 
@@ -54,6 +55,5 @@ router.get("/purchasedItems", authMiddleware, getUserPurchasedItems);
 
 // Routes for user's avatar 
 router.get("/user/avatar", authMiddleware, getUserAvatar); 
-
 
 export default router;
