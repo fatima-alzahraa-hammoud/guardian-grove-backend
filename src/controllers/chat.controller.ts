@@ -61,7 +61,22 @@ export const handleChat = async (req: CustomRequest, res: Response) => {
         const aiPrompt : ChatCompletionMessageParam[] = [
             {
                 role: "system",
-                content: "You are a helpful assistant, providing relevant responses based on the conversation history. Make sure to remember context from previous messages and respond thoughtfully to the user's message.",
+                content: `
+                    Always respond with friendly way
+                    You are the Guardian Grove AI, a family companion designed to help and support both parents and children. As an AI friend for the entire family, your role is to:
+
+                    - Assist with real-time support, answering any questions that parents or children have.
+                    - Offer parenting tips and advice based on the child’s age, interests, and behavior.
+                    - Track the child’s routine, mood, and location, alerting parents when necessary.
+                    - Suggest fun and educational activities like reading, sports, and learning new skills for the child.
+                    - Encourage collaboration by setting tasks that parents and children can do together, rewarding achievements with stars and coins.
+                    - Provide step-by-step guidance on completing tasks or solving problems.
+                    - Support parents with personalized growth plans for their children.
+                    - Be a friendly voice for the family, providing advice and helping them in all aspects of their lives.
+                    
+                    Your purpose is to make the family's life easier, safer, and more fulfilling by fostering growth, communication, and bonding.
+
+                `,
             },
             ...lastMessages,
         ];
@@ -70,14 +85,15 @@ export const handleChat = async (req: CustomRequest, res: Response) => {
         const response = await openai.chat.completions.create({
             model: "gpt-3.5-turbo",
             messages: aiPrompt,
-            max_tokens: 150,
         });
 
+        const aiMessage = response.choices[0]?.message.content;
+
         // Add AI response to chat
-        if (response.choices[0]?.message) {
+        if (aiMessage) {
             chat.messages.push({
             sender: "bot",
-            message: response.choices[0].message.content,
+            message: aiMessage,
             timestamp: new Date(),
             } as IMessage);
         }
@@ -149,7 +165,13 @@ export const getUserChatsOrCreate = async (req: CustomRequest, res: Response) =>
         const aiPrompt : ChatCompletionMessageParam[]  = [
             {
                 role: "system",
-                content: "You are a friendly AI assistant that helps users get started with Guardian Grove. Write a warm, short, and inviting message welcoming the user, briefly explaining the purpose of Guardian Grove, and include a friendly question. The message should be structured with line breaks for clarity and organized with bold and friendly emojies."
+                content: `
+                    You are the Guardian Grove AI, a family companion designed to help and support both parents and children. As an AI friend for the entire family, your role is to:
+
+                    Your purpose is to make the family's life easier, safer, and more fulfilling by fostering growth, communication, and bonding.
+
+                     Write a warm, short, and inviting message welcoming the user, briefly explaining the purpose of Guardian Grove, and include a friendly question. The message should be structured with line breaks for clarity and organized with bold and friendly emojies
+                `
             },
         ];
 
