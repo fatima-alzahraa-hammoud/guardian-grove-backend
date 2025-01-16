@@ -170,13 +170,16 @@ export const generateLearningZone = async (req: Request, res: Response) => {
             The learning zone should include engaging, age-appropriate activities, tools, and resources that foster curiosity, creativity, and growth. 
             The learning zone should focus on [specific interests or subjects if available, e.g., science, art, or language learning]. 
             
-            Include the following details:
+            You can include the following details:
 
             - Recommended books, apps, or websites.
             - Creative activities or DIY projects.
             - Fun challenges or experiments.
             - A suggested daily or weekly schedule to maximize learning and engagement.
             - Tips to make learning enjoyable and interactive.
+            - and others
+
+            Please generate an well orgainzed friendly message
         `;
 
         const response = await openai.chat.completions.create({
