@@ -273,7 +273,7 @@ export const generateStory = async (req: Request, res: Response) => {
     // Fetch the user data
     const user = await User.findById(userId);
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+        return throwError({ message: "User not found", res, status: 404});
     }
 
     const age = new Date().getFullYear() - user.birthday.getFullYear();
@@ -287,8 +287,8 @@ export const generateStory = async (req: Request, res: Response) => {
 
     // Call OpenAI to generate the story
     const response = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [{ role: "system", content: aiPrompt }],
+        model: "gpt-4",
+        messages: [{ role: "system", content: aiPrompt }],
     });
 
     const story = response?.choices[0]?.message?.content;
@@ -298,6 +298,6 @@ export const generateStory = async (req: Request, res: Response) => {
 
   } catch (error) {
     console.error("Error generating story:", error);
-    return res.status(500).json({ message: 'Error generating story' });
+    res.status(500).json({ message: 'Error generating story' });
   }
 }

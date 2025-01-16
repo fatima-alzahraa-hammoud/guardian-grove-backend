@@ -13,7 +13,7 @@ import {
 } from "../controllers/users.controller";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { adminMiddleware } from "../middlewares/adminMiddleware";
-import { generateGrowthPlans, generateLearningZone, generateTrackDay, regenerateGoalsAndTasksRoute } from "../controllers/ai.controller";
+import { generateGrowthPlans, generateLearningZone, generateStory, generateTrackDay, regenerateGoalsAndTasksRoute } from "../controllers/ai.controller";
 
 const router = express.Router();
 
@@ -60,5 +60,6 @@ router.post("/generateGoals", regenerateGoalsAndTasksRoute);
 router.post("/generatePlan", generateGrowthPlans);
 router.post("/generateLearningZone", generateLearningZone);
 router.post("/generateTrackDay", generateTrackDay);
+router.post("/generateStory", generateStory);
 
 export default router;
