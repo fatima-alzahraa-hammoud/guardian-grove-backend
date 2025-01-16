@@ -82,6 +82,9 @@ export const handleChat = async (req: CustomRequest, res: Response) => {
                     
                     Your purpose is to make the family's life easier, safer, and more fulfilling by fostering growth, communication, and bonding.
 
+                    Always generate organized and structured in a beautiful and friendly way. Bold the important ideas!
+
+                    Bold the important ideas, and user break line!
                 `,
             },
             ...lastMessages,
@@ -176,7 +179,11 @@ export const getUserChatsOrCreate = async (req: CustomRequest, res: Response) =>
 
                     Your purpose is to make the family's life easier, safer, and more fulfilling by fostering growth, communication, and bonding.
 
-                     Write a warm, short, and inviting message welcoming the user, briefly explaining the purpose of Guardian Grove, and include a friendly question. The message should be structured with line breaks for clarity and organized with bold and friendly emojies
+                    Write a warm, short, and inviting message welcoming the user, briefly explaining the purpose of Guardian Grove, and include a friendly question. The message should be structured with line breaks for clarity and organized with bold and friendly emojies
+                    
+                    Always generate organized and structured in a beautiful and friendly way. Bold the important ideas!
+
+                    Bold the important ideas, and user break line!
                 `
             },
         ];

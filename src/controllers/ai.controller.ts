@@ -6,6 +6,7 @@ import { User } from "../models/user.model";
 import { openai } from "../index";
 import { checkId } from "../utils/checkId";
 import { throwError } from "../utils/error";
+import { isToday } from "date-fns";
 
 export const regenerateGoalsAndTasks = async (userId: string) => {
     try {
@@ -76,6 +77,8 @@ export const generateGrowthPlans = async (req: Request, res: Response) => {
             3. Fun and engaging activities related to the user’s interests
             4. Tips for improvement and overcoming challenges
             5. Motivational suggestions for staying on track
+
+            Always generate organized and structured in a beautiful and friendly way. Bold the important ideas, and user break line!
         `;
 
         const response = await openai.chat.completions.create({
@@ -180,6 +183,7 @@ export const generateLearningZone = async (req: Request, res: Response) => {
             - and others
 
             Please generate an well orgainzed friendly message
+            Always generate organized and structured in a beautiful and friendly way. Bold the important ideas, and user break line!
         `;
 
         const response = await openai.chat.completions.create({
@@ -189,9 +193,74 @@ export const generateLearningZone = async (req: Request, res: Response) => {
 
         const generatedLearningZone = response.choices[0].message.content;
 
-        res.status(200).json({message: "Generate growth plan successfully", learningZone: generatedLearningZone});
+        res.status(200).json({message: "Generate learning zone successfully", learningZone: generatedLearningZone});
     } catch (error) {
-        console.error('Error generating growth plan:', error);
-        throw new Error('Failed to generate growth plan');
+        console.error('Error generating learning zone:', error);
+        throw new Error('Failed to generate learning zone');
     }
 };  
+
+export const generateTrackDay = async (req: Request, res: Response) => {
+    try {
+        const {userId} = req.body;
+
+        const user = await User.findById(userId);
+        if (!user){
+            return throwError({ message: "User not found", res, status: 404});
+        }
+        const today = new Date();
+
+        // Collect data for the track of the day
+        const unlockedAchievements = user.achievements.filter(achievement =>
+            isToday(new Date(achievement.unlockedAt)) // Filter achievements unlocked today
+        ).map(achievement => achievement.achievementId.toString());
+
+        const purchasedItems = user.purchasedItems.filter(item =>
+            isToday(new Date(item.purchasedAt)) // Filter items purchased today
+        ).map(item => item.itemId.toString());
+
+        const completedGoals = user.goals.filter(goal =>
+            goal.completedAt && isToday(new Date(goal.completedAt)) && goal.isCompleted // Filter goals completed today
+        );
+
+        const completedTasks = completedGoals.flatMap(goal =>
+            goal.tasks.filter(task =>
+                task.completedAt && isToday(new Date(task.completedAt)) && task.isCompleted // Filter tasks completed today
+            )
+        );
+
+        const completedAdventures = user.adventures.filter(adventure =>
+            adventure.isAdventureCompleted && adventure.challenges.some(challenge =>
+                challenge.completedAt && isToday(new Date(challenge.completedAt)) // Filter adventures completed today
+            )
+        );
+
+        const aiPrompt = `
+            Generate a daily summary for the user with the following details:
+
+            user: ${user}
+            Unlocked Achievements: ${unlockedAchievements.join(", ")}
+            Purchased Items: ${purchasedItems.join(", ")}
+            Completed Goals: ${completedGoals.map(goal => goal.title).join(", ")}
+            Completed Tasks: ${completedTasks.map(task => task.title).join(", ")}
+            Completed Adventures: ${completedAdventures.map(adventure => adventure.adventureId.toString()).join(", ")}
+
+            The summary should be motivational and encourage the user for their progress today and make it beautiful.
+            Always generate organized and structured in a beautiful and friendly way, and generate it like statistics.
+            Bold the important ideas, and user break line!
+            use the user data. 
+        `;
+
+        const response = await openai.chat.completions.create({
+            model: "gpt-4",
+            messages: [{ role: "system", content: aiPrompt }],
+        });
+
+        const dailySummary = response?.choices[0].message?.content;
+
+        res.status(200).json({message: "Generate tack day successfully", dailySummary: dailySummary});
+
+    } catch (error) {
+        console.error("Error generating track of the day:", error);
+    }
+};
