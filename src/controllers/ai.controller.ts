@@ -24,4 +24,21 @@ export const regenerateGoalsAndTasks = async (userId: string) => {
       console.error('Error generating and saving goals and tasks:', error);
     }
 };
-  
+
+export const regenerateGoalsAndTasksRoute = async (req: Request, res: Response) => {
+    try {
+        const { userId } = req.body;
+
+        if (!userId) {
+            res.status(400).json({ message: "User ID is required." });
+            return;
+        }
+
+        const generatedTasksAndGoals =  regenerateGoalsAndTasks(userId);
+
+        res.status(200).json({ message: "Goals and tasks regenerated successfully.", goal: generatedTasksAndGoals });
+    } catch (error) {
+        console.error("Error in regenerateGoalsAndTasksRoute:", error);
+        res.status(500).json({ message: "Internal server error." });
+    }
+};
