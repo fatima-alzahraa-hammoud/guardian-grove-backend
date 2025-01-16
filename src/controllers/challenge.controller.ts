@@ -25,7 +25,6 @@ export const createChallenge = async(req: Request, res: Response): Promise<void>
             content,
             starsReward: starsReward || 2,
             coinsReward: coinsReward || 1,
-            isCompleted: false
         } as IChallenge;
 
         adventure.challenges.push(challenge);

@@ -11,5 +11,4 @@ export interface IAdventure extends Document{
     startDate : Date;
     endDate : Date;
     challenges: IChallenge[];
-    status: string;
 }

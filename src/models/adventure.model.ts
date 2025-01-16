@@ -7,7 +7,6 @@ const challengeSchema = new Schema<IChallenge>({
     content: { type: String, required: true },
     starsReward: { type: Number, required: true, default: 2 },
     coinsReward: { type: Number, required: true, default: 1 },
-    isCompleted: { type: Boolean, required: true, default: false },
 });
 
 const adventureSchema = new Schema<IAdventure>({
@@ -22,7 +21,6 @@ const adventureSchema = new Schema<IAdventure>({
         required: true,
         default: () => new Date(Date.now() + 24 * 60 * 60 * 1000)
     },
-    status: { type: String, enum: ['in-progress', 'completed', 'pending'], default: 'pending' },
     challenges: { type: [challengeSchema], required: true, default: [] },
 });
 
