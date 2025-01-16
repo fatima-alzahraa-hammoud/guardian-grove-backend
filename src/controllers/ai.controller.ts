@@ -4,9 +4,8 @@ import { getLastChatMessages } from "../utils/AIHelperMethods.ts/getLastChatMess
 import { generateGoalsAndTasks } from "../utils/AIHelperMethods.ts/generateGoalsAndTasks";
 import { User } from "../models/user.model";
 
-export const regenerateGoalsAndTasks = async (req: Request, res: Response) => {
+export const regenerateGoalsAndTasks = async (userId: string) => {
     try {
-        const { userId } = req.body;
 
         // Step 1: Get the last 3 chats and the last 6 messages of each chat
         const lastChats = await getLastChatMessages(userId);
@@ -20,11 +19,7 @@ export const regenerateGoalsAndTasks = async (req: Request, res: Response) => {
 
         // Step 4: Regenerate new goals based on the data
         const regeneratedGoals = await generateGoalsAndTasks(userId, lastChats, completedTasks, interests);
-    
-    
-        // Step 5: Send the regenerated goals back as a response
-        res.status(200).json(regeneratedGoals);
-    
+        
     } catch (error) {
       console.error('Error generating and saving goals and tasks:', error);
     }

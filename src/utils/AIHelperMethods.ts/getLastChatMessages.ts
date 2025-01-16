@@ -1,7 +1,7 @@
 import { Types } from "mongoose";
 import { Chat } from "../../models/chat.model";
 
-export const getLastChatMessages = async (userId: Types.ObjectId) => {
+export const getLastChatMessages = async (userId: string) => {
   try {
     const lastChats = await Chat.find({ userId }).sort({ updatedAt: -1 }).limit(3)
 
