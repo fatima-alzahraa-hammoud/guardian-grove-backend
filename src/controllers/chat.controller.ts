@@ -89,7 +89,7 @@ export const handleChat = async (req: CustomRequest, res: Response) => {
 
         // Generate AI response
         const response = await openai.chat.completions.create({
-            model: "gpt-3.5-turbo",
+            model: "gpt-4",
             messages: aiPrompt,
         });
 
@@ -182,7 +182,7 @@ export const getUserChatsOrCreate = async (req: CustomRequest, res: Response) =>
         ];
 
         const aiResponse = await openai.chat.completions.create({
-            model: "gpt-3.5-turbo",
+            model: "gpt-4",
             messages: aiPrompt,
             max_tokens: 200,
         });

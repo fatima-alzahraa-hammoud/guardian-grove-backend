@@ -79,7 +79,7 @@ export const generateGrowthPlans = async (req: Request, res: Response) => {
         `;
 
         const response = await openai.chat.completions.create({
-            model: "gpt-3.5-turbo",
+            model: "gpt-4",
             messages: [{ role: "system", content: aiPrompt }],
         });
 
@@ -103,7 +103,7 @@ export const generateDailyMessage = async(userId: string) => {
             Generate a motivational daily message for the user ${user}.
         `
         const response = await openai.chat.completions.create({
-            model: "gpt-3.5-turbo",
+            model: "gpt-4",
             messages: [{ role: "system", content: aiPrompt }],
         });
 
@@ -122,7 +122,7 @@ const getTimeUntilNextRun = () => {
     const now = new Date();
     const nextRun = new Date();
 
-    nextRun.setHours(11, 5, 0, 0); 
+    nextRun.setHours(0, 8, 0, 0); 
     if (now > nextRun) {
         nextRun.setDate(nextRun.getDate() + 1);
     }
@@ -154,3 +154,41 @@ const startDailyMessageSchedule = async () => {
 };
 
 startDailyMessageSchedule();
+
+export const generateLearningZone = async (req: Request, res: Response) => {
+    try {
+        const {userId} = req.body;
+        if(!checkId({id: userId, res})) return;
+
+        const user = await User.findById(userId);
+        if (!user){
+            return throwError({ message: "User not found", res, status: 404});
+        }
+        
+        const aiPrompt = `
+            Create a personalized learning zone for a ${user} aged ${user.birthday}. 
+            The learning zone should include engaging, age-appropriate activities, tools, and resources that foster curiosity, creativity, and growth. 
+            The learning zone should focus on [specific interests or subjects if available, e.g., science, art, or language learning]. 
+            
+            Include the following details:
+
+            - Recommended books, apps, or websites.
+            - Creative activities or DIY projects.
+            - Fun challenges or experiments.
+            - A suggested daily or weekly schedule to maximize learning and engagement.
+            - Tips to make learning enjoyable and interactive.
+        `;
+
+        const response = await openai.chat.completions.create({
+            model: "gpt-4",
+            messages: [{ role: "system", content: aiPrompt }],
+        });
+
+        const generatedLearningZone = response.choices[0].message.content;
+
+        res.status(200).json({message: "Generate growth plan successfully", learningZone: generatedLearningZone});
+    } catch (error) {
+        console.error('Error generating growth plan:', error);
+        throw new Error('Failed to generate growth plan');
+    }
+};  
