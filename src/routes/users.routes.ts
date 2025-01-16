@@ -58,5 +58,6 @@ router.get("/user/avatar", authMiddleware, getUserAvatar);
 // routes for generate AI
 router.post("/generateGoals", regenerateGoalsAndTasksRoute);
 router.post("/generatePlan", generateGrowthPlans);
+router.post("/generateLearningZone", generateGrowthPlans);
 
 export default router;
