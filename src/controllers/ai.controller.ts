@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { getCompletedTasks } from "../utils/AIHelperMethods.ts/getCompletedTasks";
-import { getLastChatMessages } from "../utils/AIHelperMethods.ts/getLastChatMessages";
+import { getLastChatMessages, getLastFourChats } from "../utils/AIHelperMethods.ts/getLastChatMessages";
 import { generateGoalsAndTasks } from "../utils/AIHelperMethods.ts/generateGoalsAndTasks";
 import { User } from "../models/user.model";
 
