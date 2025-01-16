@@ -39,7 +39,7 @@ export const handleChat = async (req: CustomRequest, res: Response) => {
 
         // Add user message to the chat
         chat.messages.push({
-            sender: "user",
+            sender: sender,
             message: message,
             image,
             timestamp: new Date(),
@@ -57,6 +57,12 @@ export const handleChat = async (req: CustomRequest, res: Response) => {
             content: msg.message || "",
         }));
 
+        if (sender === "bot"){
+            const sendedMessage = {sender, message};
+            await chat.save();
+            res.status(200).send({ message: 'Message sent', chat: chat, sendedMessage});
+            return;
+        }
         // Add instructions and conversation context to the prompt
         const aiPrompt : ChatCompletionMessageParam[] = [
             {
