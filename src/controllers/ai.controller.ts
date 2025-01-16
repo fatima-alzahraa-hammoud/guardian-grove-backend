@@ -264,3 +264,40 @@ export const generateTrackDay = async (req: Request, res: Response) => {
         console.error("Error generating track of the day:", error);
     }
 };
+
+export const generateStory = async (req: Request, res: Response) => {
+  try {
+
+    const { userId } = req.body;
+
+    // Fetch the user data
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const age = new Date().getFullYear() - user.birthday.getFullYear();
+    
+    // Base AI prompt for the story
+    let aiPrompt = `
+        Tell an engaging, motivating, and creative story. Make the story interesting and suitable for the user's age, which is ${age} years old.
+        Focus on making the narrative fun and inspiring while considering their maturity, preferences, and engagement level based on age.
+        Write it in interactive, organized, structured way.
+    `;
+
+    // Call OpenAI to generate the story
+    const response = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [{ role: "system", content: aiPrompt }],
+    });
+
+    const story = response?.choices[0]?.message?.content;
+
+    // Return the generated story to the client
+    res.status(200).json({message: "Generate story successfully", story: story});
+
+  } catch (error) {
+    console.error("Error generating story:", error);
+    return res.status(500).json({ message: 'Error generating story' });
+  }
+}
