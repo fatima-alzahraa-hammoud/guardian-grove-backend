@@ -1,5 +1,8 @@
 import * as fs from "fs";
 import { Readable } from "stream";
+import dotenv from "dotenv";
+import path from "path";
+dotenv.config();
 
 const elevenLabsApiKey = process.env.ELEVEN_LABS_API_KEY;
 const voiceId = "sFSJGretr1hLpWXQZ52E";
@@ -38,10 +41,29 @@ export const TextToSpeech = async(text : string, outputFilePath : string) => {
         readableStream.pipe(fileWriter);
         
         return new Promise<string>((resolve, reject) => {
-            fileWriter.on("finish", () => resolve(outputFilePath));
-            fileWriter.on("error", reject);
+            fileWriter.on("finish", () => {
+                console.log("Audio file saved successfully:", outputFilePath);
+                resolve(outputFilePath);
+            });
+            fileWriter.on("error", (err) => {
+                console.error("Error writing audio file:", err);
+                reject(err);
+            });
         });
     } catch (error) {
         console.log("Error generating text-to-speech")
     }
 }
+
+export const audioFileToBase64 = async (filePath: string): Promise<string> => {
+    try {
+
+        const data = await fs.promises.readFile(filePath);
+        const base64 = data.toString("base64");
+
+        return base64;
+    } catch (error) {
+        console.error("Error reading or converting audio file to base64:", error);
+        throw error;
+    }
+};
