@@ -103,7 +103,9 @@ export const generateDailyMessage = async(userId: string) => {
         }
 
         const aiPrompt = `
-            Generate a motivational daily message for the user ${user}.
+            Generate a motivational daily message for the user${user}.
+            generate it without word message, and without ay introduction, directly the message.
+            Make it organized, beautiful and friendly and not more than two lines
         `
         const response = await openai.chat.completions.create({
             model: "gpt-4",
@@ -137,7 +139,7 @@ const getTimeUntilNextRun = () => {
 const startDailyMessageSchedule = async () => {
     const users = await User.find();
     if (users.length === 0) {
-        console.log("No users found.");
+        console.log("No users found."); 
         return;
     }
 
