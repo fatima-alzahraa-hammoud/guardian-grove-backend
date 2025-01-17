@@ -1,21 +1,22 @@
-import axios from "axios";
-import fs from "fs";
+import * as fs from "fs";
+import { Readable } from "stream";
 
 const elevenLabsApiKey = process.env.ELEVEN_LABS_API_KEY;
 const voiceId = "sFSJGretr1hLpWXQZ52E";
 
-const TextToSpeech = async(text : string, outputFilePath : string) => {
+export const TextToSpeech = async(text : string, outputFilePath : string) => {
     try {
         if (!elevenLabsApiKey) {
             throw new Error("ELEVEN_LABS_API_KEY is not defined");
         }
 
-        const response = await axios.post(
+        const response = await fetch(
             `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
             {
+                method: "POST",
                 headers: {
-                    "Content-Type" : "application/json",
-                    "xi-api-key" : elevenLabsApiKey,
+                    "Content-Type": "application/json",
+                    "xi-api-key": elevenLabsApiKey,
                 },
                 body: JSON.stringify({
                     text: text,
@@ -24,17 +25,18 @@ const TextToSpeech = async(text : string, outputFilePath : string) => {
                         similarity_boost: 0.7,
                     },
                 }),
-                responseType: "stream",
             }
         );
 
-        if (!response || !response.data) {
-            throw new Error("No response or data received from the API");
+        if (!response.ok) {
+            throw new Error(`Failed to fetch: ${response.statusText}`);
         }
 
-        const fileWriter = fs.createWriteStream(outputFilePath);        
-        response.data.pipe(fileWriter);
-
+        const fileWriter = fs.createWriteStream(outputFilePath);      
+          
+        const readableStream = Readable.fromWeb(response.body as any);
+        readableStream.pipe(fileWriter);
+        
         return new Promise<string>((resolve, reject) => {
             fileWriter.on("finish", () => resolve(outputFilePath));
             fileWriter.on("error", reject);

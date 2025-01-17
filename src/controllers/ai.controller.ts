@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
-import { getCompletedTasks } from "../utils/AIHelperMethods.ts/getCompletedTasks";
-import { getLastChatMessages, getLastFourChats } from "../utils/AIHelperMethods.ts/getLastChatMessages";
-import { generateGoalsAndTasks } from "../utils/AIHelperMethods.ts/generateGoalsAndTasks";
+import { getCompletedTasks } from "../utils/AIHelperMethods/getCompletedTasks";
+import { getLastChatMessages, getLastFourChats } from "../utils/AIHelperMethods/getLastChatMessages";
+import { generateGoalsAndTasks } from "../utils/AIHelperMethods/generateGoalsAndTasks";
 import { User } from "../models/user.model";
 import { openai } from "../index";
 import { checkId } from "../utils/checkId";
