@@ -7,6 +7,7 @@ import { IMessage } from "../interfaces/IMessage";
 import { openai } from "..";
 import { ChatCompletionMessageParam } from "openai/resources";
 import { generateChatTitle } from "../utils/generateChatTitle";
+import { audioFileToBase64, TextToSpeech } from "../utils/AIHelperMethods/textToSpeech";
 
 //API to send messages and save (and create new chat if no chat exists)
 
@@ -96,7 +97,7 @@ export const handleChat = async (req: CustomRequest, res: Response) => {
             messages: aiPrompt,
         });
 
-        const aiMessage = response.choices[0]?.message.content;
+        const aiMessage = response.choices[0]?.message?.content;
 
         // Add AI response to chat
         if (aiMessage) {
@@ -107,19 +108,28 @@ export const handleChat = async (req: CustomRequest, res: Response) => {
             } as IMessage);
         }
 
+        await chat.save();
+
+        const outputFilePath = `./audio-responses/message_${chatId}_${new Date().getTime()}.mp3`;
+        await TextToSpeech(aiMessage || "no message found", outputFilePath); // Save audio
+
+        const audio = await audioFileToBase64(outputFilePath);
+
         const sendedMessage = {sender, message};
 
-        await chat.save();
-        res.status(200).send({ message: 'Message sent', chat: chat, sendedMessage, aiResponse: response.choices[0].message });
-    
+
+        // Respond with AI message and audio file URL
+        res.status(200).send({
+            message: 'Message sent',
+            chat: chat,
+            sendedMessage,
+            aiResponse: response.choices[0].message,
+            audio
+        });    
     }catch(error){
         return throwError({ message: "Error occured while sending message or creating chat", res, status: 500 });
     }
 };
-
-// helper function to generate a welcoming message:
-
-//API to handle chat
 
 // Create a new chat
 export const startNewChat = async (req: CustomRequest, res: Response) => {
