@@ -1,6 +1,5 @@
 import axios from "axios";
 import fs from "fs";
-import { Readable } from "stream";
 
 const elevenLabsApiKey = process.env.ELEVEN_LABS_API_KEY;
 const voiceId = "sFSJGretr1hLpWXQZ52E";
