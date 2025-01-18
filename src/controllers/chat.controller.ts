@@ -140,7 +140,7 @@ export const startNewChat = async (req: CustomRequest, res: Response) => {
         }
     
         const userId = req.user._id;
-        const { sender, message, title, image } = req.body;
+        const { sender, message, image } = req.body;
 
         if (!sender || (!image && !message)) {
             return throwError({ message: "All required fields must be filled.", res, status: 400});
@@ -148,12 +148,19 @@ export const startNewChat = async (req: CustomRequest, res: Response) => {
 
         const newChat = new Chat({
             userId,
-            title: title || message.substring(0, 40),
-            messages: [{ sender: sender, message: message , image: image}]
+            title: "New Chat",
+            messages: []
         });
 
-        const savedChat = await newChat.save();
-        res.status(201).send({ message: 'Chat started and message sent', chat: savedChat });
+        newChat.messages.push({
+            sender: sender,
+            message: message,
+            image,
+            timestamp: new Date(),
+        } as IMessage);
+
+        await newChat.save();
+        res.status(200).send({ message: 'Chat started and message sent', chat: newChat });
     } catch (err) {
         console.error(err);
         return throwError({ message: "Error starting chat!", res, status: 500 });
