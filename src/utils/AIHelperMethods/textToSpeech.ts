@@ -1,3 +1,4 @@
+
 import * as fs from "fs";
 import { Readable } from "stream";
 import dotenv from "dotenv";
@@ -5,12 +6,18 @@ import path from "path";
 dotenv.config();
 
 const elevenLabsApiKey = process.env.ELEVEN_LABS_API_KEY;
-const voiceId = "sFSJGretr1hLpWXQZ52E";
+const voiceId = "hAUg9gFEyJLUrG4kTyBq";
 
 export const TextToSpeech = async(text : string, outputFilePath : string) => {
     try {
         if (!elevenLabsApiKey) {
             throw new Error("ELEVEN_LABS_API_KEY is not defined");
+        }
+
+        const path = './audio-responses';
+        if (!fs.existsSync(path)) {
+            console.log(`Directory does not exist, creating: ${path}`);
+            fs.mkdirSync(path, { recursive: true });
         }
 
         const response = await fetch(
@@ -32,11 +39,14 @@ export const TextToSpeech = async(text : string, outputFilePath : string) => {
         );
 
         if (!response.ok) {
+            const errorText = await response.text();
+            console.log(`Failed to fetch: ${response.statusText}`);
+            console.error(`Error Text: ${errorText}`);
             throw new Error(`Failed to fetch: ${response.statusText}`);
         }
 
         const fileWriter = fs.createWriteStream(outputFilePath);      
-          
+
         const readableStream = Readable.fromWeb(response.body as any);
         readableStream.pipe(fileWriter);
         
