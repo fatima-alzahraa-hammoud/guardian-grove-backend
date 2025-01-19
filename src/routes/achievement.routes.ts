@@ -1,6 +1,6 @@
 import express from "express";
 import { authMiddleware } from "../middlewares/auth.middleware";
-import { createAchievement, deleteAchievement, getAchievements, getLastUnlockedAchievement, getLockedAchievements, getUnLockedAchievements, getUserAchievements, unlockAchievement, unlockFamilyAchievement, updateAchievement } from "../controllers/achievement.controller";
+import { createAchievement, deleteAchievement, getAchievements, getLastFamilyUnlockedAchievement, getLastUnlockedAchievement, getLockedAchievements, getUnLockedAchievements, getUserAchievements, unlockAchievement, unlockFamilyAchievement, updateAchievement } from "../controllers/achievement.controller";
 import { adminMiddleware } from "../middlewares/adminMiddleware";
 
 const router =  express.Router();
@@ -15,6 +15,7 @@ router.delete("/", authMiddleware, adminMiddleware, deleteAchievement);
 router.get("/unlocked", authMiddleware, getUnLockedAchievements);
 router.post("/unlockFamilyAchievement", authMiddleware, unlockFamilyAchievement);
 router.get("/lastUnlocked", authMiddleware, getLastUnlockedAchievement);
+router.get("/lastFamilyUnlocked", authMiddleware, getLastFamilyUnlockedAchievement);
 
 
 export default router;
