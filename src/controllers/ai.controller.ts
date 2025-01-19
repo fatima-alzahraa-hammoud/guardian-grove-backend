@@ -440,3 +440,51 @@ export const generateQuickTips = async (req: Request, res: Response) => {
         res.status(500).json({ message: "Internal server error" });
     }
 };
+
+// API to generate a question to test task completion
+export const generateTaskCompletionQuestion = async (req: Request, res: Response) => {
+    try {
+        const { userId, taskDescription } = req.body;
+
+        if (!checkId({id: userId, res})) return;
+
+        // Check if the user ID and task are provided
+        if (!userId || !taskDescription) {
+            return throwError({ message: "User ID and task description are required.", res, status: 400 });
+        }
+
+        // Construct the AI prompt to generate a question
+        const aiPrompt = `
+            You are a helpful assistant. The user has given the following task: "${taskDescription}".
+            Generate a clear and concise question that can test if the task is completed.
+            The question should be directly related to the task.
+            Make sure the question is simple and understandable.
+
+            Generated question:
+        `;
+
+        // Call OpenAI API to generate the question
+        const response = await openai.chat.completions.create({
+            model: "gpt-4",
+            messages: [{ role: "system", content: aiPrompt }],
+            temperature: 0.7,
+            max_tokens: 40,
+        });
+
+        // Extract the generated question from the AI response
+        const generatedQuestion = response?.choices[0]?.message?.content;
+
+        if (!generatedQuestion) {
+            return throwError({ message: "Failed to generate a question.", res, status: 500 });
+        }
+
+        // Send the generated question to the user
+        res.status(200).json({
+            message: "Task completion question generated successfully.",
+            question: generatedQuestion,
+        });
+    } catch (error) {
+        console.error("Error generating question:", error);
+        return throwError({ message: "Internal server error", res, status: 500 });
+    }
+};
