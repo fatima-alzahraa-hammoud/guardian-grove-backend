@@ -148,6 +148,8 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
             text: `Hello ${req.user.name},\n\nYour ${role} ${name} account has been created successfully. Here are their login details:\n\nUsername: ${name}\nPassword: ${generatedPassword}\n\nPlease change your password after logging in.\n\nThank you,\nYour App Team`,
         });
 
+        await user.save();
+        console.log(user)
         res.status(200).send({ message: "User created successfully, password email sent.", user });
     }catch(error){
         if (error instanceof Error) {
