@@ -488,3 +488,47 @@ export const generateTaskCompletionQuestion = async (req: Request, res: Response
         return throwError({ message: "Internal server error", res, status: 500 });
     }
 };
+
+// API to check if the task is completed based on the AI-generated question and user answer
+export const checkTaskCompletion = async (req: Request, res: Response) => {
+    try {
+        const { userId, question, userAnswer } = req.body;
+
+        if (!checkId({id: userId, res})) return;
+
+        if (!userId || !question || !userAnswer) {
+            return throwError({ message: "User ID, task description, and user answer are required.", res, status: 400 });
+        }
+
+        const aiPrompt = `
+            The user has been assigned the following question for a task: "${question}".
+            The user has provided the following answer: "${userAnswer}".
+            Please analyze the answer and determine if the task has been completed or not.
+            Return "true" if the task is completed, otherwise return "false".
+            The answer may be vague, so please make a decision based on context and clarity.
+        `;
+
+        const response = await openai.chat.completions.create({
+            model: "gpt-4",
+            messages: [{ role: "system", content: aiPrompt }],
+            temperature: 0.7,
+            max_tokens: 10,
+        });
+
+        // Extract the result (true/false) from the AI response
+        const aiResponse = response?.choices[0]?.message?.content?.trim().toLowerCase();
+
+        // Validate the response and send appropriate result
+        if (aiResponse === "true" || aiResponse === "false") {
+            res.status(200).json({
+                message: "Task completion status checked successfully.",
+                taskCompleted: aiResponse === "true",
+            });
+        } else {
+            return throwError({ message: "Failed to determine task completion.", res, status: 500 });
+        }
+    } catch (error) {
+        console.error("Error checking task completion:", error);
+        return throwError({ message: "Internal server error", res, status: 500 });
+    }
+};
