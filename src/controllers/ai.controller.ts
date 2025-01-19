@@ -303,3 +303,59 @@ export const generateStory = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Error generating story' });
   }
 }
+
+export const generateViewTasks = async (req: Request, res: Response) => {
+    try {
+        const { userId } = req.body;
+
+        if (!checkId({ id: userId, res })) return;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return throwError({ message: "User not found", res, status: 404 });
+        }
+
+        const completedTasks = user.goals.flatMap(goal =>
+            goal.tasks.filter(task => task.isCompleted).map(task => task.title)
+        );
+
+        const incompleteTasks = user.goals.flatMap(goal =>
+            goal.tasks.filter(task => !task.isCompleted).map(task => task.title)
+        );
+
+        const aiPrompt = `
+            You are an AI assistant that generates personalized task suggestions for users based on their progress and interests.
+            
+            User Details:
+            - Name: ${user.name}
+            - Interests: ${user.interests.join(", ")}
+            - Completed Tasks: ${completedTasks.join(", ")}
+            - Incomplete Tasks: ${incompleteTasks.join(", ")}
+            
+            Generate a structured and motivational list of tasks for the user:
+            1. Suggest tasks aligned with their interests.
+            2. Include fun and engaging tasks to keep the user motivated.
+            3. Recommend strategies to complete incomplete tasks.
+            4. Provide tips for organizing their time effectively.
+            5. Ensure the tone is friendly and encouraging, and format the response beautifully with key points bolded and well-organized sections.
+
+            please always be creative in your answers and structure the text in a creative way.
+        `;
+
+        const response = await openai.chat.completions.create({
+            model: "gpt-4",
+            messages: [{ role: "system", content: aiPrompt }],
+            temperature: 1,
+        });
+
+        const generatedTasks = response?.choices[0]?.message?.content;
+
+        res.status(200).json({
+            message: "View tasks generated successfully",
+            tasks: generatedTasks,
+        });
+    } catch (error) {
+        console.error("Error generating view tasks:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
