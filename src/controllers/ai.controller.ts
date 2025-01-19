@@ -359,3 +359,55 @@ export const generateViewTasks = async (req: Request, res: Response) => {
         res.status(500).json({ message: "Internal server error" });
     }
 };
+
+
+export const generateQuickTips = async (req: Request, res: Response) => {
+    try {
+        const { userId } = req.body;
+
+        if (!checkId({ id: userId, res })) return;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return throwError({ message: "User not found", res, status: 404 });
+        }
+
+        const age = new Date().getFullYear() - user.birthday.getFullYear();
+
+        const aiPrompt = `
+            Generate creative and age-appropriate tips for someone who is ${age} years old.
+            
+            Generate a structured and motivational quick tip for the user.
+            Ensure the tone is friendly and encouragin.
+            please always be creative in your answers and structure the text in a creative way.
+
+            The tip should include:
+            - title: A concise, small, and creative name for the tip. 
+            - message: a small tip content, brief, be general and creative, i need it small
+
+            example of structue:
+            Tip"{
+                title: "..",
+                message: ".."
+            }
+
+        `;
+
+        const response = await openai.chat.completions.create({
+            model: "gpt-4",
+            messages: [{ role: "system", content: aiPrompt }],
+            temperature: 1,
+            max_tokens: 50
+        });
+
+        let generatedQuickTip = response?.choices[0]?.message?.content;
+        
+        res.status(200).json({
+            message: "Quick tip generated successfully",
+            quickTip: generatedQuickTip,
+        });
+    } catch (error) {
+        console.error("Error generating tip:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
