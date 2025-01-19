@@ -15,7 +15,7 @@ router.delete("/", authMiddleware, adminMiddleware, deleteAchievement);
 router.get("/unlocked", authMiddleware, getUnLockedAchievements);
 router.post("/unlockFamilyAchievement", authMiddleware, unlockFamilyAchievement);
 router.get("/lastUnlocked", authMiddleware, getLastUnlockedAchievement);
-router.get("/lastFamilyUnlocked", authMiddleware, getLastFamilyUnlockedAchievement);
+router.post("/lastFamilyUnlocked", authMiddleware, getLastFamilyUnlockedAchievement);
 
 
 export default router;
