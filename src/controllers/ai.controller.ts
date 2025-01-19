@@ -345,14 +345,14 @@ export const generateViewTasks = async (req: Request, res: Response) => {
         const response = await openai.chat.completions.create({
             model: "gpt-4",
             messages: [{ role: "system", content: aiPrompt }],
-            temperature: 1,
+            temperature: 1
         });
 
-        const generatedTasks = response?.choices[0]?.message?.content;
-
+        let generatedViewTasks = response?.choices[0]?.message?.content;
+        
         res.status(200).json({
             message: "View tasks generated successfully",
-            tasks: generatedTasks,
+            viewTasks: generatedViewTasks,
         });
     } catch (error) {
         console.error("Error generating view tasks:", error);
