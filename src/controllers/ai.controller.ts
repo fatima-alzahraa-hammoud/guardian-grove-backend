@@ -8,6 +8,7 @@ import { checkId } from "../utils/checkId";
 import { throwError } from "../utils/error";
 import { isToday } from "date-fns";
 import { INotification } from "../interfaces/INotification";
+import { Adventure } from "../models/adventure.model";
 
 export const regenerateGoalsAndTasks = async (userId: string) => {
     try {
@@ -530,5 +531,110 @@ export const checkTaskCompletion = async (req: Request, res: Response) => {
     } catch (error) {
         console.error("Error checking task completion:", error);
         return throwError({ message: "Internal server error", res, status: 500 });
+    }
+};
+
+// API to generate a daily adventure with challenges
+export const generateDailyAdventure = async (req: Request, res: Response) => {
+    try {
+        // Get the current date
+        const today = new Date();
+        const startDate = today;
+        const endDate = new Date(today);
+        endDate.setDate(endDate.getDate() + 1);  // End date of the adventure (24 hours from now)
+
+        // Construct the prompt for AI to generate an adventure
+        const aiPrompt = `
+            Generate a fun and interactive adventure story that consists of a series of challenges.
+            Each challenge should be solvable, either by answering a learning question (math, physics, etc.) or a riddle.
+            The challenges must be part of the story and lead to the conclusion of the adventure.
+            The story should be about a quest, like finding a treasure, solving a mystery, or saving the world.
+
+            Example Adventure: 
+            "The Jungle Quest" - "You’ve entered a magical jungle where treasures are hidden. To find them, you must solve puzzles, complete challenges, and work together!"
+
+            generate it in json format as:
+            {
+                "title": "string",
+                "description": "string",
+                "starsReward": number,
+                "coinsReward": number,
+                "challenges": [
+                    {
+                        "title": "string",
+                        "content": "string",
+                        "starsReward": number,
+                        "coinsReward": number
+                    },
+                    ...
+                ]
+            }
+
+            Rules:
+            - Do not include any text outside the JSON.
+            - Ensure the JSON is strictly valid and properly formatted.
+            - The title should be engaging, and the description should briefly explain the adventure's purpose.
+            - Each challenge should be relevant to the adventure's theme.
+            - Ensure the JSON is complete and well-formed.
+            - Do not leave any keys or values missing.
+            - Use proper syntax and close all brackets and quotes.
+            - Ensure all challenges are fully defined with no missing fields.
+            - at least five challenges and make the title small
+
+            Output only the JSON without any extra text.
+
+        `;
+
+
+        const response = await openai.chat.completions.create({
+            model: "gpt-4",
+            messages: [{ role: "system", content: aiPrompt }],
+            temperature: 0.8,
+            max_tokens: 500,
+        });
+
+        // Extract the generated adventure from the AI response
+        const adventureText = response?.choices[0]?.message?.content;
+
+        if (!adventureText) {
+            return throwError({ message: "Failed to generate adventure.", res, status: 500 });
+        }
+
+        console.log("AI Response Raw:", adventureText);
+
+        let adventure;
+        try {
+            // Attempt to parse the response directly
+            adventure = JSON.parse(adventureText);
+        } catch (error) {
+            console.error("AI Response Parsing Error:", error);
+        }
+        const newAdventure = new Adventure({
+            title: adventure.title,
+            description: adventure.description,
+            starsReward: 20,  
+            coinsReward: 30, 
+            iscompleted: false,
+            startDate: startDate,
+            endDate: endDate,
+            challenges: adventure.challenges.map((challenge: any) => ({
+                title: challenge.title,
+                content: challenge.content,
+                starsReward: challenge.starsReward,
+                coinsReward: challenge.coinsReward,
+            })),
+        });
+
+        // Save the adventure to the database
+        await newAdventure.save();
+
+        res.status(200).json({
+            message: "Adventure generated successfully.",
+            adventure: newAdventure,
+        });
+
+    } catch (error) {
+        console.error("Error generating adventure:", error);
+        res.status(500).json({ message: "Internal server error" });
     }
 };
