@@ -42,7 +42,7 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-const port: number = parseInt(process.env.PORT || "8080");
+const port: number = parseInt(process.env.PORT || "8000");
 
 app.use(express.json());
 
@@ -62,7 +62,7 @@ app.use("/colorings", coloringRoutes);
 app.use("/stories", storyRoutes);
 
 app.listen(port, () =>{
-    console.log("server is running on port 8080");
+    console.log("server is running on port 8000");
 
     connectToDatabase();
 });
