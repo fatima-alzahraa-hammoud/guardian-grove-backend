@@ -7,7 +7,7 @@ const router =  express.Router();
 
 router.get("/", authMiddleware, getStoreItems);
 router.post("/", authMiddleware, createItem);
-router.delete("/", authMiddleware, adminMiddleware, deleteItem);
+router.delete("/:itemId", authMiddleware, adminMiddleware, deleteItem);
 router.put("/", authMiddleware, updateItem);
 router.post("/buy", authMiddleware, buyItem);
 

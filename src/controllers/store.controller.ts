@@ -36,7 +36,7 @@ export const createItem = async (req: Request, res: Response): Promise<void> => 
         const data = req.body;
 
         const { name, description, type, price, image } = data;
-        if (!name || !description || !type || !price || !image) {
+        if (!name || !type || !price || !image) {
             return throwError({ message: "All required fields must be filled.", res, status: 400});
         }
 
@@ -59,7 +59,7 @@ export const createItem = async (req: Request, res: Response): Promise<void> => 
 // API to delete item
 export const deleteItem = async(req:Request, res: Response): Promise<void> => {
     try {
-        const {itemId} = req.body;
+        const {itemId} = req.params;
 
         if(!checkId({id: itemId, res})) return;
 
@@ -72,8 +72,9 @@ export const deleteItem = async(req:Request, res: Response): Promise<void> => {
             { $pull: { purchasedItems: { itemId } } }
         );
 
+        console.log("hello")
 
-        res.status(200).json({ message: "Item deleted successfully", item });
+        res.status(200).json({ message: "Item deleted successfully" });
     } catch (error) {
         return throwError({ message: "Failed to delete. An unknown error occurred.", res, status: 500 });
     }
