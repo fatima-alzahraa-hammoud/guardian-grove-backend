@@ -581,31 +581,11 @@ export const completeChallenge = async (req: CustomRequest, res: Response): Prom
         }
 
         const user = req.user;
-
-        const adventure = await Adventure.findById(adventureId).lean();
-        if (!adventure) {
-            return throwError({ message: "Adventure not found", res, status: 404 });
-        }
-
-        // Get or initialize adventure progress
-        let adventureProgress = user.adventures.find(
-            (adv) => adv.adventureId.equals(adventureId)
+        const adventureProgress = user.adventures.find(
+            (adventure) => adventure.adventureId.equals(adventureId)
         );
-
         if (!adventureProgress) {
-            adventureProgress = {
-                adventureId: adventureId,
-                challenges: adventure.challenges.map((challenge) => ({
-                    challengeId: challenge._id,
-                    isCompleted: false,
-                })),
-                status: "in-progress",
-                isAdventureCompleted: false,
-                starsReward: adventure.starsReward,
-                coinsReward: adventure.coinsReward,
-                progress: 0,
-            };
-            user.adventures.push(adventureProgress);
+            return throwError({ message: "Adventure not found in user's profile", res, status: 404 });
         }
 
         const challenge = adventureProgress.challenges.find(
@@ -613,6 +593,13 @@ export const completeChallenge = async (req: CustomRequest, res: Response): Prom
         );
         if (!challenge) {
             return throwError({ message: "Challenge not found in adventure", res, status: 404 });
+        }
+
+        // Fetch the full adventure to get challenge rewards
+        const adventure = await Adventure.findById(adventureId).lean();
+
+        if (!adventure) {
+            return throwError({ message: "Adventure not found", res, status: 404 });
         }
 
         const targetChallenge = adventure.challenges.find(ch =>
@@ -627,27 +614,27 @@ export const completeChallenge = async (req: CustomRequest, res: Response): Prom
         challenge.isCompleted = true;
         challenge.completedAt = new Date();
 
-        const challengStarsReward = targetChallenge.starsReward;
-        const challengeCoinsReward = targetChallenge.coinsReward;
+        const starsReward = targetChallenge.starsReward;
+        const coinsReward = targetChallenge.coinsReward;
 
-        user.stars += challengStarsReward;
-        user.coins += challengeCoinsReward;
+        user.stars += starsReward;
+        user.coins += coinsReward;
 
         adventureProgress.progress = (adventureProgress.challenges.filter(challenge => challenge.isCompleted).length / adventureProgress.challenges.length) * 100;
 
-        let adventureStarsRewards = 0;
+        let adventureStars = 0;
         if (adventureProgress.progress === 100) {
             adventureProgress.isAdventureCompleted = true;
             adventureProgress.status = 'completed';
-            adventureStarsRewards = adventureProgress.starsReward;
+            adventureStars = adventureProgress.starsReward;
 
             user.coins += adventureProgress.coinsReward;
-            user.stars += adventureStarsRewards;
+            user.stars += adventureStars;
         }
 
         // Update the family total stars
         if (user.familyId) {
-            const totalStars = challengStarsReward + adventureStarsRewards;
+            const totalStars = starsReward + adventureStars;
             await Family.findByIdAndUpdate(user.familyId, {
                 $inc: { totalStars: totalStars }
             });
@@ -656,12 +643,7 @@ export const completeChallenge = async (req: CustomRequest, res: Response): Prom
 
         await user.save();
 
-        res.status(200).json({ message: "Challenge completed successfully", 
-            adventureProgress,
-            rewards: {
-                stars: challengStarsReward + adventureStarsRewards,
-                coins: challengeCoinsReward + (adventureProgress.isAdventureCompleted ? adventureProgress.coinsReward : 0)
-            } });
+        res.status(200).json({ message: "Challenge completed successfully", adventureProgress });
 
     } catch (error) {
         console.error("Error completing challenge:", error);
