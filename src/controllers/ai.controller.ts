@@ -543,10 +543,9 @@ export const generateDailyAdventure = async (req: Request, res: Response) => {
         const endDate = new Date(today);
         endDate.setDate(endDate.getDate() + 1);  // End date of the adventure (24 hours from now)
 
-        // Construct the prompt for AI to generate an adventure
         const aiPrompt = `
-            Generate a fun and interactive adventure story that consists of a series of challenges.
-            Each challenge should be solvable, either by answering a learning question (math, physics, etc.) or a riddle.
+            Generate a fun, educational, and interactive adventure story that consists of a series of challenges.
+            Each challenge should be solvable, either by answering a learning question math, physics, riddle, and others.
             The challenges must be part of the story and lead to the conclusion of the adventure.
             The story should be about a quest, like finding a treasure, solving a mystery, or saving the world.
 
@@ -555,42 +554,41 @@ export const generateDailyAdventure = async (req: Request, res: Response) => {
 
             generate it in json format as:
             {
-                "title": "string",
+                "title": "string (10-50 chars)",
                 "description": "string",
-                "starsReward": number,
-                "coinsReward": number,
+                "starsReward": "number (10-30)",
+                "coinsReward": "number (20-50)",
                 "challenges": [
                     {
-                        "title": "string",
+                        "title": "string (10-40 chars)",
                         "content": "string",
-                        "starsReward": number,
-                        "coinsReward": number
+                        "starsReward": "number (5-15)",
+                        "coinsReward": "number (10-25)",
                     },
                     ...
                 ]
             }
 
-            Rules:
+            Format Requirements:
+            - Return strictly valid JSON with no additional text
+            - Follow the schema exactly as specified
+            - All string fields must be properly escaped
+            - All numerical values must be positive integers
             - Do not include any text outside the JSON.
-            - Ensure the JSON is strictly valid and properly formatted.
-            - The title should be engaging, and the description should briefly explain the adventure's purpose.
-            - Each challenge should be relevant to the adventure's theme.
-            - Ensure the JSON is complete and well-formed.
             - Do not leave any keys or values missing.
             - Use proper syntax and close all brackets and quotes.
-            - Ensure all challenges are fully defined with no missing fields.
-            - at least five challenges and make the title small
-
-            Output only the JSON without any extra text.
+            - Output only the JSON without any extra text.
+            
+            Story Requirements:
+            - Create 7 challenges that progress in difficulty
 
         `;
-
 
         const response = await openai.chat.completions.create({
             model: "gpt-4",
             messages: [{ role: "system", content: aiPrompt }],
             temperature: 0.8,
-            max_tokens: 500,
+            max_tokens: 1000,
         });
 
         // Extract the generated adventure from the AI response
@@ -599,8 +597,6 @@ export const generateDailyAdventure = async (req: Request, res: Response) => {
         if (!adventureText) {
             return throwError({ message: "Failed to generate adventure.", res, status: 500 });
         }
-
-        console.log("AI Response Raw:", adventureText);
 
         let adventure;
         try {
