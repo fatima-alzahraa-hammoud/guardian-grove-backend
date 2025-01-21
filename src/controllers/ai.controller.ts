@@ -347,7 +347,8 @@ export const generateViewTasks = async (req: Request, res: Response) => {
         const response = await openai.chat.completions.create({
             model: "gpt-4",
             messages: [{ role: "system", content: aiPrompt }],
-            temperature: 1
+            temperature: 0.7,
+            max_tokens: 300
         });
 
         let generatedViewTasks = response?.choices[0]?.message?.content;
@@ -581,6 +582,7 @@ export const generateDailyAdventure = async (req: Request, res: Response) => {
             
             Story Requirements:
             - Create 7 challenges that progress in difficulty
+            - Generate a solvable, not hard challenges 
 
         `;
 

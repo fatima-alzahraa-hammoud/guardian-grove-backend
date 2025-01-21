@@ -5,7 +5,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const elevenLabsApiKey = process.env.ELEVEN_LABS_API_KEY;
-const voiceId = "VQhHhkeAHPitdte1yzEN";
+const voiceId = process.env.VOICE_ID;
 
 export const TextToSpeech = async(text : string, outputFilePath : string) => {
     try {
