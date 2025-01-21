@@ -20,7 +20,7 @@ export const handleChat = async (req: CustomRequest, res: Response) => {
     
         const userId = req.user._id;
 
-        const { chatId, message, sender, image } = req.body;
+        const { chatId, message, sender, image, isCall } = req.body;
     
         if (!sender || (!message && !image)) {
             return throwError({ message: "All required fields must be filled.", res, status: 400});
@@ -110,22 +110,33 @@ export const handleChat = async (req: CustomRequest, res: Response) => {
 
         await chat.save();
 
-        const outputFilePath = `./audio-responses/message_${chatId}_${new Date().getTime()}.mp3`;
-        await TextToSpeech(aiMessage || "no message found", outputFilePath); // Save audio
-
-        const audio = await audioFileToBase64(outputFilePath);
-
         const sendedMessage = {sender, message};
 
+        if (isCall){
+            const outputFilePath = `./audio-responses/message_${chatId}_${new Date().getTime()}.mp3`;
+            await TextToSpeech(aiMessage || "no message found", outputFilePath); // Save audio
 
-        // Respond with AI message and audio file URL
+            const audio = await audioFileToBase64(outputFilePath);
+
+            res.status(200).send({
+                message: 'Message sent',
+                chat: chat,
+                sendedMessage,
+                aiResponse: response.choices[0].message,
+                audio
+            });   
+            return; 
+        }
+
+        // Respond with AI message without the audio file
+
         res.status(200).send({
             message: 'Message sent',
             chat: chat,
             sendedMessage,
             aiResponse: response.choices[0].message,
-            audio
-        });    
+        });            
+        
     }catch(error){
         return throwError({ message: "Error occured while sending message or creating chat", res, status: 500 });
     }

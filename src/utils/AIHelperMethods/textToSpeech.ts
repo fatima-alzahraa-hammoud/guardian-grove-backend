@@ -2,11 +2,10 @@
 import * as fs from "fs";
 import { Readable } from "stream";
 import dotenv from "dotenv";
-import path from "path";
 dotenv.config();
 
 const elevenLabsApiKey = process.env.ELEVEN_LABS_API_KEY;
-const voiceId = "hAUg9gFEyJLUrG4kTyBq";
+const voiceId = "VQhHhkeAHPitdte1yzEN";
 
 export const TextToSpeech = async(text : string, outputFilePath : string) => {
     try {
