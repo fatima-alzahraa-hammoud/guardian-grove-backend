@@ -5,7 +5,8 @@ import { User } from "../models/user.model";
 import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
 import { Family } from "../models/family.model";
-import { Types } from "mongoose";
+import { generateSecurePassword } from "../utils/generateSecurePassword";
+import { sendMail } from "../services/email.service";
 
 dotenv.config();
 
@@ -154,3 +155,48 @@ export const register = async (req: Request, res: Response) : Promise<void> => {
         return throwError({ message: "Something went wrong while registering.", res, status: 500});
     }
 }  
+
+export const forgetPassword = async (req: Request, res: Response) : Promise<void> => {
+    try {
+        const { name, email } = req.body;
+        const user = await User.findOne({ email, name });
+
+        if (!user) {
+            return throwError({ message: "Invalid credentials. User not found.", res, status: 404 });
+        }
+
+        const tempPassword = generateSecurePassword();
+        const hashedPassword = await bcrypt.hash(tempPassword, 12);
+
+        user.password = hashedPassword;
+        user.isTempPassword = true;
+        user.passwordChangedAt = new Date();
+        await user.save();
+
+
+        const from: string = `"Guardian Grove" <${process.env.EMAIL_USERNAME}>`;
+        const to: string = email;
+        const subject: string = "Your Temporary Password";
+
+        const html: string = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #2c3e50;">Hello ${user.name},</h2>
+                <p>Your temporary password is: <strong>${tempPassword}</strong></p>
+                <p>This password will expire in 1 hour.</p>
+                <p>Please use this to login and change your password immediately.</p>
+                <br/>
+                <p>Thank you,</p>
+                <p><strong>Guardian Grove Team</strong></p>
+            </div>
+        `
+
+        // Send email with the temporary password
+        await sendMail(from, to, subject, html);
+
+        res.status(200).send({ message: "Temporary password sent to your email." });
+
+    } catch (error) {
+        console.error(error);
+        return throwError({ message: "Error sending temporary password.", res, status: 500});
+    }
+}
