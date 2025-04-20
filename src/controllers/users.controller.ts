@@ -9,6 +9,7 @@ import { IAdventureProgress } from '../interfaces/IAdventureProgress';
 import { Family } from '../models/family.model';
 import { recalculateFamilyMemberRanks } from '../utils/recalculateFamilyMemberRanks';
 import nodemailer from "nodemailer";
+import { sendMail } from '../services/email.service';
 
 // API to get all users
 export const getUsers = async(req: Request, res: Response): Promise<void> => {
@@ -131,22 +132,45 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
         // Recalculate the ranks after adding the new user
         await recalculateFamilyMemberRanks(family._id, user);
 
-        const transporter = nodemailer.createTransport({
-            host: 'smtp.gmail.com',
-            port: 465,
-            secure: true,
-            service: "Gmail",
-            auth: {
-                user: process.env.EMAIL_USERNAME,
-                pass: process.env.EMAIL_PASSWORD,
-            },
-        });
-        await transporter.sendMail({
-            from: `"Your App Name" <${process.env.EMAIL_USERNAME}>`,
-            to: email,
-            subject: "Your Account Password",
-            text: `Hello ${req.user.name},\n\nYour ${role} ${name} account has been created successfully. Here are their login details:\n\nUsername: ${name}\nPassword: ${generatedPassword}\n\nPlease change your password after logging in.\n\nThank you,\nYour Guardian Grove Team`,
-        });
+        const from: string = `"Guardian Grove" <${process.env.EMAIL_USERNAME}>`;
+        const to: string = email;
+        const subject = `Welcome to Guardian Grove - ${name}'s Account Details`;
+        const html = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+                <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px;">
+                    <h2 style="color: #2c3e50;">Welcome to Guardian Grove!</h2>
+                    <p>Hello ${req.user.name},</p>
+                    
+                    <div style="background-color: white; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #3498db;">
+                        <p>You've successfully created a <strong>${role}</strong> account for <strong>${name}</strong>.</p>
+                        <p>Here are the login details:</p>
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <tr>
+                                <td style="padding: 8px; border-bottom: 1px solid #ddd; width: 120px;"><strong>Username:</strong></td>
+                                <td style="padding: 8px; border-bottom: 1px solid #ddd;">${name}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px;"><strong>Temporary Password:</strong></td>
+                                <td style="padding: 8px;">${generatedPassword}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    
+                    <p style="color: #e74c3c; font-weight: bold;">Please change this password after first login.</p>
+                    
+                    <p>If you didn't request this account creation, please contact our support immediately.</p>
+                    
+                    <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
+                        <p>Best regards,</p>
+                        <p><strong>The Guardian Grove Team</strong></p>
+                        <p style="font-size: 12px; color: #7f8c8d;">This is an automated message - please do not reply directly to this email.</p>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Send email with the temporary password
+        await sendMail(from, to, subject, html);
 
         await user.save();
         console.log(user)
