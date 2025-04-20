@@ -44,7 +44,14 @@ export const login = async ( req: Request, res: Response) : Promise<void> => {
 
         const token = await jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET_KEY);
 
-        res.status(200).send({user: user, token: token});
+        res.status(200).json({
+            user: user,
+            token,
+            requiresPasswordChange: user.isTempPassword || false,
+            message: user.isTempPassword 
+                ? 'Please set a new password' 
+                : 'Login successful'
+        });
     }catch(error){
         return throwError({ message: "Something went wrong while logging in.", res, status: 500});
     }
