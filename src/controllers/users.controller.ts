@@ -367,6 +367,7 @@ export const updatePassword = async (req: CustomRequest, res: Response): Promise
         // Hash new password
         const hashedPassword = await bcrypt.hash(newPassword, 10);
         user.password = hashedPassword;
+        user.isTempPassword = false;
         await user.save();
 
         // Return success response
