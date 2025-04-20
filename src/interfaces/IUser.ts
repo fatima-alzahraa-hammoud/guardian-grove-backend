@@ -15,6 +15,8 @@ export interface IUser extends Document{
     name: string;
     email: string;
     password: string;
+    isTempPassword: boolean;
+    passwordChangedAt: Date | null;
     birthday: Date;
     dailyMessage: string;
     gender: string;

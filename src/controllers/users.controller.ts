@@ -145,7 +145,7 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
             from: `"Your App Name" <${process.env.EMAIL_USERNAME}>`,
             to: email,
             subject: "Your Account Password",
-            text: `Hello ${req.user.name},\n\nYour ${role} ${name} account has been created successfully. Here are their login details:\n\nUsername: ${name}\nPassword: ${generatedPassword}\n\nPlease change your password after logging in.\n\nThank you,\nYour App Team`,
+            text: `Hello ${req.user.name},\n\nYour ${role} ${name} account has been created successfully. Here are their login details:\n\nUsername: ${name}\nPassword: ${generatedPassword}\n\nPlease change your password after logging in.\n\nThank you,\nYour Guardian Grove Team`,
         });
 
         await user.save();

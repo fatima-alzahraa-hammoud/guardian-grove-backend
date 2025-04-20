@@ -49,6 +49,8 @@ const userSchema = new Schema<IUser>({
     _id: { type: Schema.Types.ObjectId, auto: true },
     name: {type: String, required: true },
     email: {type: String, required: [true, "Email is required"],  match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, "Email is invalid",]},
+    isTempPassword: { type: Boolean, default: false },
+    passwordChangedAt: { type: Date },
     password: {type: String, required: true},
     birthday:{type: Date, required: true},
     dailyMessage: {type: String, required: true, default: "You are shining💫!"},
@@ -73,7 +75,6 @@ const userSchema = new Schema<IUser>({
     drawings: { type: [drawingSchema], default: [] }, 
     colorings: { type: [coloringSchema], default: [] }, 
     personalStories: { type: [storySchema], default: [] },
-
 });
 
 userSchema.index({ name: 1, email: 1 }, { unique: true });

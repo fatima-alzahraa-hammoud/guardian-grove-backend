@@ -2,7 +2,6 @@ import { Response, Request } from "express";
 import bcrypt from "bcrypt";
 import { throwError } from "../utils/error";
 import { User } from "../models/user.model";
-import { createUser } from "./users.controller";
 import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
 import { Family } from "../models/family.model";
