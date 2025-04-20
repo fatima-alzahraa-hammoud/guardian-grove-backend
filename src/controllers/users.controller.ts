@@ -10,6 +10,7 @@ import { Family } from '../models/family.model';
 import { recalculateFamilyMemberRanks } from '../utils/recalculateFamilyMemberRanks';
 import nodemailer from "nodemailer";
 import { sendMail } from '../services/email.service';
+import { generateSecurePassword } from '../utils/generateSecurePassword';
 
 // API to get all users
 export const getUsers = async(req: Request, res: Response): Promise<void> => {
@@ -106,9 +107,9 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
             return throwError({ message: "Invalid birthday format.", res, status: 400 });
         }
 
-        const generatedPassword = Math.random().toString(36).slice(-10); // Generate a 10-character password
-        const hashedPassword = await bcrypt.hash(generatedPassword, 10);
-
+        const generatedPassword = generateSecurePassword();
+        const hashedPassword = await bcrypt.hash(generatedPassword, 12);
+        
         // Find the parent's family
         const family = await Family.findOne({ email: req.user.email });
         if (!family) {
