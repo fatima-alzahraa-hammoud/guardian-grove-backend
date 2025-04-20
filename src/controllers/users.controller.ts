@@ -36,7 +36,7 @@ export const getUserById = async (req: CustomRequest, res: Response): Promise<vo
 
         if (!checkId({ id: targetUserId, res })) return;
 
-        let projection = '_id name email birthday role avatar gender stars coins interests nbOfTasksCompleted rankInFamily memberSince familyId dailyMessage';  // Basic user info
+        let projection = '_id name email birthday role avatar gender stars coins interests nbOfTasksCompleted rankInFamily memberSince familyId dailyMessage isTempPassword';  // Basic user info
 
         // Fetch the user with specific fields
         const user = await User.findById(targetUserId).select(projection);
