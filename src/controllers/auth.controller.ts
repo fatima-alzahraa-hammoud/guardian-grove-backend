@@ -104,7 +104,7 @@ export const register = async (req: Request, res: Response) : Promise<void> => {
             });
         }
 
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const hashedPassword = await bcrypt.hash(password, 12);
 
 
          // Family Assignment
@@ -156,6 +156,7 @@ export const register = async (req: Request, res: Response) : Promise<void> => {
     }
 }  
 
+// forget password API
 export const forgetPassword = async (req: Request, res: Response) : Promise<void> => {
     try {
         const { name, email } = req.body;
