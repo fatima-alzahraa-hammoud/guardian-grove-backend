@@ -1,0 +1,22 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = __importDefault(require("express"));
+const auth_middleware_1 = require("../middlewares/auth.middleware");
+const adventure_controller_1 = require("../controllers/adventure.controller");
+const challenge_controller_1 = require("../controllers/challenge.controller");
+const adminMiddleware_1 = require("../middlewares/adminMiddleware");
+const router = express_1.default.Router();
+router.post("/", adventure_controller_1.createAdventure);
+router.get("/", auth_middleware_1.authMiddleware, adventure_controller_1.getAllAdventures);
+router.get("/adventure", auth_middleware_1.authMiddleware, adventure_controller_1.getAdventureById);
+router.put("/", auth_middleware_1.authMiddleware, adventure_controller_1.updateAdventure);
+router.delete("/", auth_middleware_1.authMiddleware, adventure_controller_1.deleteAdventure);
+router.post("/adventure/challenges", auth_middleware_1.authMiddleware, challenge_controller_1.createChallenge);
+router.get("/adventure/challenges", auth_middleware_1.authMiddleware, challenge_controller_1.getAllChallenges);
+router.get("/adventure/challenges/challenge", auth_middleware_1.authMiddleware, challenge_controller_1.getChallengeById);
+router.put("/adventure/challenges", auth_middleware_1.authMiddleware, challenge_controller_1.updateChallege);
+router.delete("/adventure/challenges", auth_middleware_1.authMiddleware, adminMiddleware_1.adminMiddleware, challenge_controller_1.deleteChallenge);
+exports.default = router;
