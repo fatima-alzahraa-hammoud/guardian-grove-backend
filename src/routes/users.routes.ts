@@ -10,7 +10,7 @@ import {
   getUserAdventures,
   getUserPurchasedItems,
   getUserAvatar
-} from "../controllers/users.controller";
+} from "../controllers/user.controller";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { adminMiddleware } from "../middlewares/adminMiddleware";
 import { checkQuestionCompletion, generateDailyAdventure, generateGrowthPlans, generateLearningZone, generateQuickTips, generateStory, generateTaskCompletionQuestion, generateTrackDay, generateViewTasks, regenerateGoalsAndTasksRoute } from "../controllers/ai.controller";
