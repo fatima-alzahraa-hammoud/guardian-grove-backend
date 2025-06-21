@@ -493,4 +493,155 @@ describe('Auth Controller Tests', () => {
             });
         });
     });
+
+    
+    // 3. test forgetPassword API
+    describe('forgetPassword', () => {
+        const validForgetPasswordData = {
+            name: 'Test User',
+            email: 'test@example.com'
+        };
+
+        it('should send temporary password successfully', async () => {
+            const mockUserData = testUtils.createMockUser(validForgetPasswordData);
+            mockUser.findOne.mockResolvedValue(mockUserData as any);
+
+            const mockReq = testUtils.createMockRequest({ body: validForgetPasswordData });
+            const mockRes = testUtils.createMockResponse();
+
+            await forgetPassword(mockReq as any, mockRes as any);
+
+            expect(mockUser.findOne).toHaveBeenCalledWith({
+                email: validForgetPasswordData.email,
+                name: validForgetPasswordData.name
+            });
+            expect(mockGenerateSecurePassword.generateSecurePassword).toHaveBeenCalled();
+            expect(mockBcrypt.hash).toHaveBeenCalledWith('TempPass123!', 12);
+            expect(mockUserData.isTempPassword).toBe(true);
+            expect(mockUserData.passwordChangedAt).toBeDefined();
+            expect(mockEmailService.sendMail).toHaveBeenCalledWith(
+                expect.stringContaining('Guardian Grove'),
+                validForgetPasswordData.email,
+                'Your Temporary Password',
+                expect.stringContaining('TempPass123!')
+            );
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.send).toHaveBeenCalledWith({
+                message: 'Temporary password sent to your email.'
+            });
+        });
+
+        it('should return 404 if user not found', async () => {
+            mockUser.findOne.mockResolvedValue(null);
+
+            const mockReq = testUtils.createMockRequest({ body: validForgetPasswordData });
+            const mockRes = testUtils.createMockResponse();
+
+            await forgetPassword(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                error: 'Invalid credentials. User not found.'
+            });
+        });
+
+        it('should handle email service errors gracefully', async () => {
+            const mockUserData = testUtils.createMockUser(validForgetPasswordData);
+            mockUser.findOne.mockResolvedValue(mockUserData as any);
+            mockEmailService.sendMail.mockRejectedValue(new Error('Email service failed'));
+
+            const mockReq = testUtils.createMockRequest({ body: validForgetPasswordData });
+            const mockRes = testUtils.createMockResponse();
+
+            await forgetPassword(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(500);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                error: 'Error sending temporary password.'
+            });
+        });
+
+        it('should handle database save errors gracefully', async () => {
+            const mockUserData = testUtils.createMockUser(validForgetPasswordData);
+            mockUserData.save = jest.fn().mockRejectedValue(new Error('Database save failed'));
+            mockUser.findOne.mockResolvedValue(mockUserData as any);
+
+            const mockReq = testUtils.createMockRequest({ body: validForgetPasswordData });
+            const mockRes = testUtils.createMockResponse();
+
+            await forgetPassword(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(500);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                error: 'Error sending temporary password.'
+            });
+        });
+
+        it('should handle password hashing errors gracefully', async () => {
+            const mockUserData = testUtils.createMockUser(validForgetPasswordData);
+            mockUser.findOne.mockResolvedValue(mockUserData as any);
+            (mockBcrypt.hash as jest.Mock).mockRejectedValue(new Error('Hashing failed'));
+
+            const mockReq = testUtils.createMockRequest({ body: validForgetPasswordData });
+            const mockRes = testUtils.createMockResponse();
+
+            await forgetPassword(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(500);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                error: 'Error sending temporary password.'
+            });
+        });
+
+        it('should generate proper email HTML content', async () => {
+            const mockUserData = testUtils.createMockUser({
+                ...validForgetPasswordData,
+                name: 'John Doe'
+            });
+            mockUser.findOne.mockResolvedValue(mockUserData as any);
+
+            const mockReq = testUtils.createMockRequest({ body: validForgetPasswordData });
+            const mockRes = testUtils.createMockResponse();
+
+            await forgetPassword(mockReq as any, mockRes as any);
+
+            expect(mockEmailService.sendMail).toHaveBeenCalledWith(
+                expect.any(String),
+                validForgetPasswordData.email,
+                'Your Temporary Password',
+                expect.stringMatching(/Hello John Doe/)
+            );
+            expect(mockEmailService.sendMail).toHaveBeenCalledWith(
+                expect.any(String),
+                validForgetPasswordData.email,
+                'Your Temporary Password',
+                expect.stringMatching(/TempPass123!/)
+            );
+            expect(mockEmailService.sendMail).toHaveBeenCalledWith(
+                expect.any(String),
+                validForgetPasswordData.email,
+                'Your Temporary Password',
+                expect.stringMatching(/Guardian Grove Team/)
+            );
+        });
+
+        it('should set correct user properties after password reset', async () => {
+            const mockUserData = testUtils.createMockUser({
+                ...validForgetPasswordData,
+                isTempPassword: false,
+                passwordChangedAt: new Date('2024-01-01')
+            });
+            mockUser.findOne.mockResolvedValue(mockUserData as any);
+
+            const mockReq = testUtils.createMockRequest({ body: validForgetPasswordData });
+            const mockRes = testUtils.createMockResponse();
+
+            await forgetPassword(mockReq as any, mockRes as any);
+
+            expect(mockUserData.password).toBe('hashedPassword');
+            expect(mockUserData.isTempPassword).toBe(true);
+            expect(mockUserData.passwordChangedAt).toBeInstanceOf(Date);
+            expect(mockUserData.save).toHaveBeenCalled();
+        });
+    });
 });
