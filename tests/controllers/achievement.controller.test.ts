@@ -1,5 +1,5 @@
 import { testUtils } from '../setup';
-import { createAchievement } from '../../src/controllers/achievement.controller';
+import { createAchievement, updateAchievement } from '../../src/controllers/achievement.controller';
 import { Achievement } from '../../src/models/achievements.model';
 import { User } from '../../src/models/user.model';
 import { Family } from '../../src/models/family.model';
@@ -138,6 +138,80 @@ describe('Achievements Controller Tests', () => {
             expect(mockRes.json).toHaveBeenCalledWith({ 
                 error: 'An unknown error occurred.' 
             });
+        });
+    });
+
+    // 2. test updateAchievement API
+    describe('updateAchievement', () => {
+        const achievementId = testUtils.ids.achievement;
+        const updateData = {
+            achievementId,
+            title: 'Updated Achievement',
+            starsReward: 150
+        };
+
+        it('should update achievement successfully', async () => {
+            const mockUpdatedAchievement = testUtils.createMockAchievement({
+                title: 'Updated Achievement',
+                starsReward: 150
+            });
+            
+            mockAchievement.findByIdAndUpdate.mockResolvedValue(mockUpdatedAchievement as any);
+
+            const mockReq = testUtils.createMockRequest({ body: updateData });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateAchievement(mockReq as any, mockRes as any);
+
+            expect(mockAchievement.findByIdAndUpdate).toHaveBeenCalledWith(
+                achievementId,
+                updateData,
+                { new: true, runValidators: true }
+            );
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                message: 'Achievement Updated Successfully',
+                achievement: mockUpdatedAchievement
+            });
+        });
+
+        it('should return 400 if no update data provided', async () => {
+            const onlyAchievementId = { achievementId };
+
+            const mockReq = testUtils.createMockRequest({ body: onlyAchievementId });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateAchievement(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({ 
+                error: 'No other data provided to update' 
+            });
+        });
+
+        it('should return 404 if achievement not found', async () => {
+            mockAchievement.findByIdAndUpdate.mockResolvedValue(null);
+
+            const mockReq = testUtils.createMockRequest({ body: updateData });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateAchievement(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({ 
+                error: 'Achievement not found' 
+            });
+        });
+
+        it('should return early if checkId fails', async () => {
+            mockCheckId.checkId.mockReturnValue(false);
+
+            const mockReq = testUtils.createMockRequest({ body: { achievementId: 'invalid-id' } });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateAchievement(mockReq as any, mockRes as any);
+
+            expect(mockAchievement.findByIdAndUpdate).not.toHaveBeenCalled();
         });
     });
 });
