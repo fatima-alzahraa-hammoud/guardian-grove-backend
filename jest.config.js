@@ -41,8 +41,6 @@ module.exports = {
   // Performance optimizations
   maxWorkers: '100%',
   testTimeout: 5000,
-  cache: true,
-  cacheDirectory: '<rootDir>/.jest-cache',
   collectCoverage: process.env.CI === 'true',
   
   // SWC is so fast, we can remove some ts-jest specific optimizations
