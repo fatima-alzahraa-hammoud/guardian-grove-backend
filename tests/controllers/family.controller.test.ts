@@ -1,5 +1,5 @@
 import { testUtils } from '../setup';
-import { createFamilyTasks, deleteFamily, deleteFamilyGoal, deleteFamilyTask, getAllFamilies, getFamily, getFamilyGoals, getFamilyMembers, 
+import { completeFamilyTask, createFamilyTasks, deleteFamily, deleteFamilyGoal, deleteFamilyTask, getAllFamilies, getFamily, getFamilyGoals, getFamilyMembers, 
     getFamilyTaskById, 
     updateFamily, updateFamilyGoal, 
     updateFamilyTask
@@ -974,6 +974,272 @@ describe('Family Controller Tests', () => {
             const mockRes = testUtils.createMockResponse();
 
             await getFamilyTaskById(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+        });
+    });
+
+    // Updated test for completeFamilyTask with proper mock typing
+    describe('completeFamilyTask', () => {
+        it('should complete family task successfully without completing goal', async () => {
+            const mockTask1 = {
+                _id: { toString: () => testUtils.ids.task },
+                title: 'Task 1',
+                description: 'First task',
+                type: 'family',
+                isCompleted: false,
+                rewards: { stars: 5, coins: 3 },
+                createdAt: new Date('2024-01-15')
+            };
+            const mockTask2 = {
+                _id: { toString: () => '507f1f77bcf86cd799439026' },
+                title: 'Task 2',
+                description: 'Second task',
+                type: 'family',
+                isCompleted: false,
+                rewards: { stars: 5, coins: 3 },
+                createdAt: new Date('2024-01-16')
+            };
+            
+            // Create mock tasks array with proper array methods
+            const mockTasks = [mockTask1, mockTask2];
+            const mockTasksWithMethods = Object.assign(mockTasks, {
+                find: jest.fn().mockReturnValue(mockTask1),
+                filter: jest.fn().mockReturnValue([mockTask1]), // Only 1 completed after the task is marked complete
+                every: jest.fn().mockReturnValue(false), // Not all completed
+                length: 2
+            });
+
+            const mockGoal = {
+                _id: { toString: () => testUtils.ids.goal },
+                title: 'Test Goal',
+                description: 'A test goal',
+                type: 'family',
+                tasks: mockTasksWithMethods,
+                nbOfTasksCompleted: 0,
+                isCompleted: false,
+                progress: 0,
+                dueDate: new Date('2024-12-31'),
+                createdAt: new Date('2024-01-01'),
+                completedAt: undefined,
+                rewards: { stars: 50, coins: 25, achievementName: undefined, achievementId: undefined }
+            };
+            
+            const mockMember = { _id: testUtils.ids.user };
+            const mockFamilyData = testUtils.createMockFamily({
+                goals: [mockGoal],
+                members: [mockMember],
+                totalStars: 100,
+                stars: { daily: 10, weekly: 20, monthly: 30, yearly: 40 },
+                tasks: 5,
+                taskCounts: { daily: 1, weekly: 2, monthly: 3, yearly: 4 },
+                save: jest.fn().mockResolvedValue(true)
+            });
+            
+            const mockUser1 = testUtils.createMockUser({
+                _id: testUtils.ids.user,
+                coins: 10,
+                stars: 20,
+                nbOfTasksCompleted: 3,
+                save: jest.fn().mockResolvedValue(true)
+            });
+
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+            mockFamilyData.goals.find = jest.fn().mockReturnValue(mockGoal);
+            mockUser.findById.mockResolvedValue(mockUser1 as any);
+
+            const mockReq = testUtils.createMockRequest({
+                body: {
+                    familyId: testUtils.ids.family,
+                    goalId: testUtils.ids.goal,
+                    taskId: testUtils.ids.task
+                }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await completeFamilyTask(mockReq as any, mockRes as any);
+
+            expect(mockTask1.isCompleted).toBe(true);
+            expect(mockUser1.coins).toBe(13); // 10 + 3
+            expect(mockUser1.stars).toBe(25); // 20 + 5
+            expect(mockUser1.nbOfTasksCompleted).toBe(4); // 3 + 1
+            expect(mockGoal.isCompleted).toBe(false);
+            expect(mockFamilyData.totalStars).toBe(105); // 100 + 5
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+        });
+
+        it('should complete family task and goal with achievement', async () => {
+            const mockTask1 = {
+                _id: { toString: () => '507f1f77bcf86cd799439025' },
+                isCompleted: false,
+                rewards: { stars: 5, coins: 3 }
+            };
+            const mockTask2 = {
+                _id: { toString: () => '507f1f77bcf86cd799439026' },
+                isCompleted: true,
+                rewards: { stars: 5, coins: 3 }
+            };
+            
+            // Create properly typed mock tasks array
+            const mockTasks = [mockTask1, mockTask2];
+            const mockTasksWithMethods = Object.assign(mockTasks, {
+                find: jest.fn().mockReturnValue(mockTask1),
+                filter: jest.fn().mockReturnValue([mockTask1, mockTask2]), // Both completed
+                every: jest.fn().mockReturnValue(true), // All completed
+                length: 2
+            });
+
+            const mockGoal = {
+                _id: { toString: () => '507f1f77bcf86cd799439020' },
+                tasks: mockTasksWithMethods,
+                progress: 0,
+                isCompleted: false,
+                rewards: { 
+                    stars: 50, 
+                    coins: 25,
+                    achievementId: '507f1f77bcf86cd799439040'
+                }
+            };
+            
+            const mockMember = { _id: '507f1f77bcf86cd799439030' };
+            const mockFamilyData = testUtils.createMockFamily({
+                goals: [mockGoal],
+                members: [mockMember],
+                achievements: [],
+                totalStars: 100,
+                stars: { daily: 10, weekly: 20, monthly: 30, yearly: 40 },
+                tasks: 5,
+                taskCounts: { daily: 1, weekly: 2, monthly: 3, yearly: 4 },
+                save: jest.fn().mockResolvedValue(true)
+            });
+            
+            const mockUser1 = testUtils.createMockUser({
+                _id: '507f1f77bcf86cd799439030',
+                coins: 10,
+                stars: 20,
+                nbOfTasksCompleted: 3,
+                save: jest.fn().mockResolvedValue(true)
+            });
+
+            const mockAchievementData = testUtils.createMockAchievement({
+                _id: '507f1f77bcf86cd799439040',
+                title: 'Goal Master'
+            });
+
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+            mockFamilyData.goals.find = jest.fn().mockReturnValue(mockGoal);
+            mockUser.findById.mockResolvedValue(mockUser1 as any);
+            mockAchievement.findById.mockResolvedValue(mockAchievementData as any);
+
+            const mockReq = testUtils.createMockRequest({
+                body: {
+                    familyId: '507f1f77bcf86cd799439011',
+                    goalId: '507f1f77bcf86cd799439020',
+                    taskId: '507f1f77bcf86cd799439025'
+                }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await completeFamilyTask(mockReq as any, mockRes as any);
+
+            expect(mockTask1.isCompleted).toBe(true);
+            expect(mockGoal.isCompleted).toBe(true);
+            expect(mockGoal.progress).toBe(100); // 2/2 * 100
+            expect(mockUser1.coins).toBe(38); // 10 + 3 + 25
+            expect(mockUser1.stars).toBe(75); // 20 + 5 + 50
+            expect(mockFamilyData.achievements).toHaveLength(1);
+            expect(mockFamilyData.totalStars).toBe(155); // 100 + 5 + 50
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+        });
+
+        it('should return 400 if task already completed', async () => {
+            const mockTask = {
+                _id: { toString: () => '507f1f77bcf86cd799439025' },
+                isCompleted: true
+            };
+            
+            const mockTasks = [mockTask];
+            const mockTasksWithMethods = Object.assign(mockTasks, {
+                find: jest.fn().mockReturnValue(mockTask),
+                filter: jest.fn(),
+                every: jest.fn(),
+                length: 1
+            });
+
+            const mockGoal = {
+                _id: { toString: () => '507f1f77bcf86cd799439020' },
+                tasks: mockTasksWithMethods
+            };
+            
+            const mockFamilyData = testUtils.createMockFamily({ goals: [mockGoal] });
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+            mockFamilyData.goals.find = jest.fn().mockReturnValue(mockGoal);
+
+            const mockReq = testUtils.createMockRequest({
+                body: {
+                    familyId: '507f1f77bcf86cd799439011',
+                    goalId: '507f1f77bcf86cd799439020',
+                    taskId: '507f1f77bcf86cd799439025'
+                }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await completeFamilyTask(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+        });
+
+        it('should return 404 if achievement not found for goal completion', async () => {
+            const mockTask = {
+                _id: { toString: () => '507f1f77bcf86cd799439025' },
+                isCompleted: false,
+                rewards: { stars: 5, coins: 3 }
+            };
+            
+            const mockTasks = [mockTask];
+            const mockTasksWithMethods = Object.assign(mockTasks, {
+                find: jest.fn().mockReturnValue(mockTask),
+                filter: jest.fn().mockReturnValue([mockTask]),
+                every: jest.fn().mockReturnValue(true), // All completed
+                length: 1
+            });
+
+            const mockGoal = {
+                _id: { toString: () => '507f1f77bcf86cd799439020' },
+                tasks: mockTasksWithMethods,
+                rewards: { 
+                    stars: 50, 
+                    coins: 25,
+                    achievementId: '507f1f77bcf86cd799439040'
+                }
+            };
+            
+            const mockMember = { _id: '507f1f77bcf86cd799439030' };
+            const mockFamilyData = testUtils.createMockFamily({
+                goals: [mockGoal],
+                members: [mockMember]
+            });
+            
+            const mockUser1 = testUtils.createMockUser({
+                _id: '507f1f77bcf86cd799439030',
+                save: jest.fn().mockResolvedValue(true)
+            });
+
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+            mockFamilyData.goals.find = jest.fn().mockReturnValue(mockGoal);
+            mockUser.findById.mockResolvedValue(mockUser1 as any);
+            mockAchievement.findById.mockResolvedValue(null); // Achievement not found
+
+            const mockReq = testUtils.createMockRequest({
+                body: {
+                    familyId: '507f1f77bcf86cd799439011',
+                    goalId: '507f1f77bcf86cd799439020',
+                    taskId: '507f1f77bcf86cd799439025'
+                }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await completeFamilyTask(mockReq as any, mockRes as any);
 
             expect(mockRes.status).toHaveBeenCalledWith(404);
         });
