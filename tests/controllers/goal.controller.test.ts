@@ -1100,4 +1100,192 @@ describe('Goal Controller Tests', () => {
         });
     });
 
+
+    // 11. test getMonthlyStats API
+    describe('getMonthlyStats', () => {
+        const statsData = {
+            userId: testUtils.ids.user
+        };
+
+        it('should get monthly stats for authenticated user', async () => {
+            const mockTask1 = testUtils.createMockTask({ 
+                isCompleted: true,
+                createdAt: new Date('2024-01-15')
+            });
+            const mockTask2 = testUtils.createMockTask({ 
+                isCompleted: false,
+                createdAt: new Date('2024-01-20')
+            });
+            const mockGoal1 = testUtils.createMockGoal({ 
+                tasks: [mockTask1, mockTask2],
+                isCompleted: true,
+                createdAt: new Date('2024-01-10')
+            });
+            const mockGoal2 = testUtils.createMockGoal({ 
+                tasks: [],
+                isCompleted: false,
+                createdAt: new Date('2024-01-25')
+            });
+
+            const mockUserData = testUtils.createMockUser({ 
+                goals: [mockGoal1, mockGoal2]
+            });
+            mockUserData.goals.flatMap = jest.fn().mockReturnValue([mockTask1, mockTask2]);
+            
+            mockUser.findById.mockResolvedValue(mockUserData as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: statsData
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getMonthlyStats(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                totalTasks: expect.any(Number),
+                completedTasks: expect.any(Number),
+                totalGoals: expect.any(Number),
+                completedGoals: expect.any(Number)
+            });
+        });
+
+        it('should get monthly stats for own user when no userId provided', async () => {
+            const mockUserData = testUtils.createMockUser({ goals: [] });
+            mockUserData.goals.flatMap = jest.fn().mockReturnValue([]);
+            
+            mockUser.findById.mockResolvedValue(mockUserData as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: {} // No userId provided
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getMonthlyStats(mockReq as any, mockRes as any);
+
+            expect(mockUser.findById).toHaveBeenCalledWith(mockUserData._id);
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+        });
+
+        it('should allow parent to get child stats', async () => {
+            const mockChildData = testUtils.createMockUser({ 
+                _id: 'childId',
+                goals: []
+            });
+            mockChildData.goals.flatMap = jest.fn().mockReturnValue([]);
+            
+            mockUser.findById.mockResolvedValue(mockChildData as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: testUtils.createMockUser({ role: 'parent' }),
+                body: { userId: 'childId' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getMonthlyStats(mockReq as any, mockRes as any);
+
+            expect(mockUser.findById).toHaveBeenCalledWith('childId');
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+        });
+
+        it('should return 401 if user not authenticated', async () => {
+            const mockReq = testUtils.createMockRequest({ 
+                user: null,
+                body: statsData
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getMonthlyStats(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(401);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Unauthorized' });
+        });
+
+        it('should return 403 if user not authorized to view other user stats', async () => {
+            const mockReq = testUtils.createMockRequest({ 
+                user: testUtils.createMockUser({ 
+                    _id: 'differentUserId',
+                    role: 'child' 
+                }),
+                body: { userId: testUtils.ids.user }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getMonthlyStats(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(403);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Forbidden' });
+        });
+
+        it('should return 404 if target user not found', async () => {
+            mockUser.findById.mockResolvedValue(null);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: testUtils.createMockUser({ role: 'parent' }),
+                body: statsData
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getMonthlyStats(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'User not found' });
+        });
+
+        it('should filter tasks and goals by current month only', async () => {
+            const currentDate = new Date();
+            const lastMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 15);
+            const thisMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 15);
+            
+            const oldTask = testUtils.createMockTask({ 
+                createdAt: lastMonth,
+                isCompleted: true
+            });
+            const newTask = testUtils.createMockTask({ 
+                createdAt: thisMonth,
+                isCompleted: true
+            });
+            
+            const oldGoal = testUtils.createMockGoal({ 
+                createdAt: lastMonth,
+                isCompleted: true,
+                tasks: [oldTask]
+            });
+            const newGoal = testUtils.createMockGoal({ 
+                createdAt: thisMonth,
+                isCompleted: true,
+                tasks: [newTask]
+            });
+
+            const mockUserData = testUtils.createMockUser({ 
+                goals: [oldGoal, newGoal]
+            });
+            
+            // Mock flatMap to return all tasks
+            mockUserData.goals.flatMap = jest.fn().mockReturnValue([oldTask, newTask]);
+            
+            mockUser.findById.mockResolvedValue(mockUserData as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: {}
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getMonthlyStats(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            
+            // The response should only count goals/tasks from this month
+            const responseCall = mockRes.json.mock.calls[0][0];
+            expect(responseCall).toHaveProperty('totalTasks');
+            expect(responseCall).toHaveProperty('completedTasks');
+            expect(responseCall).toHaveProperty('totalGoals');
+            expect(responseCall).toHaveProperty('completedGoals');
+        });
+    });
+
+
 });
