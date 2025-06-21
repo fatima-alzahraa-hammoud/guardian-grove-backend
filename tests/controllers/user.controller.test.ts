@@ -3,7 +3,7 @@ import {  getUsers, getUserById, createUser, editUserProfile,
     deleteUser, updatePassword, getUserStars, updateUserStars,
     getUserCoins, updateUserCoins, getLocation, updateLocation,
     getUserRank, getUserInterests, startAdventure, completeChallenge,
-    
+    getUserAdventures, 
 } from '../../src/controllers/user.controller';
 import { User } from '../../src/models/user.model';
 import * as generateSecurePassword from '../../src/utils/generateSecurePassword';
@@ -1289,6 +1289,36 @@ describe('User Controller Tests', () => {
 
             expect(mockRes.status).toHaveBeenCalledWith(404);
             expect(mockRes.json).toHaveBeenCalledWith({ error: 'Adventure not found' });
+        });
+    });
+
+    // 17. test getUserAdventures API
+    describe('getUserAdventures', () => {
+        it('should get user adventures successfully', async () => {
+            const mockAdventures = [
+                { adventureId: '507f1f77bcf86cd799439015', status: 'in-progress' }
+            ];
+            const mockUserData = testUtils.createMockUser({ adventures: mockAdventures });
+            const mockReq = testUtils.createMockRequest({ user: mockUserData });
+            const mockRes = testUtils.createMockResponse();
+
+            await getUserAdventures(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.send).toHaveBeenCalledWith({
+                message: "User adventures retrieved successfully",
+                Adventure: mockAdventures
+            });
+        });
+
+        it('should return 401 if user not authenticated', async () => {
+            const mockReq = testUtils.createMockRequest({ user: null });
+            const mockRes = testUtils.createMockResponse();
+
+            await getUserAdventures(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(401);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Unauthorized' });
         });
     });
 });
