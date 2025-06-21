@@ -1,5 +1,5 @@
 import { testUtils } from '../setup';
-import { createItem, deleteItem, getStoreItems } from '../../src/controllers/store.controller';
+import { createItem, deleteItem, getStoreItems, updateItem } from '../../src/controllers/store.controller';
 import { StoreItem } from '../../src/models/storeItem.model';
 import { User } from '../../src/models/user.model';
 import * as checkId from '../../src/utils/checkId';
@@ -305,6 +305,118 @@ describe('Store Controller Tests', () => {
             expect(mockRes.status).toHaveBeenCalledWith(500);
             expect(mockRes.json).toHaveBeenCalledWith({ 
                 error: 'Failed to delete. An unknown error occurred.' 
+            });
+        });
+    });
+
+    // 4. test updateItem API
+    describe('updateItem', () => {
+        const itemId = testUtils.ids.storeItem || '507f1f77bcf86cd799439060';
+        const updateData = {
+            itemId,
+            name: 'Updated Item Name',
+            price: 75,
+            description: 'Updated description'
+        };
+
+        it('should update item successfully', async () => {
+            const mockUpdatedItem = testUtils.createMockStoreItem({ 
+                name: 'Updated Item Name',
+                price: 75,
+                description: 'Updated description'
+            });
+            
+            mockStoreItem.findByIdAndUpdate.mockResolvedValue(mockUpdatedItem as any);
+
+            const mockReq = testUtils.createMockRequest({ body: updateData });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateItem(mockReq as any, mockRes as any);
+
+            expect(mockStoreItem.findByIdAndUpdate).toHaveBeenCalledWith(
+                itemId,
+                updateData,
+                { new: true, runValidators: true }
+            );
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                message: 'Item Updated Successfully',
+                item: mockUpdatedItem
+            });
+        });
+
+        it('should return 400 if no update data provided', async () => {
+            const onlyItemId = { itemId };
+
+            const mockReq = testUtils.createMockRequest({ body: onlyItemId });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateItem(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({ 
+                error: 'No other data provided to update' 
+            });
+        });
+
+        it('should return 404 if item not found', async () => {
+            mockStoreItem.findByIdAndUpdate.mockResolvedValue(null);
+
+            const mockReq = testUtils.createMockRequest({ body: updateData });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateItem(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({ 
+                error: 'Item not found' 
+            });
+        });
+
+        it('should return early if checkId fails', async () => {
+            mockCheckId.checkId.mockReturnValue(false);
+
+            const mockReq = testUtils.createMockRequest({ body: { itemId: 'invalid-id' } });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateItem(mockReq as any, mockRes as any);
+
+            expect(mockStoreItem.findByIdAndUpdate).not.toHaveBeenCalled();
+        });
+
+        it('should handle partial updates', async () => {
+            const partialUpdateData = {
+                itemId,
+                name: 'Only Name Updated'
+            };
+
+            const mockUpdatedItem = testUtils.createMockStoreItem({ name: 'Only Name Updated' });
+            mockStoreItem.findByIdAndUpdate.mockResolvedValue(mockUpdatedItem as any);
+
+            const mockReq = testUtils.createMockRequest({ body: partialUpdateData });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateItem(mockReq as any, mockRes as any);
+
+            expect(mockStoreItem.findByIdAndUpdate).toHaveBeenCalledWith(
+                itemId,
+                partialUpdateData,
+                { new: true, runValidators: true }
+            );
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+        });
+
+        it('should handle database errors', async () => {
+            mockStoreItem.findByIdAndUpdate.mockRejectedValue(new Error('Update failed'));
+
+            const mockReq = testUtils.createMockRequest({ body: updateData });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateItem(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(500);
+            expect(mockRes.json).toHaveBeenCalledWith({ 
+                error: 'Failed to update. An unknown error occurred.' 
             });
         });
     });
