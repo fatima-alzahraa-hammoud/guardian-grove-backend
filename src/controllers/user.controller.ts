@@ -51,7 +51,6 @@ export const getUserById = async (req: CustomRequest, res: Response): Promise<vo
 
         res.status(200).json({ message: "Retrieving user successfully", user });
     } catch (error) {
-        console.error("Error retrieving user:", error);
         return throwError({ message: "Error retrieving user", res, status: 500 });
     }
 };
@@ -173,7 +172,6 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
         await sendMail(from, to, subject, html);
 
         await user.save();
-        console.log(user)
         res.status(200).send({ message: "User created successfully, password email sent.", user });
     }catch(error){
         if (error instanceof Error) {
@@ -185,11 +183,9 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
                     status: 409 
                 });
             } else {
-                console.error("Error creating user:", error);
                 return throwError({ message: error.message, res, status: 500 });
             }
         } else {
-            console.error("Unknown error creating user:", error);
             return throwError({ message: "An unknown error occurred.", res, status: 500 });
         }    
     } 
@@ -373,7 +369,6 @@ export const updatePassword = async (req: CustomRequest, res: Response): Promise
         res.status(200).send({ message: "Password updated successfully.", password: newPassword });
 
     } catch (error) {
-        console.error("Error updating password: ", error);
         return throwError({ message: "Failed to update password.", res, status: 500 });
     }
 };
@@ -417,7 +412,6 @@ export const updateUserStars = async(req:CustomRequest, res: Response): Promise<
 
         res.status(200).send({ message: "User stars updated successfully", user: req.user });
     }catch(error){
-        console.error('Error updating user stars:', error);
         return throwError({ message: "Error updating user stars", res, status: 500});
     }
 } 
@@ -671,7 +665,6 @@ export const completeChallenge = async (req: CustomRequest, res: Response): Prom
         res.status(200).json({ message: "Challenge completed successfully", adventureProgress });
 
     } catch (error) {
-        console.error("Error completing challenge:", error);
         return throwError({ message: "An unknown error occurred while completing the challenge.", res, status: 500 });
     }
 };
@@ -718,7 +711,6 @@ export const getUserPurchasedItems = async (req: CustomRequest, res: Response): 
 
         res.status(200).json({ message: "Purchased items retrieved successfully", purchasedItems: purchasedItemIds });
     } catch (error) {
-        console.error("Error retrieving purchased items:", error);
         return throwError({ message: "Error retrieving purchased items", res, status: 500 });
     }
 };
