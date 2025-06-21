@@ -3,7 +3,7 @@ import {  getUsers, getUserById, createUser, editUserProfile,
     deleteUser, updatePassword, getUserStars, updateUserStars,
     getUserCoins, updateUserCoins, getLocation, updateLocation,
     getUserRank, getUserInterests, startAdventure, completeChallenge,
-    getUserAdventures, getUserPurchasedItems
+    getUserAdventures, getUserPurchasedItems, getUserAvatar
 } from '../../src/controllers/user.controller';
 import { User } from '../../src/models/user.model';
 import * as generateSecurePassword from '../../src/utils/generateSecurePassword';
@@ -1391,6 +1391,156 @@ describe('User Controller Tests', () => {
 
             expect(mockRes.status).toHaveBeenCalledWith(404);
             expect(mockRes.json).toHaveBeenCalledWith({ error: 'User not found' });
+        });
+    });
+
+    describe('getUserAvatar', () => {
+        it('should get user avatar successfully', async () => {
+            const mockUserData = testUtils.createMockUser({ 
+                avatar: '/avatars/child-boy-1.png' 
+            });
+            
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getUserAvatar(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                message: "Avatar retrieved successfully",
+                avatar: '/avatars/child-boy-1.png'
+            });
+        });
+
+        it('should return 401 if user not authenticated', async () => {
+            const mockReq = testUtils.createMockRequest({ user: null });
+            const mockRes = testUtils.createMockResponse();
+
+            await getUserAvatar(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(401);
+            expect(mockRes.json).toHaveBeenCalledWith({ 
+                error: "Unauthorized" 
+            });
+        });
+
+        it('should handle different avatar formats correctly', async () => {
+            const testCases = [
+                { avatar: '/avatars/parent-woman.png', description: 'parent avatar' },
+                { avatar: '/avatars/child-girl-2.png', description: 'child avatar' },
+                { avatar: 'https://example.com/avatar.jpg', description: 'external URL' },
+                { avatar: '/default-avatar.svg', description: 'default avatar' },
+                { avatar: '', description: 'empty string' },
+                { avatar: null, description: 'null avatar' },
+                { avatar: undefined, description: 'undefined avatar' }
+            ];
+
+            for (const { avatar, description } of testCases) {
+                const mockUserData = testUtils.createMockUser({ avatar });
+                const mockReq = testUtils.createMockRequest({ user: mockUserData });
+                const mockRes = testUtils.createMockResponse();
+
+                await getUserAvatar(mockReq as any, mockRes as any);
+
+                expect(mockRes.status).toHaveBeenCalledWith(200);
+                expect(mockRes.json).toHaveBeenCalledWith({
+                    message: "Avatar retrieved successfully",
+                    avatar: avatar
+                });
+            }
+        });
+
+        it('should handle server errors gracefully', async () => {
+            // Create a normal user object first
+            const mockUserData = testUtils.createMockUser();
+            
+            // Then override the avatar property with a getter that throws
+            Object.defineProperty(mockUserData, 'avatar', {
+                get() {
+                    throw new Error('Database connection failed');
+                },
+                configurable: true
+            });
+            
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData 
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getUserAvatar(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(500);
+            expect(mockRes.json).toHaveBeenCalledWith({ 
+                error: "Error fetching avatar" 
+            });
+        });
+
+
+        it('should handle user with all avatar edge cases', async () => {
+            // Test various edge cases for avatar property
+            const edgeCases = [
+                { avatar: 0, description: 'number zero' },
+                { avatar: false, description: 'boolean false' },
+                { avatar: [], description: 'empty array' },
+                { avatar: {}, description: 'empty object' },
+                { avatar: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==', description: 'base64 image' }
+            ];
+
+            for (const { avatar, description } of edgeCases) {
+                const mockUserData = testUtils.createMockUser({ avatar });
+                const mockReq = testUtils.createMockRequest({ user: mockUserData });
+                const mockRes = testUtils.createMockResponse();
+
+                await getUserAvatar(mockReq as any, mockRes as any);
+
+                expect(mockRes.status).toHaveBeenCalledWith(200);
+                expect(mockRes.json).toHaveBeenCalledWith({
+                    message: "Avatar retrieved successfully",
+                    avatar: avatar
+                });
+            }
+        });
+
+        it('should handle user object without avatar property', async () => {
+            // Create user without avatar property
+            const userWithoutAvatar = testUtils.createMockUser();
+            delete (userWithoutAvatar as any).avatar;
+            
+            const mockReq = testUtils.createMockRequest({ 
+                user: userWithoutAvatar 
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getUserAvatar(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                message: "Avatar retrieved successfully",
+                avatar: undefined
+            });
+        });
+
+        it('should work with minimal user object', async () => {
+            // Test with very basic user object
+            const minimalUser = {
+                _id: '507f1f77bcf86cd799439011',
+                avatar: '/simple-avatar.png'
+            };
+            
+            const mockReq = testUtils.createMockRequest({ 
+                user: minimalUser 
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getUserAvatar(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                message: "Avatar retrieved successfully",
+                avatar: '/simple-avatar.png'
+            });
         });
     });
 });
