@@ -76,7 +76,7 @@ export const getChallengeById = async(req: Request, res: Response): Promise<void
 }
 
 // API to update challenges
-export const updateChallege = async(req: Request, res: Response): Promise<void> => {
+export const updateChallenge = async(req: Request, res: Response): Promise<void> => {
     try{
         const { adventureId, challengeId } = req.body;
         if(!checkId({id: adventureId, res})) return;
