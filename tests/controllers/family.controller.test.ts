@@ -1,5 +1,6 @@
 import { testUtils } from '../setup';
 import { createFamilyTasks, deleteFamily, deleteFamilyGoal, deleteFamilyTask, getAllFamilies, getFamily, getFamilyGoals, getFamilyMembers, 
+    getFamilyTaskById, 
     updateFamily, updateFamilyGoal, 
     updateFamilyTask
 } from '../../src/controllers/family.controller';
@@ -915,6 +916,66 @@ describe('Family Controller Tests', () => {
             await deleteFamilyTask(mockReq as any, mockRes as any);
 
             expect(mockRes.status).toHaveBeenCalledWith(401);
+        });
+    });
+
+    // 12. test getFamilyTaskById API
+    describe('getFamilyTaskById', () => {
+        it('should get family task by ID successfully', async () => {
+            const mockTask = {
+                _id: { toString: () => '507f1f77bcf86cd799439025' },
+                title: 'Test Task',
+                description: 'Test Description'
+            };
+            const mockGoal = {
+                _id: { toString: () => '507f1f77bcf86cd799439020' },
+                tasks: [mockTask]
+            };
+            const mockFamilyData = testUtils.createMockFamily({ goals: [mockGoal] });
+            mockFamilyData.goals.find = jest.fn().mockReturnValue(mockGoal);
+            mockGoal.tasks.find = jest.fn().mockReturnValue(mockTask);
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+
+            const mockReq = testUtils.createMockRequest({
+                body: {
+                    familyId: '507f1f77bcf86cd799439011',
+                    goalId: '507f1f77bcf86cd799439020',
+                    taskId: '507f1f77bcf86cd799439025'
+                }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getFamilyTaskById(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(201);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                message: 'Retrieve task successfully',
+                Task: mockTask
+            });
+        });
+
+        it('should return 404 if task not found', async () => {
+            const mockGoal = {
+                _id: { toString: () => '507f1f77bcf86cd799439020' },
+                tasks: []
+            };
+            const mockFamilyData = testUtils.createMockFamily({ goals: [mockGoal] });
+            mockFamilyData.goals.find = jest.fn().mockReturnValue(mockGoal);
+            mockGoal.tasks.find = jest.fn().mockReturnValue(undefined);
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+
+            const mockReq = testUtils.createMockRequest({
+                body: {
+                    familyId: '507f1f77bcf86cd799439011',
+                    goalId: '507f1f77bcf86cd799439020',
+                    taskId: '507f1f77bcf86cd799439025'
+                }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getFamilyTaskById(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
         });
     });
 });
