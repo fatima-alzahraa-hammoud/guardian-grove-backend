@@ -1,5 +1,5 @@
 import { testUtils } from '../setup';
-import { createAchievement, deleteAchievement, getAchievements, getLockedAchievements, getUnLockedAchievements, getUserAchievements, updateAchievement } from '../../src/controllers/achievement.controller';
+import { createAchievement, deleteAchievement, getAchievements, getLockedAchievements, getUnLockedAchievements, getUserAchievements, unlockAchievement, updateAchievement } from '../../src/controllers/achievement.controller';
 import { Achievement } from '../../src/models/achievements.model';
 import { User } from '../../src/models/user.model';
 import { Family } from '../../src/models/family.model';
@@ -482,6 +482,112 @@ describe('Achievements Controller Tests', () => {
 
             expect(mockRes.status).toHaveBeenCalledWith(401);
             expect(mockRes.json).toHaveBeenCalledWith({ error: 'Unauthorized' });
+        });
+    });
+
+    // 8. test unlockAchievement API
+    describe('unlockAchievement', () => {
+        const achievementId = testUtils.ids.achievement;
+
+        it('should unlock personal achievement successfully', async () => {
+            const mockUserData = testUtils.createMockUser({
+                achievements: [],
+                save: jest.fn().mockResolvedValue(true)
+            });
+            const mockAchievementData = testUtils.createMockAchievement({
+                type: 'personal'
+            });
+
+            mockAchievement.findById.mockResolvedValue(mockAchievementData as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: { achievementId }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await unlockAchievement(mockReq as any, mockRes as any);
+
+            expect(mockUserData.achievements).toHaveLength(1);
+            expect(mockUserData.achievements[0]).toEqual({
+                achievementId,
+                unlockedAt: expect.any(Date)
+            });
+            expect(mockUserData.save).toHaveBeenCalled();
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+        });
+
+        it('should return 401 if user not authenticated', async () => {
+            const mockReq = testUtils.createMockRequest({ 
+                user: null,
+                body: { achievementId }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await unlockAchievement(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(401);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Unauthorized' });
+        });
+
+        it('should return 404 if achievement not found', async () => {
+            mockAchievement.findById.mockResolvedValue(null);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: testUtils.createMockUser(),
+                body: { achievementId }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await unlockAchievement(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Achievement not found' });
+        });
+
+        it('should return 400 if achievement already unlocked', async () => {
+            const mockUserData = testUtils.createMockUser({
+                achievements: [
+                    { achievementId, unlockedAt: new Date() }
+                ]
+            });
+            const mockAchievementData = testUtils.createMockAchievement({
+                type: 'personal'
+            });
+
+            mockAchievement.findById.mockResolvedValue(mockAchievementData as any);
+            mockUserData.achievements.find = jest.fn().mockReturnValue(mockUserData.achievements[0]);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: { achievementId }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await unlockAchievement(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Achievement already unlocked' });
+        });
+
+        it('should return 400 if achievement is not personal type', async () => {
+            const mockUserData = testUtils.createMockUser({ achievements: [] });
+            const mockAchievementData = testUtils.createMockAchievement({
+                type: 'family'
+            });
+
+            mockAchievement.findById.mockResolvedValue(mockAchievementData as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: { achievementId }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await unlockAchievement(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'It is not personal achievement' });
         });
     });
 });
