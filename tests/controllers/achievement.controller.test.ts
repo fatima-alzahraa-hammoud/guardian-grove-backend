@@ -1,5 +1,5 @@
 import { testUtils } from '../setup';
-import { createAchievement, deleteAchievement, getAchievements, getLockedAchievements, getUnLockedAchievements, getUserAchievements, unlockAchievement, unlockFamilyAchievement, updateAchievement } from '../../src/controllers/achievement.controller';
+import { createAchievement, deleteAchievement, getAchievements, getLastUnlockedAchievement, getLockedAchievements, getUnLockedAchievements, getUserAchievements, unlockAchievement, unlockFamilyAchievement, updateAchievement } from '../../src/controllers/achievement.controller';
 import { Achievement } from '../../src/models/achievements.model';
 import { User } from '../../src/models/user.model';
 import { Family } from '../../src/models/family.model';
@@ -659,5 +659,303 @@ describe('Achievements Controller Tests', () => {
         });
     });
 
-    
+    // 10. test getLastUnlockedAchievement API
+    describe('getLastUnlockedAchievement', () => {
+        const userId = testUtils.ids.user;
+
+        it('should get last unlocked achievement successfully for authenticated user', async () => {
+            const mockUserData = testUtils.createMockUser({
+                _id: userId,
+                role: 'parent',
+                achievements: [
+                    { 
+                        achievementId: {
+                            title: 'First Achievement',
+                            photo: '/first.png',
+                            description: 'First test description'
+                        },
+                        unlockedAt: new Date('2024-01-10')
+                    },
+                    { 
+                        achievementId: {
+                            title: 'Last Achievement',
+                            photo: '/last.png',
+                            description: 'Last test description'
+                        },
+                        unlockedAt: new Date('2024-01-15')
+                    }
+                ]
+            });
+
+            mockUser.findById.mockReturnValue({
+                populate: jest.fn().mockResolvedValue(mockUserData)
+            } as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: { userId }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getLastUnlockedAchievement(mockReq as any, mockRes as any);
+
+            expect(mockUser.findById).toHaveBeenCalledWith(userId);
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.send).toHaveBeenCalledWith({
+                message: 'Retrieve unlocked achievement successfully',
+                lastUnlockedAchievement: {
+                    title: 'Last Achievement',
+                    photo: '/last.png',
+                    description: 'Last test description',
+                    unlockedAt: expect.any(Date)
+                }
+            });
+        });
+
+        it('should use current user ID when userId not provided in body', async () => {
+            const currentUserId = '507f1f77bcf86cd799439099';
+            const mockUserData = testUtils.createMockUser({
+                _id: currentUserId,
+                achievements: [
+                    { 
+                        achievementId: {
+                            title: 'User Achievement',
+                            photo: '/user.png',
+                            description: 'User description'
+                        },
+                        unlockedAt: new Date('2024-01-15')
+                    }
+                ]
+            });
+
+            mockUser.findById.mockReturnValue({
+                populate: jest.fn().mockResolvedValue(mockUserData)
+            } as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: {} // No userId provided
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getLastUnlockedAchievement(mockReq as any, mockRes as any);
+
+            expect(mockUser.findById).toHaveBeenCalledWith(currentUserId);
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+        });
+
+        it('should return 401 if user not authenticated', async () => {
+            const mockReq = testUtils.createMockRequest({ 
+                user: null,
+                body: { userId }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getLastUnlockedAchievement(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(401);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Unauthorized' });
+            expect(mockUser.findById).not.toHaveBeenCalled();
+        });
+
+        it('should return early if checkId fails', async () => {
+            mockCheckId.checkId.mockReturnValue(false);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: testUtils.createMockUser(),
+                body: { userId: 'invalid-id' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getLastUnlockedAchievement(mockReq as any, mockRes as any);
+
+            expect(mockUser.findById).not.toHaveBeenCalled();
+        });
+
+        it('should return 403 if user not authorized to view target user achievements', async () => {
+            const mockUserData = testUtils.createMockUser({
+                _id: 'different-user-id',
+                role: 'child' // Not parent/admin/owner
+            });
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: { userId } // Different user ID
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getLastUnlockedAchievement(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(403);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Forbidden' });
+            expect(mockUser.findById).not.toHaveBeenCalled();
+        });
+
+        it('should allow parent role to view any user achievements', async () => {
+            const mockUserData = testUtils.createMockUser({
+                _id: 'parent-user-id',
+                role: 'parent'
+            });
+
+            const targetUser = testUtils.createMockUser({
+                _id: userId,
+                achievements: [
+                    { 
+                        achievementId: {
+                            title: 'Child Achievement',
+                            photo: '/child.png',
+                            description: 'Child description'
+                        },
+                        unlockedAt: new Date('2024-01-15')
+                    }
+                ]
+            });
+
+            mockUser.findById.mockReturnValue({
+                populate: jest.fn().mockResolvedValue(targetUser)
+            } as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: { userId }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getLastUnlockedAchievement(mockReq as any, mockRes as any);
+
+            expect(mockUser.findById).toHaveBeenCalledWith(userId);
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+        });
+
+        it('should allow admin role to view any user achievements', async () => {
+            const mockUserData = testUtils.createMockUser({
+                _id: 'admin-user-id',
+                role: 'admin'
+            });
+
+            const targetUser = testUtils.createMockUser({
+                achievements: [
+                    { 
+                        achievementId: {
+                            title: 'Admin View Achievement',
+                            photo: '/admin.png',
+                            description: 'Admin view description'
+                        },
+                        unlockedAt: new Date('2024-01-15')
+                    }
+                ]
+            });
+
+            mockUser.findById.mockReturnValue({
+                populate: jest.fn().mockResolvedValue(targetUser)
+            } as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: { userId }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getLastUnlockedAchievement(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+        });
+
+        it('should return 404 if target user not found', async () => {
+            const mockUserData = testUtils.createMockUser({ role: 'parent' });
+
+            mockUser.findById.mockReturnValue({
+                populate: jest.fn().mockResolvedValue(null)
+            } as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: { userId }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getLastUnlockedAchievement(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'User not found' });
+        });
+
+        it('should handle user with no achievements', async () => {
+            const mockUserData = testUtils.createMockUser({
+                achievements: [] // Empty achievements array
+            });
+
+            mockUser.findById.mockReturnValue({
+                populate: jest.fn().mockResolvedValue(mockUserData)
+            } as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: { userId }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getLastUnlockedAchievement(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.send).toHaveBeenCalledWith({
+                message: 'No achievements'
+            });
+        });
+
+        it('should handle database errors and return 500', async () => {
+            const mockUserData = testUtils.createMockUser({ role: 'parent' });
+
+            mockUser.findById.mockReturnValue({
+                populate: jest.fn().mockRejectedValue(new Error('Database connection failed'))
+            } as any);
+
+            // Mock console.error to avoid log output during tests
+            const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: { userId }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getLastUnlockedAchievement(mockReq as any, mockRes as any);
+            
+            expect(mockRes.status).toHaveBeenCalledWith(500);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'An error occurred while getting last unlocked achievement.' });
+
+            consoleErrorSpy.mockRestore();
+        });
+
+        it('should populate achievements with correct fields', async () => {
+            const mockUserData = testUtils.createMockUser({
+                achievements: [
+                    { 
+                        achievementId: {
+                            title: 'Test Achievement',
+                            photo: '/test.png',
+                            description: 'Test description'
+                        },
+                        unlockedAt: new Date('2024-01-15')
+                    }
+                ]
+            });
+
+            const populateMock = jest.fn().mockResolvedValue(mockUserData);
+            mockUser.findById.mockReturnValue({ populate: populateMock } as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: { userId }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getLastUnlockedAchievement(mockReq as any, mockRes as any);
+
+            expect(populateMock).toHaveBeenCalledWith({
+                path: "achievements.achievementId",
+                select: "title photo description"
+            });
+        });
+    });
 });
