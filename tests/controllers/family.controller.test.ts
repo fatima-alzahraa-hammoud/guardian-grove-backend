@@ -1,5 +1,5 @@
 import { testUtils } from '../setup';
-import { completeFamilyTask, createFamilyTasks, deleteFamily, deleteFamilyGoal, deleteFamilyTask, getAllFamilies, getFamily, getFamilyGoals, getFamilyMembers, 
+import { completeFamilyTask, createFamilyTasks, deleteFamily, deleteFamilyGoal, deleteFamilyTask, getAllFamilies, getFamily, getFamilyGoals, getFamilyLeaderboard, getFamilyMembers, 
     getFamilyTaskById, 
     getLeaderboard, 
     updateFamily, updateFamilyGoal, 
@@ -1377,6 +1377,102 @@ describe('Family Controller Tests', () => {
                 monthlyTop10: expect.any(Array),
                 yearlyTop10: expect.any(Array)
             });
+        });
+    });
+
+    // 15. test getFamilyLeaderboard API
+    describe('getFamilyLeaderboard', () => {
+        it('should get family leaderboard successfully', async () => {
+            const mockMembers = [
+                testUtils.createMockUser({ 
+                    stars: 100, 
+                    nbOfTasksCompleted: 10,
+                    toObject: jest.fn().mockReturnValue({
+                        stars: 100,
+                        nbOfTasksCompleted: 10,
+                        name: 'Top Member'
+                    })
+                }),
+                testUtils.createMockUser({ 
+                    stars: 80, 
+                    nbOfTasksCompleted: 8,
+                    toObject: jest.fn().mockReturnValue({
+                        stars: 80,
+                        nbOfTasksCompleted: 8,
+                        name: 'Second Member'
+                    })
+                })
+            ];
+
+            const mockFamilyData = testUtils.createMockFamily();
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+            
+            const mockUserDoc = {
+                select: jest.fn().mockReturnValue({
+                    sort: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue(mockMembers)
+                    })
+                })
+            };
+            mockUser.find.mockReturnValue(mockUserDoc as any);
+
+            const mockReq = testUtils.createMockRequest({
+                body: { familyId: '507f1f77bcf86cd799439011' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getFamilyLeaderboard(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.send).toHaveBeenCalledWith({
+                message: 'Leaderboard fetched successfully',
+                familyLeaderboard: expect.arrayContaining([
+                    expect.objectContaining({
+                        name: 'Top Member',
+                        rank: 1
+                    }),
+                    expect.objectContaining({
+                        name: 'Second Member',
+                        rank: 2
+                    })
+                ])
+            });
+        });
+
+        it('should return 404 if family not found', async () => {
+            mockFamily.findById.mockResolvedValue(null);
+
+            const mockReq = testUtils.createMockRequest({
+                body: { familyId: '507f1f77bcf86cd799439011' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getFamilyLeaderboard(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+        });
+
+        it('should return 404 if members not found', async () => {
+            const mockFamilyData = testUtils.createMockFamily();
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+            
+            const mockUserDoc = {
+                select: jest.fn().mockReturnValue({
+                    sort: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue(null)
+                    })
+                })
+            };
+            mockUser.find.mockReturnValue(mockUserDoc as any);
+
+            const mockReq = testUtils.createMockRequest({
+                body: { familyId: '507f1f77bcf86cd799439011' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getFamilyLeaderboard(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
         });
     });
 });
