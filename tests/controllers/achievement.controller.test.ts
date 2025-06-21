@@ -1,5 +1,5 @@
 import { testUtils } from '../setup';
-import { createAchievement, deleteAchievement, getAchievements, getLockedAchievements, getUnLockedAchievements, getUserAchievements, unlockAchievement, updateAchievement } from '../../src/controllers/achievement.controller';
+import { createAchievement, deleteAchievement, getAchievements, getLockedAchievements, getUnLockedAchievements, getUserAchievements, unlockAchievement, unlockFamilyAchievement, updateAchievement } from '../../src/controllers/achievement.controller';
 import { Achievement } from '../../src/models/achievements.model';
 import { User } from '../../src/models/user.model';
 import { Family } from '../../src/models/family.model';
@@ -590,4 +590,73 @@ describe('Achievements Controller Tests', () => {
             expect(mockRes.json).toHaveBeenCalledWith({ error: 'It is not personal achievement' });
         });
     });
+
+    // 9. test unlockFamilyAchievement API
+    describe('unlockFamilyAchievement', () => {
+        const familyId = testUtils.ids.family;
+        const achievementId = testUtils.ids.achievement;
+
+        it('should unlock family achievement successfully', async () => {
+            const mockFamilyData = testUtils.createMockFamily({
+                achievements: [],
+                save: jest.fn().mockResolvedValue(true)
+            });
+            const mockAchievementData = testUtils.createMockAchievement({
+                type: 'family'
+            });
+
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+            mockAchievement.findById.mockResolvedValue(mockAchievementData as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                body: { familyId, achievementId }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await unlockFamilyAchievement(mockReq as any, mockRes as any);
+
+            expect(mockFamilyData.achievements).toHaveLength(1);
+            expect(mockFamilyData.achievements[0]).toEqual({
+                achievementId,
+                unlockedAt: expect.any(Date)
+            });
+            expect(mockFamilyData.save).toHaveBeenCalled();
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+        });
+
+        it('should return 404 if family not found', async () => {
+            mockFamily.findById.mockResolvedValue(null);
+
+            const mockReq = testUtils.createMockRequest({ 
+                body: { familyId, achievementId }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await unlockFamilyAchievement(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Family not found' });
+        });
+
+        it('should return 400 if achievement is not family type', async () => {
+            const mockFamilyData = testUtils.createMockFamily({ achievements: [] });
+            const mockAchievementData = testUtils.createMockAchievement({
+                type: 'personal'
+            });
+
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+            mockAchievement.findById.mockResolvedValue(mockAchievementData as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                body: { familyId, achievementId }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await unlockFamilyAchievement(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'It is not family achievement' });
+        });
+    });
+
 });
