@@ -1,6 +1,7 @@
 import { testUtils } from '../setup';
 import {  getUsers, getUserById, createUser, editUserProfile,
-    deleteUser, updatePassword, getUserStars, updateUserStars
+    deleteUser, updatePassword, getUserStars, updateUserStars,
+    getUserCoins, 
 } from '../../src/controllers/user.controller';
 import { User } from '../../src/models/user.model';
 import * as generateSecurePassword from '../../src/utils/generateSecurePassword';
@@ -790,6 +791,33 @@ describe('User Controller Tests', () => {
 
             expect(mockRes.status).toHaveBeenCalledWith(500);
             expect(mockRes.json).toHaveBeenCalledWith({ error: 'Error updating user stars' });
+        });
+    });
+
+    // 8. test getUserCoins API
+    describe('getUserCoins', () => {
+        it('should get user coins successfully', async () => {
+            const mockUserData = testUtils.createMockUser({ coins: 200 });
+            const mockReq = testUtils.createMockRequest({ user: mockUserData });
+            const mockRes = testUtils.createMockResponse();
+
+            await getUserCoins(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.send).toHaveBeenCalledWith({
+                message: "Coins retrieved successfully",
+                coins: 200
+            });
+        });
+
+        it('should return 401 if user not authenticated', async () => {
+            const mockReq = testUtils.createMockRequest({ user: null });
+            const mockRes = testUtils.createMockResponse();
+
+            await getUserCoins(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(401);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Unauthorized' });
         });
     });
 });
