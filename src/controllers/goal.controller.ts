@@ -79,7 +79,6 @@ export const createGoal = async (req: Request, res: Response): Promise<void> => 
         
         res.status(201).json({ message: 'Goal created successfully', goal: newGoal});
     } catch (err) {
-        console.error("Error creating goal:", err);
         return throwError({message: "An unknown error occurred while creating goal", res, status: 500});
     }
 }
@@ -127,7 +126,6 @@ export const getGoals = async (req: CustomRequest, res: Response): Promise<void>
 
         res.status(200).json({message: "Retrieving all users' goals successfully", goals: allGoals });
     } catch (error) {
-        console.error(error);
         return throwError({ message: "Error retrieving goals", res, status: 500 });
     }
 };
@@ -224,7 +222,6 @@ export const updateUserGoal = async (req: CustomRequest, res: Response): Promise
 
         res.status(200).json({ message: "Goal updated", goal });
     } catch (error) {
-        console.error(error);
         return throwError({ message: "Error updating goal", res, status: 500 });
     }
 };
@@ -261,7 +258,6 @@ export const deleteGoal = async (req: CustomRequest, res: Response): Promise<voi
 
         res.status(200).json({ message: 'Goal deleted successfully', DeletedGoal: deletedGoal });
     } catch (error) {
-        console.error("Error deleting goal:", error);
         return throwError({message: "Error deleting goal", res, status: 500});
     }
 };
@@ -426,7 +422,6 @@ export const deleteTask = async (req: CustomRequest, res: Response): Promise<voi
 
         res.status(200).json({ message: 'Task deleted successfully', DeletedTask: deletedTask });
     } catch (error) {
-        console.error(error);
         return throwError({message: "Error deleting task", res, status: 500});
     }
 };
@@ -506,7 +501,6 @@ export const completeTask = async (req: CustomRequest, res: Response): Promise<v
 
         res.status(200).json({ message: "Task marked as done", task, goal });
     } catch (error) {
-        console.error(error);
         return throwError({ message: "Error marking task as done", res, status: 500 });
     }
 };
@@ -566,7 +560,6 @@ export const getMonthlyStats = async (req: CustomRequest, res: Response): Promis
             completedGoals: completedGoalsForCurrentMonth.length,
         });
     } catch (error) {
-        console.error(error);
         return throwError({ message: "Error retrieving monthly stats", res, status: 500 });
     }
 };
