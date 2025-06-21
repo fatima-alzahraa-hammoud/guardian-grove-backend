@@ -1,4 +1,4 @@
-import { createChallenge, getAllChallenges, getChallengeById, updateChallenge } from '../../src/controllers/challenge.controller';
+import { createChallenge, deleteChallenge, getAllChallenges, getChallengeById, updateChallenge } from '../../src/controllers/challenge.controller';
 import { Adventure } from '../../src/models/adventure.model';
 import * as checkId from '../../src/utils/checkId';
 import { testUtils } from '../setup';
@@ -538,6 +538,152 @@ describe('Challenge Controller Tests', () => {
             expect(mockRes.json).toHaveBeenCalledWith({
                 error: 'An unknown error occurred while updating challenge.'
             });
+        });
+    });
+
+    // 5. test deleteChallenge API
+    describe('deleteChallenge', () => {
+        const adventureId = testUtils.ids.adventure;
+        const challengeId = testUtils.ids.challenge;
+
+        it('should delete challenge successfully', async () => {
+            const challengeToDelete = {
+                _id: challengeId,
+                title: 'Challenge to Delete',
+                toString: jest.fn(() => challengeId)
+            };
+
+            const mockAdventureData = testUtils.createMockAdventureWithChallenges([challengeToDelete]);
+            mockAdventureData.challenges.findIndex = jest.fn().mockReturnValue(0);
+            mockAdventure.findById.mockResolvedValue(mockAdventureData as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                body: { adventureId, challengeId }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await deleteChallenge(mockReq as any, mockRes as any);
+
+            expect(mockAdventure.findById).toHaveBeenCalledWith(adventureId);
+            expect(mockAdventureData.challenges.findIndex).toHaveBeenCalledWith(expect.any(Function));
+            expect(mockAdventureData.challenges.splice).toHaveBeenCalledWith(0, 1);
+            expect(mockAdventureData.save).toHaveBeenCalled();
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                message: 'Challenge deleted successfully',
+                adventure: mockAdventureData
+            });
+        });
+
+        it('should return early if adventureId checkId fails', async () => {
+            mockCheckId.checkId.mockReturnValueOnce(false).mockReturnValueOnce(true);
+
+            const mockReq = testUtils.createMockRequest({ 
+                body: { adventureId: 'invalid-id', challengeId }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await deleteChallenge(mockReq as any, mockRes as any);
+
+            expect(mockAdventure.findById).not.toHaveBeenCalled();
+        });
+
+        it('should return early if adventureId checkId fails', async () => {
+            mockCheckId.checkId.mockReturnValueOnce(false).mockReturnValueOnce(true);
+
+            const mockReq = testUtils.createMockRequest({ 
+                body: { adventureId: 'invalid-id', challengeId }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await deleteChallenge(mockReq as any, mockRes as any);
+
+            expect(mockAdventure.findById).not.toHaveBeenCalled();
+        });
+
+        it('should return 404 if adventure not found', async () => {
+            mockAdventure.findById.mockResolvedValue(null);
+
+            const mockReq = testUtils.createMockRequest({ 
+                body: { adventureId, challengeId }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await deleteChallenge(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                error: 'Adventure not found'
+            });
+        });
+
+        it('should return 404 if challenge not found for deletion', async () => {
+            const mockAdventureData = testUtils.createMockAdventureWithChallenges([]);
+            mockAdventureData.challenges.findIndex = jest.fn().mockReturnValue(-1);
+            mockAdventure.findById.mockResolvedValue(mockAdventureData as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                body: { adventureId, challengeId }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await deleteChallenge(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                error: 'Challenge not found'
+            });
+        });
+
+        it('should handle database save errors', async () => {
+            const mockAdventureData = testUtils.createMockAdventureWithChallenges([]);
+            mockAdventureData.challenges.findIndex = jest.fn().mockReturnValue(0);
+            mockAdventureData.save = jest.fn().mockRejectedValue(new Error('Save failed'));
+            mockAdventure.findById.mockResolvedValue(mockAdventureData as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                body: { adventureId, challengeId }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await deleteChallenge(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(500);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                error: 'Failed to delete. An unknown error occurred.'
+            });
+        });
+
+        it('should delete the correct challenge from multiple challenges', async () => {
+            const challenge1 = {
+                _id: 'challenge1',
+                title: 'Challenge 1',
+                toString: jest.fn(() => 'challenge1')
+            };
+            const challenge2 = {
+                _id: challengeId,
+                title: 'Challenge 2',
+                toString: jest.fn(() => challengeId)
+            };
+            const challenge3 = {
+                _id: 'challenge3',
+                title: 'Challenge 3',
+                toString: jest.fn(() => 'challenge3')
+            };
+
+            const mockAdventureData = testUtils.createMockAdventureWithChallenges([challenge1, challenge2, challenge3]);
+            mockAdventureData.challenges.findIndex = jest.fn().mockReturnValue(1); // Index of challenge2
+            mockAdventure.findById.mockResolvedValue(mockAdventureData as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                body: { adventureId, challengeId }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await deleteChallenge(mockReq as any, mockRes as any);
+
+            expect(mockAdventureData.challenges.splice).toHaveBeenCalledWith(1, 1);
+            expect(mockRes.status).toHaveBeenCalledWith(200);
         });
     });
 });
