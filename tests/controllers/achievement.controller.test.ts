@@ -1,5 +1,5 @@
 import { testUtils } from '../setup';
-import { createAchievement, deleteAchievement, getAchievements, getLockedAchievements, updateAchievement } from '../../src/controllers/achievement.controller';
+import { createAchievement, deleteAchievement, getAchievements, getLockedAchievements, getUnLockedAchievements, updateAchievement } from '../../src/controllers/achievement.controller';
 import { Achievement } from '../../src/models/achievements.model';
 import { User } from '../../src/models/user.model';
 import { Family } from '../../src/models/family.model';
@@ -400,6 +400,49 @@ describe('Achievements Controller Tests', () => {
             expect(mockAchievement.find).toHaveBeenCalledWith({
                 _id: { $nin: [] }
             });
+        });
+    });
+
+    // 6. test getUnLockedAchievements API
+    describe('getUnLockedAchievements', () => {
+        it('should get unlocked achievements successfully', async () => {
+            const mockUserData = testUtils.createMockUser({
+                achievements: [
+                    { achievementId: 'achievement1', unlockedAt: new Date() }
+                ]
+            });
+            const mockFamilyData = testUtils.createMockFamily({
+                achievements: [
+                    { achievementId: 'achievement2', unlockedAt: new Date() }
+                ]
+            });
+            const mockUnlockedAchievements = [
+                testUtils.createMockAchievement({ _id: 'achievement1' }),
+                testUtils.createMockAchievement({ _id: 'achievement2' })
+            ];
+
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+            mockAchievement.find.mockResolvedValue(mockUnlockedAchievements as any);
+
+            const mockReq = testUtils.createMockRequest({ user: mockUserData });
+            const mockRes = testUtils.createMockResponse();
+
+            await getUnLockedAchievements(mockReq as any, mockRes as any);
+
+            expect(mockAchievement.find).toHaveBeenCalledWith({
+                _id: { $in: ['achievement1', 'achievement2'] }
+            });
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+        });
+
+        it('should return 401 if user not authenticated', async () => {
+            const mockReq = testUtils.createMockRequest({ user: null });
+            const mockRes = testUtils.createMockResponse();
+
+            await getUnLockedAchievements(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(401);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Unauthorized' });
         });
     });
 });
