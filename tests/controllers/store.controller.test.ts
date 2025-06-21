@@ -1,5 +1,5 @@
 import { testUtils } from '../setup';
-import { getStoreItems } from '../../src/controllers/store.controller';
+import { createItem, getStoreItems } from '../../src/controllers/store.controller';
 import { StoreItem } from '../../src/models/storeItem.model';
 import { User } from '../../src/models/user.model';
 import * as checkId from '../../src/utils/checkId';
@@ -108,6 +108,137 @@ describe('Store Controller Tests', () => {
             expect(mockRes.status).toHaveBeenCalledWith(400);
             expect(mockRes.json).toHaveBeenCalledWith({ 
                 error: 'Error fetching store items' 
+            });
+        });
+    });
+
+    // 2. test createItem API
+    describe('createItem', () => {
+        const validItemData = {
+            name: 'New Avatar',
+            description: 'A cool new avatar',
+            type: 'avatar',
+            price: 100,
+            image: '/assets/images/avatars/new-avatar.png'
+        };
+
+        it('should create store item successfully', async () => {
+            const mockNewItem = testUtils.createMockStoreItem(validItemData);
+            mockStoreItem.prototype.save = jest.fn().mockResolvedValue(mockNewItem);
+            
+            // Mock the constructor
+            (mockStoreItem as any).mockImplementation(() => ({
+                ...mockNewItem,
+                save: jest.fn().mockResolvedValue(mockNewItem)
+            }));
+
+            const mockReq = testUtils.createMockRequest({ body: validItemData });
+            const mockRes = testUtils.createMockResponse();
+
+            await createItem(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(201);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                message: 'StoreItem created successfully',
+                StoreItem: expect.objectContaining({
+                    name: 'New Avatar',
+                    type: 'avatar',
+                    price: 100
+                })
+            });
+        });
+
+        it('should use default price when not provided', async () => {
+            const itemDataWithoutPrice = { ...validItemData };
+            delete (itemDataWithoutPrice as any).price;
+
+            const mockNewItem = testUtils.createMockStoreItem({ ...itemDataWithoutPrice, price: 5 });
+            
+            (mockStoreItem as any).mockImplementation(() => ({
+                ...mockNewItem,
+                save: jest.fn().mockResolvedValue(mockNewItem)
+            }));
+
+            const mockReq = testUtils.createMockRequest({ body: itemDataWithoutPrice });
+            const mockRes = testUtils.createMockResponse();
+
+            await createItem(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(201);
+        });
+
+        it('should return 400 if required fields are missing', async () => {
+            const incompleteData = { name: 'Incomplete Item' }; // Missing required fields
+
+            const mockReq = testUtils.createMockRequest({ body: incompleteData });
+            const mockRes = testUtils.createMockResponse();
+
+            await createItem(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({ 
+                error: 'All required fields must be filled.' 
+            });
+        });
+
+        it('should return 400 if name is missing', async () => {
+            const dataWithoutName = { ...validItemData };
+            delete (dataWithoutName as any).name;
+
+            const mockReq = testUtils.createMockRequest({ body: dataWithoutName });
+            const mockRes = testUtils.createMockResponse();
+
+            await createItem(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({ 
+                error: 'All required fields must be filled.' 
+            });
+        });
+
+        it('should return 400 if type is missing', async () => {
+            const dataWithoutType = { ...validItemData };
+            delete (dataWithoutType as any).type;
+
+            const mockReq = testUtils.createMockRequest({ body: dataWithoutType });
+            const mockRes = testUtils.createMockResponse();
+
+            await createItem(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({ 
+                error: 'All required fields must be filled.' 
+            });
+        });
+
+        it('should return 400 if image is missing', async () => {
+            const dataWithoutImage = { ...validItemData };
+            delete (dataWithoutImage as any).image;
+
+            const mockReq = testUtils.createMockRequest({ body: dataWithoutImage });
+            const mockRes = testUtils.createMockResponse();
+
+            await createItem(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({ 
+                error: 'All required fields must be filled.' 
+            });
+        });
+
+        it('should handle save errors', async () => {
+            (mockStoreItem as any).mockImplementation(() => ({
+                save: jest.fn().mockRejectedValue(new Error('Save failed'))
+            }));
+
+            const mockReq = testUtils.createMockRequest({ body: validItemData });
+            const mockRes = testUtils.createMockResponse();
+
+            await createItem(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(500);
+            expect(mockRes.json).toHaveBeenCalledWith({ 
+                error: 'An unknown error occurred.' 
             });
         });
     });
