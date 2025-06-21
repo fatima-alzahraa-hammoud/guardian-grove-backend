@@ -51,4 +51,154 @@ describe('Auth Controller Tests', () => {
             process.env.JWT_SECRET = 'test_jwt_secret_key_for_guardian_grove_123';
         }
     });
+
+    // 1. test login API
+    describe('login', () => {
+        const validLoginData = {
+            name: 'Test User',
+            email: 'test@example.com',
+            password: 'TestPass123!'
+        };
+
+        it('should login successfully with valid credentials', async () => {
+            const mockUserData = {
+                ...testUtils.createMockUser({
+                    ...validLoginData,
+                    isTempPassword: false
+                }),
+                id: '507f1f77bcf86cd799439011' 
+            };
+            mockUser.findOne.mockResolvedValue(mockUserData as any);
+            (mockBcrypt.compare as jest.Mock).mockResolvedValue(true);
+
+            const mockReq = testUtils.createMockRequest({ body: validLoginData });
+            const mockRes = testUtils.createMockResponse();
+
+            await login(mockReq as any, mockRes as any);
+
+            expect(mockUser.findOne).toHaveBeenCalledWith({
+                name: validLoginData.name,
+                email: validLoginData.email
+            });
+            expect(mockBcrypt.compare).toHaveBeenCalledWith(validLoginData.password, mockUserData.password);
+            expect(mockJwt.sign).toHaveBeenCalledWith(
+                { userId: mockUserData.id, role: mockUserData.role },
+                'test_jwt_secret_key_for_guardian_grove_123'
+            );
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                user: mockUserData,
+                token: 'mock-jwt-token',
+                requiresPasswordChange: false,
+                message: 'Login successful'
+            });
+        });
+
+        it('should login with temporary password and require password change', async () => {
+            const mockUserData = {
+                ...testUtils.createMockUser({
+                    ...validLoginData,
+                    isTempPassword: true
+                }),
+                id: '507f1f77bcf86cd799439011' // Add id property for JWT
+            };
+            mockUser.findOne.mockResolvedValue(mockUserData as any);
+            (mockBcrypt.compare as jest.Mock).mockResolvedValue(true);
+
+            const mockReq = testUtils.createMockRequest({ body: validLoginData });
+            const mockRes = testUtils.createMockResponse();
+
+            await login(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                user: mockUserData,
+                token: 'mock-jwt-token',
+                requiresPasswordChange: true,
+                message: 'Please set a new password'
+            });
+        });
+
+        it('should return 400 if required fields are missing', async () => {
+            const incompleteData = { name: 'Test User', email: 'test@example.com' }; // Missing password
+
+            const mockReq = testUtils.createMockRequest({ body: incompleteData });
+            const mockRes = testUtils.createMockResponse();
+
+            await login(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                error: 'Name, email, and password are required.'
+            });
+        });
+
+        it('should return 404 if user not found', async () => {
+            mockUser.findOne.mockResolvedValue(null);
+
+            const mockReq = testUtils.createMockRequest({ body: validLoginData });
+            const mockRes = testUtils.createMockResponse();
+
+            await login(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                error: 'Invalid credentials. User not found.'
+            });
+        });
+
+        it('should return 401 if password is incorrect', async () => {
+            const mockUserData = {
+                ...testUtils.createMockUser(validLoginData),
+                id: '507f1f77bcf86cd799439011'
+            };
+            mockUser.findOne.mockResolvedValue(mockUserData as any);
+            (mockBcrypt.compare as jest.Mock).mockResolvedValue(false);
+
+            const mockReq = testUtils.createMockRequest({ body: validLoginData });
+            const mockRes = testUtils.createMockResponse();
+
+            await login(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(401);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                error: 'Invalid password.'
+            });
+        });
+
+        it('should handle JWT signing errors gracefully', async () => {
+            const mockUserData = {
+                ...testUtils.createMockUser(validLoginData),
+                id: '507f1f77bcf86cd799439011'
+            };
+            mockUser.findOne.mockResolvedValue(mockUserData as any);
+            (mockBcrypt.compare as jest.Mock).mockResolvedValue(true);
+            // Mock JWT sign to throw an error
+            (mockJwt.sign as jest.Mock).mockRejectedValue(new Error('JWT signing failed'));
+
+            const mockReq = testUtils.createMockRequest({ body: validLoginData });
+            const mockRes = testUtils.createMockResponse();
+
+            await login(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(500);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                error: 'Something went wrong while logging in.'
+            });
+        });
+
+        it('should handle database errors gracefully', async () => {
+            mockUser.findOne.mockRejectedValue(new Error('Database connection failed'));
+
+            const mockReq = testUtils.createMockRequest({ body: validLoginData });
+            const mockRes = testUtils.createMockResponse();
+
+            await login(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(500);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                error: 'Something went wrong while logging in.'
+            });
+        });
+    });
 });
