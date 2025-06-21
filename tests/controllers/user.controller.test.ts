@@ -25,4 +25,35 @@ describe('User Controller Tests', () => {
         mockGenerateSecurePassword.generateSecurePassword.mockReturnValue('TempPass123!');
         mockCheckId.checkId.mockReturnValue(true);
     });
+
+    describe('getUsers', () => {
+        it('should return all users successfully', async () => {
+            const mockUsers = [
+                testUtils.createMockUser({ name: 'John' }),
+                testUtils.createMockUser({ name: 'Jane', _id: '507f1f77bcf86cd799439013' })
+            ];
+            mockUser.find.mockResolvedValue(mockUsers as any);
+
+            const mockReq = testUtils.createMockRequest();
+            const mockRes = testUtils.createMockResponse();
+
+            await getUsers(mockReq as any, mockRes as any);
+
+            expect(mockUser.find).toHaveBeenCalledTimes(1);
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.send).toHaveBeenCalledWith(mockUsers);
+        });
+
+        it('should handle database errors', async () => {
+            mockUser.find.mockRejectedValue(new Error('Database connection failed'));
+
+            const mockReq = testUtils.createMockRequest();
+            const mockRes = testUtils.createMockResponse();
+
+            await getUsers(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(500);
+            expect(mockRes.json).toHaveBeenCalledWith({ message: 'Error retrieving users' });
+        });
+    });
 });
