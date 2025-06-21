@@ -1,0 +1,27 @@
+c16cf7f6cf5479fa1c38d68930a7f349
+"use strict";
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+Object.defineProperty(exports, "unlockedAchievementSchema", {
+    enumerable: true,
+    get: function() {
+        return unlockedAchievementSchema;
+    }
+});
+const _mongoose = require("mongoose");
+const unlockedAchievementSchema = new _mongoose.Schema({
+    achievementId: {
+        type: _mongoose.Schema.Types.ObjectId,
+        ref: "Achievement",
+        required: true
+    },
+    unlockedAt: {
+        type: Date,
+        default: Date.now
+    }
+}, {
+    _id: false
+});
+
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIkM6XFxVc2Vyc1xcVVNFUlxcRGVza3RvcFxcZ3VhcmRpYW4tZ3JvdmVcXGd1YXJkaWFuLWdyb3ZlLWJhY2tlbmRcXHNyY1xcbW9kZWxzXFxzY2hlbWFzXFx1bmxvY2tlZEFjaGlldmVtZW50U2NoZW1hLnNjaGVtYS50cyJdLCJzb3VyY2VzQ29udGVudCI6WyJpbXBvcnQgeyBTY2hlbWEgfSBmcm9tIFwibW9uZ29vc2VcIjtcclxuaW1wb3J0IHsgSVVubG9ja2VkQWNoaWV2ZW1lbnQgfSBmcm9tIFwiLi4vLi4vaW50ZXJmYWNlcy9JVW5sb2NrZWRBY2hpZXZlbWVudFwiO1xyXG5cclxuZXhwb3J0IGNvbnN0IHVubG9ja2VkQWNoaWV2ZW1lbnRTY2hlbWEgPSBuZXcgU2NoZW1hPElVbmxvY2tlZEFjaGlldmVtZW50Pih7XHJcbiAgICBhY2hpZXZlbWVudElkOiB7IHR5cGU6IFNjaGVtYS5UeXBlcy5PYmplY3RJZCwgcmVmOiBcIkFjaGlldmVtZW50XCIsIHJlcXVpcmVkOiB0cnVlIH0sXHJcbiAgICB1bmxvY2tlZEF0OiB7IHR5cGU6IERhdGUsIGRlZmF1bHQ6IERhdGUubm93IH0sXHJcbn0sIHtfaWQ6IGZhbHNlfSk7Il0sIm5hbWVzIjpbInVubG9ja2VkQWNoaWV2ZW1lbnRTY2hlbWEiLCJTY2hlbWEiLCJhY2hpZXZlbWVudElkIiwidHlwZSIsIlR5cGVzIiwiT2JqZWN0SWQiLCJyZWYiLCJyZXF1aXJlZCIsInVubG9ja2VkQXQiLCJEYXRlIiwiZGVmYXVsdCIsIm5vdyIsIl9pZCJdLCJtYXBwaW5ncyI6Ijs7OzsrQkFHYUE7OztlQUFBQTs7OzBCQUhVO0FBR2hCLE1BQU1BLDRCQUE0QixJQUFJQyxnQkFBTSxDQUF1QjtJQUN0RUMsZUFBZTtRQUFFQyxNQUFNRixnQkFBTSxDQUFDRyxLQUFLLENBQUNDLFFBQVE7UUFBRUMsS0FBSztRQUFlQyxVQUFVO0lBQUs7SUFDakZDLFlBQVk7UUFBRUwsTUFBTU07UUFBTUMsU0FBU0QsS0FBS0UsR0FBRztJQUFDO0FBQ2hELEdBQUc7SUFBQ0MsS0FBSztBQUFLIn0=

@@ -37,6 +37,7 @@
     "winston": "^3.17.0"
   },
   "devDependencies": {
+    "@swc/jest": "^0.2.38",
     "@types/bcrypt": "^5.0.2",
     "@types/cors": "^2.8.17",
     "@types/date-fns": "^2.5.3",
