@@ -1,5 +1,5 @@
 import { testUtils } from '../setup';
-import {  getUsers } from '../../src/controllers/user.controller';
+import {  getUsers, getUserById, } from '../../src/controllers/user.controller';
 import { User } from '../../src/models/user.model';
 import * as generateSecurePassword from '../../src/utils/generateSecurePassword';
 import * as checkId from '../../src/utils/checkId';
@@ -64,4 +64,78 @@ describe('User Controller Tests', () => {
             expect(mockRes.json).toHaveBeenCalledWith({ error: 'Error retrieving users' });
         });
     });
+
+    // test getUserById API
+    describe('getUserById', () => {
+        it('should return user by ID successfully', async () => {
+            const mockUser_data = testUtils.createMockUser();
+            const mockUserDoc = {
+                ...mockUser_data,
+                select: jest.fn().mockResolvedValue(mockUser_data)
+            };
+            mockUser.findById.mockReturnValue(mockUserDoc as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: testUtils.createMockUser(),
+                body: { userId: '507f1f77bcf86cd799439011' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getUserById(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                message: "Retrieving user successfully",
+                user: mockUser_data
+            });
+        });
+
+        it('should return 401 if user not authenticated', async () => {
+            const mockReq = testUtils.createMockRequest({ user: null });
+            const mockRes = testUtils.createMockResponse();
+
+            await getUserById(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(401);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Unauthorized' });
+        });
+
+        it('should return 404 if user not found', async () => {
+            const mockUserDoc = {
+                select: jest.fn().mockResolvedValue(null)
+            };
+            mockUser.findById.mockReturnValue(mockUserDoc as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: testUtils.createMockUser(),
+                body: { userId: '507f1f77bcf86cd799439011' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getUserById(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'User not found' });
+        });
+
+        it('should return 403 if forbidden access', async () => {
+            const mockUser_data = testUtils.createMockUser({ email: 'different@email.com' });
+            const mockUserDoc = {
+                select: jest.fn().mockResolvedValue(mockUser_data)
+            };
+            mockUser.findById.mockReturnValue(mockUserDoc as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: testUtils.createMockUser({ _id: 'different-id', role: 'child' }),
+                body: { userId: '507f1f77bcf86cd799439011' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getUserById(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(403);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Forbidden' });
+        });
+    });
+
 });
