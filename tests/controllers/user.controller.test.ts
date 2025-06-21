@@ -1,7 +1,8 @@
 import { testUtils } from '../setup';
 import {  getUsers, getUserById, createUser, editUserProfile,
     deleteUser, updatePassword, getUserStars, updateUserStars,
-    getUserCoins, updateUserCoins, getLocation, updateLocation
+    getUserCoins, updateUserCoins, getLocation, updateLocation,
+    getUserRank, 
 } from '../../src/controllers/user.controller';
 import { User } from '../../src/models/user.model';
 import * as generateSecurePassword from '../../src/utils/generateSecurePassword';
@@ -949,6 +950,33 @@ describe('User Controller Tests', () => {
 
             expect(mockRes.status).toHaveBeenCalledWith(400);
             expect(mockRes.json).toHaveBeenCalledWith({ error: 'Location must be valid.' });
+        });
+    });
+
+    // 13. test getUserRank API
+    describe('getUserRank', () => {
+        it('should get user rank successfully', async () => {
+            const mockUserData = testUtils.createMockUser({ rankInFamily: 3 });
+            const mockReq = testUtils.createMockRequest({ user: mockUserData });
+            const mockRes = testUtils.createMockResponse();
+
+            await getUserRank(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.send).toHaveBeenCalledWith({
+                message: "Rank retrieved successfully",
+                Rank: 3
+            });
+        });
+
+        it('should return 401 if user not authenticated', async () => {
+            const mockReq = testUtils.createMockRequest({ user: null });
+            const mockRes = testUtils.createMockResponse();
+
+            await getUserRank(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(401);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Unauthorized' });
         });
     });
 
