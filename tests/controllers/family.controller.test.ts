@@ -1,5 +1,5 @@
 import { testUtils } from '../setup';
-import { getAllFamilies, getFamily, getFamilyMembers } from '../../src/controllers/family.controller';
+import { getAllFamilies, getFamily, getFamilyMembers, updateFamily } from '../../src/controllers/family.controller';
 import { Family } from '../../src/models/family.model';
 import { User } from '../../src/models/user.model';
 import { Achievement } from '../../src/models/achievements.model';
@@ -215,6 +215,135 @@ describe('Family Controller Tests', () => {
             await getFamilyMembers(mockReq as any, mockRes as any);
 
             expect(mockRes.status).toHaveBeenCalledWith(404);
+        });
+    });
+
+     // 4. test updateFamily API
+    describe('updateFamily', () => {
+        it('should update family successfully', async () => {
+            const mockFamilyData = testUtils.createMockFamily({ 
+                email: 'parent@test.com',
+                save: jest.fn().mockResolvedValue(true)
+            });
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+            mockFamily.findOne.mockResolvedValue(null); // No duplicate
+
+            const mockReq = testUtils.createMockRequest({
+                user: testUtils.createMockUser({ role: 'parent', email: 'parent@test.com' }),
+                body: {
+                    familyId: '507f1f77bcf86cd799439011',
+                    familyName: 'Updated Family',
+                    email: 'updated@test.com',
+                    familyAvatar: '/new-avatar.png'
+                }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateFamily(mockReq as any, mockRes as any);
+
+            expect(mockFamilyData.familyName).toBe('Updated Family');
+            expect(mockFamilyData.email).toBe('updated@test.com');
+            expect(mockFamilyData.familyAvatar).toBe('/new-avatar.png');
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+        });
+
+        it('should return 401 if user not authenticated', async () => {
+            const mockReq = testUtils.createMockRequest({ user: null });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateFamily(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(401);
+        });
+
+        it('should return 401 if user role is child', async () => {
+            const mockReq = testUtils.createMockRequest({
+                user: testUtils.createMockUser({ role: 'child' })
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateFamily(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(401);
+        });
+
+        it('should return 400 if email already exists', async () => {
+            const mockFamilyData = testUtils.createMockFamily({ email: 'parent@test.com' });
+            const existingFamily = testUtils.createMockFamily({ email: 'duplicate@test.com' });
+            
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+            mockFamily.findOne.mockResolvedValue(existingFamily as any);
+
+            const mockReq = testUtils.createMockRequest({
+                user: testUtils.createMockUser({ role: 'parent', email: 'parent@test.com' }),
+                body: {
+                    familyId: '507f1f77bcf86cd799439011',
+                    email: 'duplicate@test.com'
+                }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateFamily(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+        });
+
+        it('should return 400 if family name already exists', async () => {
+            const mockFamilyData = testUtils.createMockFamily({ 
+                email: 'parent@test.com',
+                familyName: 'Original Family'
+            });
+            const existingFamily = testUtils.createMockFamily({ 
+                familyName: 'Duplicate Family',
+                _id: 'different-family-id' // Different ID to pass the $ne check
+            });
+            
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+            // The function only checks for name duplicates if familyName is provided
+            // and only checks email if email is provided
+            mockFamily.findOne.mockResolvedValue(existingFamily as any);
+
+            const mockReq = testUtils.createMockRequest({
+                user: testUtils.createMockUser({ role: 'parent', email: 'parent@test.com' }),
+                body: {
+                    familyId: testUtils.ids.family,
+                    familyName: 'Duplicate Family' // Only providing familyName, not email
+                }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateFamily(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({ 
+                error: 'A family with the same name already exists.' 
+            });
+        });
+
+        it('should update user emails when family email changes', async () => {
+            const mockFamilyData = testUtils.createMockFamily({ 
+                email: 'parent@test.com',
+                save: jest.fn().mockResolvedValue(true)
+            });
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+            mockFamily.findOne.mockResolvedValue(null);
+            mockUser.updateMany.mockResolvedValue({} as any);
+
+            const mockReq = testUtils.createMockRequest({
+                user: testUtils.createMockUser({ role: 'parent', email: 'parent@test.com' }),
+                body: {
+                    familyId: '507f1f77bcf86cd799439011',
+                    email: 'newemail@test.com'
+                }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateFamily(mockReq as any, mockRes as any);
+
+            expect(mockUser.updateMany).toHaveBeenCalledWith(
+                { familyId: '507f1f77bcf86cd799439011' },
+                { $set: { email: 'newemail@test.com' } }
+            );
         });
     });
 });
