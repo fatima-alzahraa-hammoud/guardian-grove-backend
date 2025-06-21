@@ -738,4 +738,108 @@ describe('Goal Controller Tests', () => {
             expect(mockRes.json).toHaveBeenCalledWith({ error: 'Task not found' });
         });
     });
+
+    // 9. test deleteTask API
+    describe('deleteTask', () => {
+        const deleteTaskData = {
+            userId: testUtils.ids.user,
+            goalId: testUtils.ids.goal,
+            taskId: testUtils.ids.task
+        };
+
+        it('should delete task successfully', async () => {
+            const mockTask = testUtils.createMockTask();
+            const mockGoal = testUtils.createMockGoal({ 
+                tasks: [mockTask],
+                splice: jest.fn().mockReturnValue([mockTask])
+            });
+            mockGoal.tasks.splice = jest.fn().mockReturnValue([mockTask]);
+            mockGoal.tasks.findIndex = jest.fn().mockReturnValue(0);
+
+            const mockUserData = testUtils.createMockUser({ 
+                goals: [mockGoal],
+                save: jest.fn().mockResolvedValue(true)
+            });
+            
+            mockUser.findById.mockResolvedValue(mockUserData as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: testUtils.createMockUser({ role: 'parent' }),
+                body: deleteTaskData
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await deleteTask(mockReq as any, mockRes as any);
+
+            expect(mockUserData.save).toHaveBeenCalled();
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                message: 'Task deleted successfully',
+                DeletedTask: expect.any(Object)
+            });
+        });
+
+        it('should return 401 if user not authorized', async () => {
+            const mockReq = testUtils.createMockRequest({ 
+                user: testUtils.createMockUser({ role: 'child' }),
+                body: deleteTaskData
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await deleteTask(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(401);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Unauthorized' });
+        });
+
+        it('should return 404 if user not found', async () => {
+            mockUser.findById.mockResolvedValue(null);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: testUtils.createMockUser({ role: 'parent' }),
+                body: deleteTaskData
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await deleteTask(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'User not found' });
+        });
+
+        it('should return 404 if goal not found', async () => {
+            const mockUserData = testUtils.createMockUser({ goals: [] });
+            mockUser.findById.mockResolvedValue(mockUserData as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: testUtils.createMockUser({ role: 'parent' }),
+                body: deleteTaskData
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await deleteTask(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Goal not found' });
+        });
+
+        it('should return 404 if task not found', async () => {
+            const mockGoal = testUtils.createMockGoal({ tasks: [] });
+            mockGoal.tasks.findIndex = jest.fn().mockReturnValue(-1);
+            
+            const mockUserData = testUtils.createMockUser({ goals: [mockGoal] });
+            mockUser.findById.mockResolvedValue(mockUserData as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: testUtils.createMockUser({ role: 'parent' }),
+                body: deleteTaskData
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await deleteTask(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Task not found' });
+        });
+    });
 });
