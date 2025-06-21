@@ -1,5 +1,5 @@
 import { testUtils } from '../setup';
-import { createAchievement, updateAchievement } from '../../src/controllers/achievement.controller';
+import { createAchievement, deleteAchievement, updateAchievement } from '../../src/controllers/achievement.controller';
 import { Achievement } from '../../src/models/achievements.model';
 import { User } from '../../src/models/user.model';
 import { Family } from '../../src/models/family.model';
@@ -212,6 +212,64 @@ describe('Achievements Controller Tests', () => {
             await updateAchievement(mockReq as any, mockRes as any);
 
             expect(mockAchievement.findByIdAndUpdate).not.toHaveBeenCalled();
+        });
+    });
+
+    // 3. test deleteAchievement API
+    describe('deleteAchievement', () => {
+        const achievementId = testUtils.ids.achievement;
+
+        it('should delete achievement successfully', async () => {
+            const mockDeletedAchievement = testUtils.createMockAchievement();
+            
+            mockAchievement.findByIdAndDelete.mockResolvedValue(mockDeletedAchievement as any);
+            mockUser.updateMany.mockResolvedValue({ modifiedCount: 2 } as any);
+            mockFamily.updateMany.mockResolvedValue({ modifiedCount: 1 } as any);
+
+            const mockReq = testUtils.createMockRequest({ body: { achievementId } });
+            const mockRes = testUtils.createMockResponse();
+
+            await deleteAchievement(mockReq as any, mockRes as any);
+
+            expect(mockAchievement.findByIdAndDelete).toHaveBeenCalledWith(achievementId);
+            expect(mockUser.updateMany).toHaveBeenCalledWith(
+                { 'achievements.achievementId': achievementId },
+                { $pull: { achievements: { achievementId } } }
+            );
+            expect(mockFamily.updateMany).toHaveBeenCalledWith(
+                { 'achievements.achievementId': achievementId },
+                { $pull: { achievements: { achievementId } } }
+            );
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                message: 'Achievement deleted successfully',
+                achievement: mockDeletedAchievement
+            });
+        });
+
+        it('should return 404 if achievement not found', async () => {
+            mockAchievement.findByIdAndDelete.mockResolvedValue(null);
+
+            const mockReq = testUtils.createMockRequest({ body: { achievementId } });
+            const mockRes = testUtils.createMockResponse();
+
+            await deleteAchievement(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({ 
+                error: 'Achievement not found' 
+            });
+        });
+
+        it('should return early if checkId fails', async () => {
+            mockCheckId.checkId.mockReturnValue(false);
+
+            const mockReq = testUtils.createMockRequest({ body: { achievementId: 'invalid-id' } });
+            const mockRes = testUtils.createMockResponse();
+
+            await deleteAchievement(mockReq as any, mockRes as any);
+
+            expect(mockAchievement.findByIdAndDelete).not.toHaveBeenCalled();
         });
     });
 });
