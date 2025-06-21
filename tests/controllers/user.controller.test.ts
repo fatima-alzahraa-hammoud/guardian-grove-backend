@@ -1,5 +1,7 @@
 import { testUtils } from '../setup';
-import {  getUsers, getUserById, createUser, editUserProfile} from '../../src/controllers/user.controller';
+import {  getUsers, getUserById, createUser, editUserProfile,
+    deleteUser, 
+} from '../../src/controllers/user.controller';
 import { User } from '../../src/models/user.model';
 import * as generateSecurePassword from '../../src/utils/generateSecurePassword';
 import * as checkId from '../../src/utils/checkId';
@@ -404,6 +406,64 @@ describe('User Controller Tests', () => {
             expect(mockRes.status).toHaveBeenCalledWith(400);
             expect(mockRes.json).toHaveBeenCalledWith({ 
                 error: 'A user with the same email and name already exists.' 
+            });
+        });
+    });
+
+    // 5. test deleteUser API
+    describe('deleteUser', () => {
+        it('should delete user successfully', async () => {
+            const mockUserData = testUtils.createMockUser();
+            const mockFamilyData = testUtils.createMockFamily({ 
+                members: [{ _id: '507f1f77bcf86cd799439011', role: 'child', name: 'Test', gender: 'male', avatar: '/avatar.png' }]
+            });
+
+            mockUser.findById.mockResolvedValue(mockUserData as any);
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+            mockUser.countDocuments.mockResolvedValue(2); // More than 1 parent
+            mockUser.findByIdAndDelete.mockResolvedValue(mockUserData as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: { userId: '507f1f77bcf86cd799439011' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await deleteUser(mockReq as any, mockRes as any);
+
+            expect(mockUser.findByIdAndDelete).toHaveBeenCalledWith('507f1f77bcf86cd799439011');
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+        });
+
+        it('should return 401 if user not authenticated', async () => {
+            const mockReq = testUtils.createMockRequest({ user: null });
+            const mockRes = testUtils.createMockResponse();
+
+            await deleteUser(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(401);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Unauthorized' });
+        });
+
+        it('should return 400 if trying to delete last parent', async () => {
+            const mockParent = testUtils.createMockUser({ role: 'parent' });
+            const mockFamilyData = testUtils.createMockFamily();
+
+            mockUser.findById.mockResolvedValue(mockParent as any);
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+            mockUser.countDocuments.mockResolvedValue(1); // Only 1 parent
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockParent,
+                body: { userId: '507f1f77bcf86cd799439011' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await deleteUser(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({ 
+                error: 'Cannot delete the last parent in the family' 
             });
         });
     });
