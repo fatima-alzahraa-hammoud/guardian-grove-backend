@@ -95,15 +95,175 @@ export const testUtils = {
         ...overrides
     }),
 
-    // Create mock family based on your Family model
-    createMockFamily: (overrides = {}) => ({
-        _id: '507f1f77bcf86cd799439012',
-        email: 'family@example.com',
-        members: [],
-        totalStars: 500,
-        familyName: 'Test Family',
-        // Mock Mongoose methods
-        save: jest.fn().mockResolvedValue(true),
+    // Create mock family based on your complete Family model schema
+    createMockFamily: (overrides = {}) => {
+        // Create default arrays with mock methods
+        const defaultGoals = Object.assign([], {
+            find: jest.fn(),
+            filter: jest.fn(),
+            push: jest.fn(),
+            splice: jest.fn(),
+            findIndex: jest.fn(),
+            flatMap: jest.fn(),
+            every: jest.fn(),
+            map: jest.fn()
+        });
+
+        const defaultMembers = Object.assign([
+            {
+                _id: '507f1f77bcf86cd799439030',
+                name: 'John Doe',
+                role: 'parent',
+                gender: 'male',
+                avatar: '/assets/images/avatars/parent/avatar1.png'
+            },
+            {
+                _id: '507f1f77bcf86cd799439031', 
+                name: 'Jane Doe',
+                role: 'child',
+                gender: 'female',
+                avatar: '/assets/images/avatars/child/avatar2.png'
+            }
+        ], {
+            map: jest.fn(),
+            find: jest.fn(),
+            filter: jest.fn(),
+            push: jest.fn(),
+            splice: jest.fn()
+        });
+
+        const defaultAchievements = Object.assign([], {
+            push: jest.fn(),
+            find: jest.fn(),
+            filter: jest.fn()
+        });
+
+        const defaultNotifications = Object.assign([], {
+            push: jest.fn(),
+            find: jest.fn(),
+            filter: jest.fn()
+        });
+
+        const defaultSharedStories = Object.assign([], {
+            push: jest.fn(),
+            find: jest.fn(),
+            filter: jest.fn()
+        });
+
+        return {
+            _id: '507f1f77bcf86cd799439012',
+            familyName: 'Test Family',
+            members: defaultMembers,
+            email: 'family@example.com',
+            createdAt: new Date('2024-01-01'),
+            totalStars: 500,
+            tasks: 10,
+            notifications: defaultNotifications,
+            goals: defaultGoals,
+            achievements: defaultAchievements,
+            stars: {
+                daily: 50,
+                weekly: 150,
+                monthly: 300,
+                yearly: 500
+            },
+            taskCounts: {
+                daily: 2,
+                weekly: 5,
+                monthly: 8,
+                yearly: 10
+            },
+            familyAvatar: '/assets/images/family-avatars/default.png',
+            sharedStories: defaultSharedStories,
+            // Mock Mongoose methods
+            save: jest.fn().mockResolvedValue(true),
+            toJSON: jest.fn(),
+            toObject: jest.fn(),
+            equals: jest.fn((id: any) => id === '507f1f77bcf86cd799439012'),
+            ...overrides
+        };
+    },
+
+    // Create mock goal based on your goal schema
+    createMockGoal: (overrides = {}) => ({
+        _id: '507f1f77bcf86cd799439020',
+        title: 'Test Goal',
+        description: 'A test family goal',
+        type: 'weekly',
+        dueDate: new Date('2024-12-31'),
+        isCompleted: false,
+        progress: 0,
+        createdAt: new Date('2024-01-01'),
+        rewards: {
+            stars: 50,
+            coins: 25,
+            achievementName: '',
+            achievementId: null
+        },
+        tasks: [],
+        // Mock methods
+        toString: jest.fn(() => '507f1f77bcf86cd799439020'),
+        ...overrides
+    }),
+
+    // Create mock task based on your task interface
+    createMockTask: (overrides = {}) => ({
+        _id: '507f1f77bcf86cd799439025',
+        title: 'Test Task',
+        description: 'A test family task',
+        type: 'family',
+        isCompleted: false,
+        rewards: {
+            stars: 10,
+            coins: 5
+        },
+        createdAt: new Date('2024-01-15'),
+        // Mock methods
+        toString: jest.fn(() => '507f1f77bcf86cd799439025'),
+        ...overrides
+    }),
+
+    // Create mock achievement based on your Achievement model
+    createMockAchievement: (overrides = {}) => ({
+        _id: '507f1f77bcf86cd799439040',
+        title: 'Test Achievement',
+        description: 'A test achievement',
+        category: 'goals',
+        difficulty: 'easy',
+        starsReward: 100,
+        coinsReward: 50,
+        icon: '/assets/icons/achievement.png',
+        // Mock methods
+        toString: jest.fn(() => '507f1f77bcf86cd799439040'),
+        ...overrides
+    }),
+
+    // Create mock unlocked achievement
+    createMockUnlockedAchievement: (overrides = {}) => ({
+        achievementId: '507f1f77bcf86cd799439040',
+        unlockedAt: new Date('2024-01-15'),
+        ...overrides
+    }),
+
+    // Create mock notification
+    createMockNotification: (overrides = {}) => ({
+        _id: '507f1f77bcf86cd799439050',
+        title: 'Test Notification',
+        message: 'This is a test notification',
+        type: 'info',
+        isRead: false,
+        createdAt: new Date('2024-01-15'),
+        ...overrides
+    }),
+
+    // Create mock story
+    createMockStory: (overrides = {}) => ({
+        _id: '507f1f77bcf86cd799439055',
+        title: 'Test Story',
+        content: 'Once upon a time...',
+        author: 'Test Author',
+        createdAt: new Date('2024-01-15'),
+        isShared: true,
         ...overrides
     }),
 
@@ -113,14 +273,14 @@ export const testUtils = {
         title: 'Test Adventure',
         description: 'A test adventure',
         challenges: [
-        {
-            _id: '507f1f77bcf86cd799439016',
-            title: 'Test Challenge',
-            description: 'A test challenge',
-            starsReward: 10,
-            coinsReward: 5,
-            equals: jest.fn((id: any) => id === '507f1f77bcf86cd799439016')
-        }
+            {
+                _id: '507f1f77bcf86cd799439016',
+                title: 'Test Challenge',
+                description: 'A test challenge',
+                starsReward: 10,
+                coinsReward: 5,
+                equals: jest.fn((id: any) => id === '507f1f77bcf86cd799439016')
+            }
         ],
         starsReward: 100,
         coinsReward: 50,
@@ -171,13 +331,63 @@ export const testUtils = {
         ...overrides
     }),
 
-    createMockNotification: (overrides = {}) => ({
-        _id: '507f1f77bcf86cd799439019',
-        title: 'Test Notification',
-        message: 'This is a test notification',
-        type: 'info',
-        isRead: false,
-        createdAt: new Date(),
+    // Helper method to create mock family member
+    createMockFamilyMember: (overrides = {}) => ({
+        _id: '507f1f77bcf86cd799439030',
+        name: 'Test Member',
+        role: 'child',
+        gender: 'male',
+        avatar: '/assets/images/avatars/child/avatar1.png',
         ...overrides
-    })
+    }),
+
+    // Helper method to create time period mock for getTimePeriod utility
+    createMockTimePeriod: (timeFrame = 'monthly') => {
+        const now = new Date();
+        const start = new Date(now.getFullYear(), now.getMonth(), 1);
+        const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        
+        return { start, end };
+    },
+
+    // Helper to create mock leaderboard entry
+    createMockLeaderboardEntry: (overrides = {}) => ({
+        familyId: '507f1f77bcf86cd799439012',
+        familyName: 'Test Family',
+        familyAvatar: '/assets/images/family-avatars/default.png',
+        stars: 100,
+        tasks: 10,
+        rank: 1,
+        ...overrides
+    }),
+
+    // Helper to create mock family progress data
+    createMockFamilyProgress: (overrides = {}) => ({
+        totalTasks: 10,
+        completedTasks: 7,
+        totalGoals: 3,
+        completedGoals: 2,
+        totalAchievements: 50,
+        unlockedAchievements: 15,
+        ...overrides
+    }),
+
+    // Date helpers for consistent testing
+    dates: {
+        past: new Date('2023-01-01'),
+        recent: new Date('2024-01-15'),
+        current: new Date('2024-01-20'),
+        future: new Date('2024-12-31')
+    },
+
+    // Common test IDs
+    ids: {
+        family: '507f1f77bcf86cd799439012',
+        user: '507f1f77bcf86cd799439011',
+        goal: '507f1f77bcf86cd799439020',
+        task: '507f1f77bcf86cd799439025',
+        achievement: '507f1f77bcf86cd799439040',
+        adventure: '507f1f77bcf86cd799439015',
+        challenge: '507f1f77bcf86cd799439016'
+    }
 };
