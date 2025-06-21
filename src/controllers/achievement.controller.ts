@@ -344,7 +344,6 @@ export const getLastUnlockedAchievement = async (req: CustomRequest, res: Respon
         
         res.status(200).send({message: 'Retrieve unlocked achievement successfully', lastUnlockedAchievement: achievementDetails});
     } catch (error) {
-        console.error("Error fetching last unlocked achievement:", error);
         res.status(500).json({ message: "Server error" });
     }
 };
@@ -387,7 +386,6 @@ export const getLastFamilyUnlockedAchievement = async (req: CustomRequest, res: 
         
         res.status(200).send({message: 'Retrieve last unlocked family achievement successfully', lastUnlockedAchievement: achievementDetails});
     } catch (error) {
-        console.error("Error fetching last unlocked achievement:", error);
         res.status(500).json({ message: "Server error" });
     }
 };
