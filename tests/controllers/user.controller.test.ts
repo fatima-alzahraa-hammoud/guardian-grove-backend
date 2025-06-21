@@ -32,15 +32,31 @@ describe('User Controller Tests', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         
-        // 🎯 ADD: Ensure User model methods are mocked
+        // Setup User model methods
         mockUser.find = jest.fn();
         mockUser.findOne = jest.fn();
         mockUser.findById = jest.fn();
         mockUser.create = jest.fn();
+        mockUser.findByIdAndUpdate = jest.fn();
+        mockUser.findByIdAndDelete = jest.fn();
+        mockUser.countDocuments = jest.fn();
+
+        // Setup Adventure model methods
+        mockAdventure.findById = jest.fn();
+
+        // Setup Family model methods
+        mockFamily.findOne = jest.fn();
+        mockFamily.findById = jest.fn();
+        mockFamily.findByIdAndUpdate = jest.fn();
         
-        // Your existing mocks
+        // Setup utility mocks
         mockGenerateSecurePassword.generateSecurePassword.mockReturnValue('TempPass123!');
         mockCheckId.checkId.mockReturnValue(true);
+        jest.spyOn(mockEmailService, 'sendMail').mockResolvedValue(undefined);
+        jest.spyOn(mockRecalculateFamilyMemberRanks, 'recalculateFamilyMemberRanks').mockResolvedValue(undefined);
+        
+        (jest.spyOn(bcrypt, 'hash') as jest.Mock).mockResolvedValue('hashedPassword');
+        (jest.spyOn(bcrypt, 'compare') as jest.Mock).mockResolvedValue(true);
     });
 
     // test getUsers API
