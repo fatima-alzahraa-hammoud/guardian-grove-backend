@@ -1,5 +1,5 @@
 import { testUtils } from '../setup';
-import { createFamilyTasks, deleteFamily, deleteFamilyGoal, getAllFamilies, getFamily, getFamilyGoals, getFamilyMembers, 
+import { createFamilyTasks, deleteFamily, deleteFamilyGoal, deleteFamilyTask, getAllFamilies, getFamily, getFamilyGoals, getFamilyMembers, 
     updateFamily, updateFamilyGoal, 
     updateFamilyTask
 } from '../../src/controllers/family.controller';
@@ -857,6 +857,64 @@ describe('Family Controller Tests', () => {
             await updateFamilyTask(mockReq as any, mockRes as any);
 
             expect(mockRes.status).toHaveBeenCalledWith(404);
+        });
+    });
+
+    // 11. test deleteFamilyTask API
+    describe('deleteFamilyTask', () => {
+        it('should delete family task successfully', async () => {
+            const mockTask = {
+                _id: { toString: () => '507f1f77bcf86cd799439025' },
+                title: 'Task to delete'
+            };
+            const mockGoal = {
+                _id: { toString: () => '507f1f77bcf86cd799439020' },
+                tasks: [mockTask]
+            };
+            const mockFamilyData = testUtils.createMockFamily({
+                email: 'parent@test.com',
+                goals: [mockGoal],
+                save: jest.fn().mockResolvedValue(true)
+            });
+            mockFamilyData.goals.find = jest.fn().mockReturnValue(mockGoal);
+            mockGoal.tasks.findIndex = jest.fn().mockReturnValue(0);
+            mockGoal.tasks.splice = jest.fn().mockReturnValue([mockTask]);
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+
+            const mockReq = testUtils.createMockRequest({
+                user: testUtils.createMockUser({ role: 'parent', email: 'parent@test.com' }),
+                body: {
+                    familyId: '507f1f77bcf86cd799439011',
+                    goalId: '507f1f77bcf86cd799439020',
+                    taskId: '507f1f77bcf86cd799439025'
+                }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await deleteFamilyTask(mockReq as any, mockRes as any);
+
+            expect(mockGoal.tasks.splice).toHaveBeenCalledWith(0, 1);
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+        });
+
+        it('should return 401 if user not authenticated', async () => {
+            const mockReq = testUtils.createMockRequest({ user: null });
+            const mockRes = testUtils.createMockResponse();
+
+            await deleteFamilyTask(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(401);
+        });
+
+        it('should return 401 if user role unauthorized', async () => {
+            const mockReq = testUtils.createMockRequest({
+                user: testUtils.createMockUser({ role: 'child' })
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await deleteFamilyTask(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(401);
         });
     });
 });
