@@ -1,5 +1,5 @@
 import { testUtils } from '../setup';
-import { getAllFamilies, getFamily, getFamilyMembers, updateFamily } from '../../src/controllers/family.controller';
+import { deleteFamily, getAllFamilies, getFamily, getFamilyMembers, updateFamily } from '../../src/controllers/family.controller';
 import { Family } from '../../src/models/family.model';
 import { User } from '../../src/models/user.model';
 import { Achievement } from '../../src/models/achievements.model';
@@ -344,6 +344,77 @@ describe('Family Controller Tests', () => {
                 { familyId: '507f1f77bcf86cd799439011' },
                 { $set: { email: 'newemail@test.com' } }
             );
+        });
+    });
+
+    // 5. test deleteFamily API
+    describe('deleteFamily', () => {
+        it('should delete family successfully', async () => {
+            const mockFamilyData = testUtils.createMockFamily({ email: 'parent@test.com' });
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+            mockUser.deleteMany.mockResolvedValue({} as any);
+            mockFamily.findByIdAndDelete.mockResolvedValue(mockFamilyData as any);
+
+            const mockReq = testUtils.createMockRequest({
+                user: testUtils.createMockUser({ role: 'parent', email: 'parent@test.com' }),
+                body: { familyId: '507f1f77bcf86cd799439011' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await deleteFamily(mockReq as any, mockRes as any);
+
+            expect(mockUser.deleteMany).toHaveBeenCalledWith({ familyId: '507f1f77bcf86cd799439011' });
+            expect(mockFamily.findByIdAndDelete).toHaveBeenCalledWith('507f1f77bcf86cd799439011');
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+        });
+
+        it('should return 401 if user not authenticated', async () => {
+            const mockReq = testUtils.createMockRequest({ user: null });
+            const mockRes = testUtils.createMockResponse();
+
+            await deleteFamily(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(401);
+        });
+
+        it('should return 401 if user role unauthorized', async () => {
+            const mockReq = testUtils.createMockRequest({
+                user: testUtils.createMockUser({ role: 'child' })
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await deleteFamily(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(401);
+        });
+
+        it('should return 404 if family not found', async () => {
+            mockFamily.findById.mockResolvedValue(null);
+
+            const mockReq = testUtils.createMockRequest({
+                user: testUtils.createMockUser({ role: 'parent' }),
+                body: { familyId: '507f1f77bcf86cd799439011' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await deleteFamily(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+        });
+
+        it('should return 401 if user email does not match family email', async () => {
+            const mockFamilyData = testUtils.createMockFamily({ email: 'different@test.com' });
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+
+            const mockReq = testUtils.createMockRequest({
+                user: testUtils.createMockUser({ role: 'parent', email: 'parent@test.com' }),
+                body: { familyId: '507f1f77bcf86cd799439011' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await deleteFamily(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(401);
         });
     });
 });
