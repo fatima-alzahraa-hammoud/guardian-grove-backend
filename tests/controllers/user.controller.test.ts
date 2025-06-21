@@ -1,7 +1,7 @@
 import { testUtils } from '../setup';
 import {  getUsers, getUserById, createUser, editUserProfile,
     deleteUser, updatePassword, getUserStars, updateUserStars,
-    getUserCoins, updateUserCoins, getLocation
+    getUserCoins, updateUserCoins, getLocation, updateLocation
 } from '../../src/controllers/user.controller';
 import { User } from '../../src/models/user.model';
 import * as generateSecurePassword from '../../src/utils/generateSecurePassword';
@@ -892,4 +892,64 @@ describe('User Controller Tests', () => {
             expect(mockRes.json).toHaveBeenCalledWith({ error: 'Unauthorized' });
         });
     });
+
+    // 12. test updateLocation API
+    describe('updateLocation', () => {
+        it('should update user location successfully', async () => {
+            const mockUserData = testUtils.createMockUser({ currentLocation: 'Old Location' });
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: { currentLocation: 'New Location' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateLocation(mockReq as any, mockRes as any);
+
+            expect(mockUserData.currentLocation).toBe('New Location');
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.send).toHaveBeenCalledWith({
+                message: "User location updated successfully",
+                user: mockUserData
+            });
+        });
+
+        it('should return 401 if user not authenticated', async () => {
+            const mockReq = testUtils.createMockRequest({ user: null });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateLocation(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(401);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Unauthorized' });
+        });
+
+        it('should return 400 if location is invalid', async () => {
+            const mockUserData = testUtils.createMockUser();
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: { currentLocation: '' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateLocation(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Location must be valid.' });
+        });
+
+        it('should return 400 if location is not string', async () => {
+            const mockUserData = testUtils.createMockUser();
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: { currentLocation: 123 }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateLocation(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Location must be valid.' });
+        });
+    });
+
 });
