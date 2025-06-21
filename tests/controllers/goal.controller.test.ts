@@ -469,4 +469,93 @@ describe('Goal Controller Tests', () => {
         });
     });
 
+    // 6. test createUserTask API
+    describe('createUserTask', () => {
+        const taskData = {
+            userId: testUtils.ids.user,
+            goalId: testUtils.ids.goal,
+            title: 'Test Task',
+            description: 'Test task description',
+            rewards: { stars: 10, coins: 5 }
+        };
+
+        it('should create task successfully', async () => {
+            const mockGoal = testUtils.createMockGoal({ tasks: [] });
+            const mockUserData = testUtils.createMockUser({ 
+                goals: [mockGoal],
+                save: jest.fn().mockResolvedValue(true)
+            });
+            
+            mockUser.findById.mockResolvedValue(mockUserData as any);
+
+            const mockReq = testUtils.createMockRequest({ body: taskData });
+            const mockRes = testUtils.createMockResponse();
+
+            await createUserTask(mockReq as any, mockRes as any);
+
+            expect(mockUserData.save).toHaveBeenCalled();
+            expect(mockRes.status).toHaveBeenCalledWith(201);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                message: 'Task created successfully',
+                Task: expect.objectContaining({
+                    title: 'Test Task',
+                    description: 'Test task description'
+                })
+            });
+        });
+
+        it('should handle completed goal becoming uncompleted', async () => {
+            const mockGoal = testUtils.createMockGoal({ 
+                isCompleted: true,
+                rewards: { stars: 50, coins: 25 },
+                tasks: []
+            });
+            const mockUserData = testUtils.createMockUser({ 
+                goals: [mockGoal],
+                stars: 150,
+                coins: 75,
+                familyId: testUtils.ids.family,
+                save: jest.fn().mockResolvedValue(true)
+            });
+            
+            mockUser.findById.mockResolvedValue(mockUserData as any);
+            mockFamily.findByIdAndUpdate.mockResolvedValue({} as any);
+
+            const mockReq = testUtils.createMockRequest({ body: taskData });
+            const mockRes = testUtils.createMockResponse();
+
+            await createUserTask(mockReq as any, mockRes as any);
+
+            expect(mockGoal.isCompleted).toBe(false);
+            expect(mockUserData.stars).toBe(100); // 150 - 50
+            expect(mockUserData.coins).toBe(50); // 75 - 25
+            expect(mockFamily.findByIdAndUpdate).toHaveBeenCalled();
+            expect(mockRecalculateFamilyMemberRanks.recalculateFamilyMemberRanks).toHaveBeenCalled();
+        });
+
+        it('should return 400 if required fields missing', async () => {
+            const mockGoal = testUtils.createMockGoal({ tasks: [] });
+            const mockUserData = testUtils.createMockUser({ 
+                goals: [mockGoal],
+                save: jest.fn().mockResolvedValue(true)
+            });
+            
+            mockUser.findById.mockResolvedValue(mockUserData as any);
+
+            const incompleteData = { 
+                userId: testUtils.ids.user,
+                goalId: testUtils.ids.goal,
+                description: 'Test task description',
+                rewards: { stars: 10, coins: 5 }
+            };
+
+            const mockReq = testUtils.createMockRequest({ body: incompleteData });
+            const mockRes = testUtils.createMockResponse();
+
+            await createUserTask(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'All required fields must be filled.' });
+        });
+    });
 });
