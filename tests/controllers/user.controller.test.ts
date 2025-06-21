@@ -1,7 +1,7 @@
 import { testUtils } from '../setup';
 import {  getUsers, getUserById, createUser, editUserProfile,
     deleteUser, updatePassword, getUserStars, updateUserStars,
-    getUserCoins, updateUserCoins
+    getUserCoins, updateUserCoins, getLocation
 } from '../../src/controllers/user.controller';
 import { User } from '../../src/models/user.model';
 import * as generateSecurePassword from '../../src/utils/generateSecurePassword';
@@ -866,4 +866,30 @@ describe('User Controller Tests', () => {
         });
     });
 
+    // 11. test getLocation API
+    describe('getLocation', () => {
+        it('should get user location successfully', async () => {
+            const mockUserData = testUtils.createMockUser({ currentLocation: 'New York' });
+            const mockReq = testUtils.createMockRequest({ user: mockUserData });
+            const mockRes = testUtils.createMockResponse();
+
+            await getLocation(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.send).toHaveBeenCalledWith({
+                message: "Location retrieved successfully",
+                location: 'New York'
+            });
+        });
+
+        it('should return 401 if user not authenticated', async () => {
+            const mockReq = testUtils.createMockRequest({ user: null });
+            const mockRes = testUtils.createMockResponse();
+
+            await getLocation(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(401);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Unauthorized' });
+        });
+    });
 });
