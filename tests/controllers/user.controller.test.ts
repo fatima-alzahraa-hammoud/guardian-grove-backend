@@ -474,7 +474,6 @@ describe('User Controller Tests', () => {
             const mockUserData = testUtils.createMockUser();
             mockUser.findById.mockResolvedValue(mockUserData as any);
             
-            // ✅ Fix: Use mockImplementation for sequential calls
             (mockBcrypt.compare as jest.Mock)
                 .mockResolvedValueOnce(true)   // Old password matches
                 .mockResolvedValueOnce(false); // New password is different
@@ -499,12 +498,9 @@ describe('User Controller Tests', () => {
             });
         });
 
-        // Also fix this test:
         it('should return 400 if old password incorrect', async () => {
             const mockUserData = testUtils.createMockUser();
             mockUser.findById.mockResolvedValue(mockUserData as any);
-            
-            // ✅ Fix: Cast to jest.Mock
             (mockBcrypt.compare as jest.Mock).mockResolvedValue(false);
 
             const mockReq = testUtils.createMockRequest({ 
@@ -524,12 +520,9 @@ describe('User Controller Tests', () => {
             expect(mockRes.json).toHaveBeenCalledWith({ error: 'Old password is incorrect.' });
         });
 
-        // And this one:
         it('should return 400 if new password same as old', async () => {
             const mockUserData = testUtils.createMockUser();
             mockUser.findById.mockResolvedValue(mockUserData as any);
-            
-            // ✅ Fix: Cast to jest.Mock
             (mockBcrypt.compare as jest.Mock).mockResolvedValue(true);
 
             const mockReq = testUtils.createMockRequest({ 
@@ -551,12 +544,10 @@ describe('User Controller Tests', () => {
             });
         });
 
-        // And this one:
         it('should return 400 if password does not meet requirements', async () => {
             const mockUserData = testUtils.createMockUser();
             mockUser.findById.mockResolvedValue(mockUserData as any);
             
-            // ✅ Fix: Cast to jest.Mock for sequential calls
             (mockBcrypt.compare as jest.Mock)
                 .mockResolvedValueOnce(true)   // Old password matches
                 .mockResolvedValueOnce(false); // New password is different
