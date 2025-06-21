@@ -72,8 +72,6 @@ export const deleteItem = async(req:Request, res: Response): Promise<void> => {
             { $pull: { purchasedItems: { itemId } } }
         );
 
-        console.log("hello")
-
         res.status(200).json({ message: "Item deleted successfully" });
     } catch (error) {
         return throwError({ message: "Failed to delete. An unknown error occurred.", res, status: 500 });
