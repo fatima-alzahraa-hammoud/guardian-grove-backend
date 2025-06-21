@@ -19,9 +19,16 @@ const mockGenerateSecurePassword = generateSecurePassword as jest.Mocked<typeof 
 const mockCheckId = checkId as jest.Mocked<typeof checkId>;
 
 describe('User Controller Tests', () => {
-
     beforeEach(() => {
         jest.clearAllMocks();
+        
+        // 🎯 ADD: Ensure User model methods are mocked
+        mockUser.find = jest.fn();
+        mockUser.findOne = jest.fn();
+        mockUser.findById = jest.fn();
+        mockUser.create = jest.fn();
+        
+        // Your existing mocks
         mockGenerateSecurePassword.generateSecurePassword.mockReturnValue('TempPass123!');
         mockCheckId.checkId.mockReturnValue(true);
     });
