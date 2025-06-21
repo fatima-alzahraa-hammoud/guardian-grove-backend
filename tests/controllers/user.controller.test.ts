@@ -53,7 +53,7 @@ describe('User Controller Tests', () => {
             await getUsers(mockReq as any, mockRes as any);
 
             expect(mockRes.status).toHaveBeenCalledWith(500);
-            expect(mockRes.json).toHaveBeenCalledWith({ message: 'Error retrieving users' });
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Error retrieving users' });
         });
     });
 });
