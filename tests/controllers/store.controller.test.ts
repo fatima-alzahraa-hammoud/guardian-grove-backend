@@ -1,5 +1,5 @@
 import { testUtils } from '../setup';
-import { createItem, deleteItem, getStoreItems, updateItem } from '../../src/controllers/store.controller';
+import { buyItem, createItem, deleteItem, getStoreItems, updateItem } from '../../src/controllers/store.controller';
 import { StoreItem } from '../../src/models/storeItem.model';
 import { User } from '../../src/models/user.model';
 import * as checkId from '../../src/utils/checkId';
@@ -418,6 +418,183 @@ describe('Store Controller Tests', () => {
             expect(mockRes.json).toHaveBeenCalledWith({ 
                 error: 'Failed to update. An unknown error occurred.' 
             });
+        });
+    });
+
+    // 5. test buyItem API
+    describe('buyItem', () => {
+        const itemId = testUtils.ids.storeItem || '507f1f77bcf86cd799439060';
+        const buyItemData = { itemId };
+
+        it('should buy item successfully', async () => {
+            const mockItem = testUtils.createMockStoreItem({ price: 50 });
+            const mockUserData = testUtils.createMockUser({ 
+                coins: 100,
+                purchasedItems: [],
+                save: jest.fn().mockResolvedValue(true)
+            });
+            
+            mockStoreItem.findById.mockResolvedValue(mockItem as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: buyItemData 
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await buyItem(mockReq as any, mockRes as any);
+
+            expect(mockUserData.coins).toBe(50); // 100 - 50
+            expect(mockUserData.purchasedItems).toHaveLength(1);
+            expect(mockUserData.purchasedItems[0]).toEqual({
+                itemId: mockItem._id,
+                purchasedAt: expect.any(Date)
+            });
+            expect(mockUserData.save).toHaveBeenCalled();
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                message: 'Item purchased successfully',
+                item: mockItem
+            });
+        });
+
+        it('should return 401 if user not authenticated', async () => {
+            const mockReq = testUtils.createMockRequest({ 
+                user: null,
+                body: buyItemData 
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await buyItem(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(401);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Unauthorized' });
+        });
+
+        it('should return 404 if item not found', async () => {
+            mockStoreItem.findById.mockResolvedValue(null);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: testUtils.createMockUser(),
+                body: buyItemData 
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await buyItem(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Item not found' });
+        });
+
+        it('should return 400 if item already purchased', async () => {
+            const mockItem = testUtils.createMockStoreItem();
+            const mockUserData = testUtils.createMockUser({ 
+                purchasedItems: [{ 
+                    itemId: mockItem._id, 
+                    purchasedAt: new Date() 
+                }]
+            });
+            
+            mockStoreItem.findById.mockResolvedValue(mockItem as any);
+            
+            // Mock the some method
+            mockUserData.purchasedItems.some = jest.fn().mockReturnValue(true);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: buyItemData 
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await buyItem(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Item already purchased' });
+        });
+
+        it('should return 400 if user has insufficient coins', async () => {
+            const mockItem = testUtils.createMockStoreItem({ price: 100 });
+            const mockUserData = testUtils.createMockUser({ 
+                coins: 50, // Less than item price
+                purchasedItems: []
+            });
+            
+            mockStoreItem.findById.mockResolvedValue(mockItem as any);
+            
+            // Mock the some method to return false (not already purchased)
+            mockUserData.purchasedItems.some = jest.fn().mockReturnValue(false);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: buyItemData 
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await buyItem(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Insufficient coins' });
+        });
+
+        it('should handle exact coin amount', async () => {
+            const mockItem = testUtils.createMockStoreItem({ price: 100 });
+            const mockUserData = testUtils.createMockUser({ 
+                coins: 100, // Exactly the item price
+                purchasedItems: [],
+                save: jest.fn().mockResolvedValue(true)
+            });
+            
+            mockStoreItem.findById.mockResolvedValue(mockItem as any);
+            mockUserData.purchasedItems.some = jest.fn().mockReturnValue(false);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: buyItemData 
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await buyItem(mockReq as any, mockRes as any);
+
+            expect(mockUserData.coins).toBe(0); // 100 - 100
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+        });
+
+        it('should handle database save errors', async () => {
+            const mockItem = testUtils.createMockStoreItem({ price: 50 });
+            const mockUserData = testUtils.createMockUser({ 
+                coins: 100,
+                purchasedItems: [],
+                save: jest.fn().mockRejectedValue(new Error('Save failed'))
+            });
+            
+            mockStoreItem.findById.mockResolvedValue(mockItem as any);
+            mockUserData.purchasedItems.some = jest.fn().mockReturnValue(false);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: buyItemData 
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await buyItem(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(500);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Purchase failed' });
+        });
+
+        it('should handle item lookup errors', async () => {
+            mockStoreItem.findById.mockRejectedValue(new Error('Database error'));
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: testUtils.createMockUser(),
+                body: buyItemData 
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await buyItem(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(500);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Purchase failed' });
         });
     });
 });
