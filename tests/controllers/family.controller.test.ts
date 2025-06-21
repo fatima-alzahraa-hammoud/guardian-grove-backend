@@ -1,5 +1,7 @@
 import { testUtils } from '../setup';
-import { deleteFamily, getAllFamilies, getFamily, getFamilyMembers, updateFamily } from '../../src/controllers/family.controller';
+import { deleteFamily, getAllFamilies, getFamily, getFamilyMembers, 
+    updateFamily, updateFamilyGoal 
+} from '../../src/controllers/family.controller';
 import { Family } from '../../src/models/family.model';
 import { User } from '../../src/models/user.model';
 import { Achievement } from '../../src/models/achievements.model';
@@ -415,6 +417,140 @@ describe('Family Controller Tests', () => {
             await deleteFamily(mockReq as any, mockRes as any);
 
             expect(mockRes.status).toHaveBeenCalledWith(401);
+        });
+    });
+
+    // 6. test updateFamilyGoal API
+    describe('updateFamilyGoal', () => {
+        it('should update family goal successfully', async () => {
+            const mockGoal = {
+                _id: { toString: () => '507f1f77bcf86cd799439020' },
+                title: 'Original Goal',
+                description: 'Original Description',
+                type: 'weekly',
+                dueDate: new Date(),
+                rewards: { stars: 10, coins: 5 }
+            };
+            const mockFamilyData = testUtils.createMockFamily({
+                email: 'parent@test.com',
+                goals: [mockGoal],
+                save: jest.fn().mockResolvedValue(true)
+            });
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+
+            const mockReq = testUtils.createMockRequest({
+                user: testUtils.createMockUser({ role: 'parent', email: 'parent@test.com' }),
+                body: {
+                    familyId: '507f1f77bcf86cd799439011',
+                    goalId: '507f1f77bcf86cd799439020',
+                    title: 'Updated Goal',
+                    description: 'Updated Description',
+                    rewards: { stars: 20, coins: 10 }
+                }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateFamilyGoal(mockReq as any, mockRes as any);
+
+            expect(mockGoal.title).toBe('Updated Goal');
+            expect(mockGoal.description).toBe('Updated Description');
+            expect(mockGoal.rewards.stars).toBe(20);
+            expect(mockGoal.rewards.coins).toBe(10);
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+        });
+
+        it('should return 401 if user not authenticated', async () => {
+            const mockReq = testUtils.createMockRequest({ user: null });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateFamilyGoal(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(401);
+        });
+
+        it('should return 404 if goal not found', async () => {
+            const mockFamilyData = testUtils.createMockFamily({
+                email: 'parent@test.com',
+                goals: []
+            });
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+
+            const mockReq = testUtils.createMockRequest({
+                user: testUtils.createMockUser({ role: 'parent', email: 'parent@test.com' }),
+                body: {
+                    familyId: '507f1f77bcf86cd799439011',
+                    goalId: '507f1f77bcf86cd799439020'
+                }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateFamilyGoal(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+        });
+
+        it('should update goal with achievement rewards', async () => {
+            const mockGoal = {
+                _id: { toString: () => '507f1f77bcf86cd799439020' },
+                title: 'Original Goal',
+                rewards: { stars: 10, coins: 5 }
+            };
+            const mockFamilyData = testUtils.createMockFamily({
+                email: 'parent@test.com',
+                goals: [mockGoal],
+                save: jest.fn().mockResolvedValue(true)
+            });
+            const mockAchievementData = testUtils.createMockAchievement({ title: 'Great Achievement' });
+            
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+            mockAchievement.findById.mockResolvedValue(mockAchievementData as any);
+
+            const mockReq = testUtils.createMockRequest({
+                user: testUtils.createMockUser({ role: 'parent', email: 'parent@test.com' }),
+                body: {
+                    familyId: '507f1f77bcf86cd799439011',
+                    goalId: '507f1f77bcf86cd799439020',
+                    rewards: {
+                        achievementId: '507f1f77bcf86cd799439025'
+                    }
+                }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateFamilyGoal(mockReq as any, mockRes as any);
+
+            expect(mockGoal.rewards.achievementName).toBe('Great Achievement');
+            expect(mockGoal.rewards.achievementId).toBe('507f1f77bcf86cd799439025');
+        });
+
+        it('should return 404 if achievement not found', async () => {
+            const mockGoal = {
+                _id: { toString: () => '507f1f77bcf86cd799439020' },
+                rewards: { stars: 10, coins: 5 }
+            };
+            const mockFamilyData = testUtils.createMockFamily({
+                email: 'parent@test.com',
+                goals: [mockGoal]
+            });
+            
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+            mockAchievement.findById.mockResolvedValue(null);
+
+            const mockReq = testUtils.createMockRequest({
+                user: testUtils.createMockUser({ role: 'parent', email: 'parent@test.com' }),
+                body: {
+                    familyId: '507f1f77bcf86cd799439011',
+                    goalId: '507f1f77bcf86cd799439020',
+                    rewards: {
+                        achievementId: '507f1f77bcf86cd799439025'
+                    }
+                }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateFamilyGoal(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
         });
     });
 });
