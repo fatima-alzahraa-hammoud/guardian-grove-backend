@@ -1,4 +1,4 @@
-import { createChallenge } from '../../src/controllers/challenge.controller';
+import { createChallenge, getAllChallenges } from '../../src/controllers/challenge.controller';
 import { Adventure } from '../../src/models/adventure.model';
 import * as checkId from '../../src/utils/checkId';
 import { testUtils } from '../setup';
@@ -84,7 +84,7 @@ describe('Challenge Controller Tests', () => {
             });
             expect(mockRes.status).toHaveBeenCalledWith(201);
         });
-        
+
         it('should return 400 if required fields are missing', async () => {
             const incompleteData = {
                 adventureId,

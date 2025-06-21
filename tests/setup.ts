@@ -307,7 +307,7 @@ export const testUtils = {
     }),
 
     // Create mock adventure with challenges - ADDED FOR CHALLENGE CONTROLLER TESTS
-    createMockAdventureWithChallenges: (challenges = []) => {
+    createMockAdventureWithChallenges: (challenges : any[] = []) => {
         const defaultChallenges = challenges.length > 0 ? challenges : [
             {
                 _id: '507f1f77bcf86cd799439016', // testUtils.ids.challenge
