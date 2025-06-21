@@ -1,5 +1,5 @@
 import { testUtils } from '../setup';
-import { createItem, getStoreItems } from '../../src/controllers/store.controller';
+import { createItem, deleteItem, getStoreItems } from '../../src/controllers/store.controller';
 import { StoreItem } from '../../src/models/storeItem.model';
 import { User } from '../../src/models/user.model';
 import * as checkId from '../../src/utils/checkId';
@@ -239,6 +239,72 @@ describe('Store Controller Tests', () => {
             expect(mockRes.status).toHaveBeenCalledWith(500);
             expect(mockRes.json).toHaveBeenCalledWith({ 
                 error: 'An unknown error occurred.' 
+            });
+        });
+    });
+
+    // 3. test deleteItem API
+    describe('deleteItem', () => {
+        const itemId = testUtils.ids.storeItem || '507f1f77bcf86cd799439060';
+
+        it('should delete item successfully', async () => {
+            const mockDeletedItem = testUtils.createMockStoreItem();
+            
+            mockStoreItem.findByIdAndDelete.mockResolvedValue(mockDeletedItem as any);
+            mockUser.updateMany.mockResolvedValue({ modifiedCount: 2 } as any);
+
+            const mockReq = testUtils.createMockRequest({ params: { itemId } });
+            const mockRes = testUtils.createMockResponse();
+
+            await deleteItem(mockReq as any, mockRes as any);
+
+            expect(mockStoreItem.findByIdAndDelete).toHaveBeenCalledWith(itemId);
+            expect(mockUser.updateMany).toHaveBeenCalledWith(
+                { 'purchasedItems.itemId': itemId },
+                { $pull: { purchasedItems: { itemId } } }
+            );
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                message: 'Item deleted successfully'
+            });
+        });
+
+        it('should return 404 if item not found', async () => {
+            mockStoreItem.findByIdAndDelete.mockResolvedValue(null);
+
+            const mockReq = testUtils.createMockRequest({ params: { itemId } });
+            const mockRes = testUtils.createMockResponse();
+
+            await deleteItem(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({ 
+                error: 'Item not found' 
+            });
+        });
+
+        it('should return early if checkId fails', async () => {
+            mockCheckId.checkId.mockReturnValue(false);
+
+            const mockReq = testUtils.createMockRequest({ params: { itemId: 'invalid-id' } });
+            const mockRes = testUtils.createMockResponse();
+
+            await deleteItem(mockReq as any, mockRes as any);
+
+            expect(mockStoreItem.findByIdAndDelete).not.toHaveBeenCalled();
+        });
+
+        it('should handle database errors', async () => {
+            mockStoreItem.findByIdAndDelete.mockRejectedValue(new Error('Database error'));
+
+            const mockReq = testUtils.createMockRequest({ params: { itemId } });
+            const mockRes = testUtils.createMockResponse();
+
+            await deleteItem(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(500);
+            expect(mockRes.json).toHaveBeenCalledWith({ 
+                error: 'Failed to delete. An unknown error occurred.' 
             });
         });
     });
