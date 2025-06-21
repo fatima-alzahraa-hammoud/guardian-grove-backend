@@ -1,5 +1,5 @@
 import { testUtils } from '../setup';
-import {  getUsers, getUserById, createUser} from '../../src/controllers/user.controller';
+import {  getUsers, getUserById, createUser, editUserProfile} from '../../src/controllers/user.controller';
 import { User } from '../../src/models/user.model';
 import * as generateSecurePassword from '../../src/utils/generateSecurePassword';
 import * as checkId from '../../src/utils/checkId';
@@ -314,4 +314,97 @@ describe('User Controller Tests', () => {
         });
     });
 
+
+    // 4. test editUserProfile API
+    describe('editUserProfile', () => {
+        it('should edit user profile successfully', async () => {
+            const mockUserData = testUtils.createMockUser();
+            mockUser.findById.mockResolvedValue(mockUserData as any);
+            mockUser.findOne.mockResolvedValue(null); // No duplicate name
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: { 
+                    userId: '507f1f77bcf86cd799439011',
+                    name: 'Updated Name',
+                    birthday: '1990-01-01',
+                    gender: 'male',
+                    avatar: '/new-avatar.png'
+                }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await editUserProfile(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.send).toHaveBeenCalledWith({
+                message: "User profile updated successfully",
+                user: expect.any(Object)
+            });
+        });
+
+        it('should return 401 if user not authenticated', async () => {
+            const mockReq = testUtils.createMockRequest({ user: null });
+            const mockRes = testUtils.createMockResponse();
+
+            await editUserProfile(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(401);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Unauthorized' });
+        });
+
+        it('should return 403 if child tries to change role', async () => {
+            const mockChild = testUtils.createMockUser({ role: 'child' });
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockChild,
+                body: { role: 'parent' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await editUserProfile(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(403);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Forbidden: You cannot change role nor email' });
+        });
+
+        it('should return 404 if user not found', async () => {
+            const mockParent = testUtils.createMockUser({ role: 'parent' });
+            mockUser.findById.mockResolvedValue(null);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockParent,
+                body: { userId: '507f1f77bcf86cd799439011' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await editUserProfile(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'User not found' });
+        });
+
+        it('should return 400 if name already exists', async () => {
+            const mockUserData = testUtils.createMockUser();
+            const existingUser = testUtils.createMockUser({ name: 'Existing Name' });
+            
+            mockUser.findById.mockResolvedValue(mockUserData as any);
+            mockUser.findOne.mockResolvedValue(existingUser as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: { 
+                    userId: '507f1f77bcf86cd799439011',
+                    name: 'Existing Name'
+                }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await editUserProfile(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({ 
+                error: 'A user with the same email and name already exists.' 
+            });
+        });
+    });
 });
