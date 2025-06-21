@@ -291,6 +291,19 @@ export const testUtils = {
         ...overrides
     }),
 
+    // Add this to your testUtils object in setup.js/ts
+    createMockStoreItem: (overrides = {}) => ({
+        _id: '507f1f77bcf86cd799439060',
+        name: 'Test Item',
+        description: 'A test store item',
+        type: 'avatar',
+        price: 50,
+        image: '/assets/images/store/test-item.png',
+        save: jest.fn().mockResolvedValue(true),
+        toString: jest.fn(() => '507f1f77bcf86cd799439060'),
+        ...overrides
+    }),
+
     // Valid MongoDB ObjectId for testing (24 character hex string)
     validObjectId: '507f1f77bcf86cd799439011',
     
@@ -390,6 +403,7 @@ export const testUtils = {
         task: '507f1f77bcf86cd799439025',
         achievement: '507f1f77bcf86cd799439040',
         adventure: '507f1f77bcf86cd799439015',
-        challenge: '507f1f77bcf86cd799439016'
+        challenge: '507f1f77bcf86cd799439016',
+        storeItem: '507f1f77bcf86cd799439060'
     }
 };
