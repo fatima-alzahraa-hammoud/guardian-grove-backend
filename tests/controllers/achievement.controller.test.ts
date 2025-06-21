@@ -1,5 +1,5 @@
 import { testUtils } from '../setup';
-import { createAchievement, deleteAchievement, getAchievements, getLockedAchievements, getUnLockedAchievements, updateAchievement } from '../../src/controllers/achievement.controller';
+import { createAchievement, deleteAchievement, getAchievements, getLockedAchievements, getUnLockedAchievements, getUserAchievements, updateAchievement } from '../../src/controllers/achievement.controller';
 import { Achievement } from '../../src/models/achievements.model';
 import { User } from '../../src/models/user.model';
 import { Family } from '../../src/models/family.model';
@@ -440,6 +440,45 @@ describe('Achievements Controller Tests', () => {
             const mockRes = testUtils.createMockResponse();
 
             await getUnLockedAchievements(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(401);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Unauthorized' });
+        });
+    });
+
+    // 7. test getUserAchievements API
+    describe('getUserAchievements', () => {
+        it('should get user achievements successfully', async () => {
+            const mockUserData = {
+                ...testUtils.createMockUser({
+                    achievements: [
+                        { achievementId: 'achievement1', unlockedAt: new Date() }
+                    ]
+                }),
+                populate: jest.fn().mockResolvedValue(true)
+            };
+
+            const mockReq = testUtils.createMockRequest({ user: mockUserData });
+            const mockRes = testUtils.createMockResponse();
+
+            await getUserAchievements(mockReq as any, mockRes as any);
+
+            expect(mockUserData.populate).toHaveBeenCalledWith({
+                path: 'achievements.achievementId',
+                select: 'title description photo'
+            });
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                message: 'Getting user achievements Successfully',
+                achievements: mockUserData.achievements
+            });
+        });
+
+        it('should return 401 if user not authenticated', async () => {
+            const mockReq = testUtils.createMockRequest({ user: null });
+            const mockRes = testUtils.createMockResponse();
+
+            await getUserAchievements(mockReq as any, mockRes as any);
 
             expect(mockRes.status).toHaveBeenCalledWith(401);
             expect(mockRes.json).toHaveBeenCalledWith({ error: 'Unauthorized' });
