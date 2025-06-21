@@ -1,5 +1,5 @@
 import { testUtils } from '../setup';
-import { deleteFamily, getAllFamilies, getFamily, getFamilyMembers, 
+import { deleteFamily, getAllFamilies, getFamily, getFamilyGoals, getFamilyMembers, 
     updateFamily, updateFamilyGoal 
 } from '../../src/controllers/family.controller';
 import { Family } from '../../src/models/family.model';
@@ -570,4 +570,43 @@ describe('Family Controller Tests', () => {
             expect(mockRes.status).toHaveBeenCalledWith(404);
         });
     });
+
+     // 7. test getFamilyGoals API
+    describe('getFamilyGoals', () => {
+        it('should get family goals successfully', async () => {
+            const mockGoals = [
+                { title: 'Goal 1', description: 'First goal' },
+                { title: 'Goal 2', description: 'Second goal' }
+            ];
+            const mockFamilyData = testUtils.createMockFamily({ goals: mockGoals });
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+
+            const mockReq = testUtils.createMockRequest({
+                body: { familyId: '507f1f77bcf86cd799439011' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getFamilyGoals(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                message: 'Family goals retrieved',
+                goals: mockGoals
+            });
+        });
+
+        it('should return 404 if family not found', async () => {
+            mockFamily.findById.mockResolvedValue(null);
+
+            const mockReq = testUtils.createMockRequest({
+                body: { familyId: '507f1f77bcf86cd799439011' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getFamilyGoals(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+        });
+    });
+
 });
