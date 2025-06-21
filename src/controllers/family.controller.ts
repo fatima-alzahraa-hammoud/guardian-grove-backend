@@ -219,7 +219,6 @@ export const updateFamilyGoal = async (req: CustomRequest, res: Response): Promi
 
         res.status(200).json({ message: "Goal updated", goal });
     } catch (error) {
-        console.error(error);
         return throwError({ message: "Error updating goal", res, status: 500 });
     }
 };
@@ -385,7 +384,6 @@ export const deleteFamilyTask = async (req: CustomRequest, res: Response): Promi
 
         res.status(200).json({ message: 'Task deleted successfully', DeletedTask: deletedTask });
     } catch (error) {
-        console.error(error);
         return throwError({message: "Error deleting task", res, status: 500});
     }
 };
@@ -506,7 +504,6 @@ export const completeFamilyTask = async (req: CustomRequest, res: Response): Pro
 
         res.status(200).json({ message: "Task marked as done", task, goal });
     } catch (error) {
-        console.error(error);
         return throwError({ message: "Error marking task as done", res, status: 500 });
     }
 };
@@ -583,7 +580,6 @@ export const getLeaderboard = async (req: CustomRequest, res: Response): Promise
 
         res.status(200).json({ message: 'Leaderboard fetched successfully', ...results, });
     } catch (error) {
-        console.error('Error fetching leaderboard:', error);
         res.status(500).json({ message: 'Error fetching leaderboard', error });
     }
 };
@@ -622,7 +618,6 @@ export const getFamilyLeaderboard = async (req: Request, res: Response): Promise
             familyLeaderboard: leaderboard,
         });
     } catch (error) {
-        console.error('Error fetching leaderboard:', error);
         res.status(500).json({ message: 'Error fetching leaderboard' });
     }
 };
@@ -748,7 +743,6 @@ export const getFamilyProgressStats = async (req: CustomRequest, res: Response):
         });
 
     } catch (error) {
-        console.error(error);
         return throwError({ message: "Error retrieving monthly stats", res, status: 500 });
     }
 };
