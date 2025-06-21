@@ -158,7 +158,6 @@ export const register = async (req: Request, res: Response) : Promise<void> => {
         res.status(200).send({user: newUser, token: token, family: family});
 
     }catch(error){
-        console.error(error); 
         return throwError({ message: "Something went wrong while registering.", res, status: 500});
     }
 }  
@@ -204,7 +203,6 @@ export const forgetPassword = async (req: Request, res: Response) : Promise<void
         res.status(200).send({ message: "Temporary password sent to your email." });
 
     } catch (error) {
-        console.error(error);
         return throwError({ message: "Error sending temporary password.", res, status: 500});
     }
 }
