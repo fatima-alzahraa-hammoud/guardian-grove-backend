@@ -1,5 +1,5 @@
 import { testUtils } from '../setup';
-import {  getUsers, getUserById, } from '../../src/controllers/user.controller';
+import {  getUsers, getUserById, createUser} from '../../src/controllers/user.controller';
 import { User } from '../../src/models/user.model';
 import * as generateSecurePassword from '../../src/utils/generateSecurePassword';
 import * as checkId from '../../src/utils/checkId';
@@ -59,7 +59,7 @@ describe('User Controller Tests', () => {
         (jest.spyOn(bcrypt, 'compare') as jest.Mock).mockResolvedValue(true);
     });
 
-    // test getUsers API
+    // 1. test getUsers API
     describe('getUsers', () => {
         it('should return all users successfully', async () => {
             const mockUsers = [
@@ -91,7 +91,7 @@ describe('User Controller Tests', () => {
         });
     });
 
-    // test getUserById API
+    // 2. test getUserById API
     describe('getUserById', () => {
         it('should return user by ID successfully', async () => {
             const mockUser_data = testUtils.createMockUser();
@@ -161,6 +161,156 @@ describe('User Controller Tests', () => {
 
             expect(mockRes.status).toHaveBeenCalledWith(403);
             expect(mockRes.json).toHaveBeenCalledWith({ error: 'Forbidden' });
+        });
+    });
+
+    // 3. test createUser API
+    describe('createUser', () => {
+        const validUserData = {
+            name: 'Test Child',
+            birthday: '2010-01-01',
+            gender: 'male',
+            role: 'child',
+            avatar: '/avatar.png',
+            interests: ['reading', 'sports']
+        };
+
+        it('should create user successfully', async () => {
+            const mockParent = testUtils.createMockUser({ role: 'parent', email: 'parent@test.com' });
+            const mockFamilyData = testUtils.createMockFamily({ email: 'parent@test.com', members: [] });
+            const mockCreatedUser = testUtils.createMockUser(validUserData);
+
+            mockUser.findOne.mockResolvedValue(null); // No existing user
+            mockFamily.findOne.mockResolvedValue(mockFamilyData as any);
+            mockUser.create.mockResolvedValue(mockCreatedUser as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockParent,
+                body: validUserData
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await createUser(mockReq as any, mockRes as any);
+
+            expect(mockUser.create).toHaveBeenCalled();
+            expect(mockEmailService.sendMail).toHaveBeenCalled();
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+        });
+
+        it('should return 401 if user not authenticated', async () => {
+            const mockReq = testUtils.createMockRequest({ user: null, body: validUserData });
+            const mockRes = testUtils.createMockResponse();
+
+            await createUser(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(401);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Unauthorized' });
+        });
+
+        it('should return 403 if user is child', async () => {
+            const mockChild = testUtils.createMockUser({ role: 'child' });
+            const mockReq = testUtils.createMockRequest({ user: mockChild, body: validUserData });
+            const mockRes = testUtils.createMockResponse();
+
+            await createUser(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(403);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Forbidden' });
+        });
+
+        it('should return 400 if required fields missing', async () => {
+            const mockParent = testUtils.createMockUser({ role: 'parent' });
+            const incompleteData = { name: 'Test' }; // Missing required fields
+
+            const mockReq = testUtils.createMockRequest({ user: mockParent, body: incompleteData });
+            const mockRes = testUtils.createMockResponse();
+
+            await createUser(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'All required fields must be filled.' });
+        });
+
+        it('should return 409 if username already taken', async () => {
+            const mockParent = testUtils.createMockUser({ role: 'parent', email: 'parent@test.com' });
+            const existingUser = testUtils.createMockUser({ name: 'Test Child', email: 'parent@test.com' });
+
+            mockUser.findOne.mockResolvedValue(existingUser as any);
+
+            const mockReq = testUtils.createMockRequest({ user: mockParent, body: validUserData });
+            const mockRes = testUtils.createMockResponse();
+
+            await createUser(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(409);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'This username is already taken for this email.' });
+        });
+
+        it('should return 400 if interests is not array', async () => {
+            const mockParent = testUtils.createMockUser({ role: 'parent' });
+            const invalidData = { ...validUserData, interests: 'not-an-array' };
+
+            const mockReq = testUtils.createMockRequest({ user: mockParent, body: invalidData });
+            const mockRes = testUtils.createMockResponse();
+
+            await createUser(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Interests must be an array.' });
+        });
+
+        it('should return 400 if invalid gender', async () => {
+            const mockParent = testUtils.createMockUser({ role: 'parent' });
+            const invalidData = { ...validUserData, gender: 'invalid' };
+
+            const mockReq = testUtils.createMockRequest({ user: mockParent, body: invalidData });
+            const mockRes = testUtils.createMockResponse();
+
+            await createUser(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: "Gender must be either 'male' or 'female'." });
+        });
+
+        it('should return 400 if invalid role', async () => {
+            const mockParent = testUtils.createMockUser({ role: 'parent' });
+            const invalidData = { ...validUserData, role: 'invalid' };
+
+            const mockReq = testUtils.createMockRequest({ user: mockParent, body: invalidData });
+            const mockRes = testUtils.createMockResponse();
+
+            await createUser(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Invalid role.' });
+        });
+
+        it('should return 400 if invalid birthday', async () => {
+            const mockParent = testUtils.createMockUser({ role: 'parent' });
+            const invalidData = { ...validUserData, birthday: 'invalid-date' };
+
+            const mockReq = testUtils.createMockRequest({ user: mockParent, body: invalidData });
+            const mockRes = testUtils.createMockResponse();
+
+            await createUser(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Invalid birthday format.' });
+        });
+
+        it('should return 404 if family not found', async () => {
+            const mockParent = testUtils.createMockUser({ role: 'parent' });
+            
+            mockUser.findOne.mockResolvedValue(null); // No existing user
+            mockFamily.findOne.mockResolvedValue(null); // No family found
+
+            const mockReq = testUtils.createMockRequest({ user: mockParent, body: validUserData });
+            const mockRes = testUtils.createMockResponse();
+
+            await createUser(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Family not found.' });
         });
     });
 
