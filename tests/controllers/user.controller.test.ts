@@ -1,6 +1,6 @@
 import { testUtils } from '../setup';
 import {  getUsers, getUserById, createUser, editUserProfile,
-    deleteUser, updatePassword
+    deleteUser, updatePassword, getUserStars
 } from '../../src/controllers/user.controller';
 import { User } from '../../src/models/user.model';
 import * as generateSecurePassword from '../../src/utils/generateSecurePassword';
@@ -569,6 +569,33 @@ describe('User Controller Tests', () => {
             expect(mockRes.json).toHaveBeenCalledWith({ 
                 error: 'Password must be at least 8 characters long, include an uppercase letter, lowercase letter, a number, and a special character.' 
             });
+        });
+    });
+
+    // 7. test getUserStars API
+    describe('getUserStars', () => {
+        it('should get user stars successfully', async () => {
+            const mockUserData = testUtils.createMockUser({ stars: 150 });
+            const mockReq = testUtils.createMockRequest({ user: mockUserData });
+            const mockRes = testUtils.createMockResponse();
+
+            await getUserStars(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.send).toHaveBeenCalledWith({
+                message: "Stars retrieved successfully",
+                stars: 150
+            });
+        });
+
+        it('should return 401 if user not authenticated', async () => {
+            const mockReq = testUtils.createMockRequest({ user: null });
+            const mockRes = testUtils.createMockResponse();
+
+            await getUserStars(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(401);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Unauthorized' });
         });
     });
 });
