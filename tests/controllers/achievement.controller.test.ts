@@ -1,5 +1,5 @@
 import { testUtils } from '../setup';
-import { createAchievement, deleteAchievement, updateAchievement } from '../../src/controllers/achievement.controller';
+import { createAchievement, deleteAchievement, getAchievements, updateAchievement } from '../../src/controllers/achievement.controller';
 import { Achievement } from '../../src/models/achievements.model';
 import { User } from '../../src/models/user.model';
 import { Family } from '../../src/models/family.model';
@@ -270,6 +270,71 @@ describe('Achievements Controller Tests', () => {
             await deleteAchievement(mockReq as any, mockRes as any);
 
             expect(mockAchievement.findByIdAndDelete).not.toHaveBeenCalled();
+        });
+    });
+
+    // 4. test getAchievements API
+    describe('getAchievements', () => {
+        it('should get all achievements when no type specified', async () => {
+            const mockAchievements = [
+                testUtils.createMockAchievement({ type: 'personal' }),
+                testUtils.createMockAchievement({ type: 'family' })
+            ];
+            
+            mockAchievement.find.mockResolvedValue(mockAchievements as any);
+
+            const mockReq = testUtils.createMockRequest({ query: {} });
+            const mockRes = testUtils.createMockResponse();
+
+            await getAchievements(mockReq as any, mockRes as any);
+
+            expect(mockAchievement.find).toHaveBeenCalledWith({});
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                message: 'Getting all achievements Successfully',
+                achievements: mockAchievements
+            });
+        });
+
+        it('should get achievements by type', async () => {
+            const mockAchievements = [testUtils.createMockAchievement({ type: 'personal' })];
+            
+            mockAchievement.find.mockResolvedValue(mockAchievements as any);
+
+            const mockReq = testUtils.createMockRequest({ query: { type: 'personal' } });
+            const mockRes = testUtils.createMockResponse();
+
+            await getAchievements(mockReq as any, mockRes as any);
+
+            expect(mockAchievement.find).toHaveBeenCalledWith({ type: 'personal' });
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+        });
+
+        it('should get all achievements when type is "All"', async () => {
+            const mockAchievements = [testUtils.createMockAchievement()];
+            
+            mockAchievement.find.mockResolvedValue(mockAchievements as any);
+
+            const mockReq = testUtils.createMockRequest({ query: { type: 'All' } });
+            const mockRes = testUtils.createMockResponse();
+
+            await getAchievements(mockReq as any, mockRes as any);
+
+            expect(mockAchievement.find).toHaveBeenCalledWith({});
+        });
+
+        it('should return 404 if no achievements found', async () => {
+            mockAchievement.find.mockResolvedValue([]);
+
+            const mockReq = testUtils.createMockRequest({ query: {} });
+            const mockRes = testUtils.createMockResponse();
+
+            await getAchievements(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({ 
+                error: 'No achievements found' 
+            });
         });
     });
 });
