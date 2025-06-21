@@ -1,3 +1,5 @@
+import { testUtils } from '../setup';
+import { getAllFamilies } from '../../src/controllers/family.controller';
 import { Family } from '../../src/models/family.model';
 import { User } from '../../src/models/user.model';
 import { Achievement } from '../../src/models/achievements.model';
@@ -49,6 +51,51 @@ describe('Family Controller Tests', () => {
         mockGetTimePeriod.getTimePeriod.mockReturnValue({
             start: new Date('2024-01-01'),
             end: new Date('2024-01-31')
+        });
+    });
+
+    // 1. test getAllFamilies API
+    describe('getAllFamilies', () => {
+        it('should return all families successfully', async () => {
+            const mockFamilies = [
+                testUtils.createMockFamily({ familyName: 'Smith Family' }),
+                testUtils.createMockFamily({ familyName: 'Johnson Family', _id: '507f1f77bcf86cd799439013' })
+            ];
+            mockFamily.find.mockResolvedValue(mockFamilies as any);
+
+            const mockReq = testUtils.createMockRequest();
+            const mockRes = testUtils.createMockResponse();
+
+            await getAllFamilies(mockReq as any, mockRes as any);
+
+            expect(mockFamily.find).toHaveBeenCalledTimes(1);
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.send).toHaveBeenCalledWith({
+                message: "Retrieving all families successfully",
+                families: mockFamilies
+            });
+        });
+
+        it('should return 404 if no families found', async () => {
+            mockFamily.find.mockResolvedValue([]);
+
+            const mockReq = testUtils.createMockRequest();
+            const mockRes = testUtils.createMockResponse();
+
+            await getAllFamilies(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+        });
+
+        it('should handle database errors', async () => {
+            mockFamily.find.mockRejectedValue(new Error('Database connection failed'));
+
+            const mockReq = testUtils.createMockRequest();
+            const mockRes = testUtils.createMockResponse();
+
+            await getAllFamilies(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(500);
         });
     });
 });
