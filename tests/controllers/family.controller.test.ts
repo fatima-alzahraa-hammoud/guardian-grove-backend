@@ -1,5 +1,5 @@
 import { testUtils } from '../setup';
-import { getAllFamilies } from '../../src/controllers/family.controller';
+import { getAllFamilies, getFamily } from '../../src/controllers/family.controller';
 import { Family } from '../../src/models/family.model';
 import { User } from '../../src/models/user.model';
 import { Achievement } from '../../src/models/achievements.model';
@@ -96,6 +96,63 @@ describe('Family Controller Tests', () => {
             await getAllFamilies(mockReq as any, mockRes as any);
 
             expect(mockRes.status).toHaveBeenCalledWith(500);
+        });
+    });
+
+    // 2. test getFamily API
+    describe('getFamily', () => {
+        it('should return family by ID successfully', async () => {
+            const mockFamilyData = testUtils.createMockFamily();
+            const mockFamilyDoc = {
+                select: jest.fn().mockReturnValue({
+                    lean: jest.fn().mockResolvedValue(mockFamilyData)
+                })
+            };
+            mockFamily.findById.mockReturnValue(mockFamilyDoc as any);
+
+            const mockReq = testUtils.createMockRequest({
+                body: { familyId: '507f1f77bcf86cd799439011' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getFamily(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.send).toHaveBeenCalledWith({
+                message: "Retrieving family successfully",
+                family: mockFamilyData
+            });
+        });
+
+        it('should return 404 if family not found', async () => {
+            const mockFamilyDoc = {
+                select: jest.fn().mockReturnValue({
+                    lean: jest.fn().mockResolvedValue(null)
+                })
+            };
+            mockFamily.findById.mockReturnValue(mockFamilyDoc as any);
+
+            const mockReq = testUtils.createMockRequest({
+                body: { familyId: '507f1f77bcf86cd799439011' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getFamily(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+        });
+
+        it('should return error if invalid ID', async () => {
+            mockCheckId.checkId.mockReturnValue(false);
+
+            const mockReq = testUtils.createMockRequest({
+                body: { familyId: 'invalid-id' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getFamily(mockReq as any, mockRes as any);
+
+            expect(mockFamily.findById).not.toHaveBeenCalled();
         });
     });
 });
