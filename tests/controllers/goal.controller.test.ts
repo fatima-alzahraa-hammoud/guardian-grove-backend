@@ -268,4 +268,79 @@ describe('Goal Controller Tests', () => {
             expect(mockRes.json).toHaveBeenCalledWith({ error: 'User not found' });
         });
     });
+
+    // 3. test getGoalById API
+    describe('getGoalById', () => {
+        it('should get personal goal by ID successfully', async () => {
+            const mockGoal = testUtils.createMockGoal();
+            const mockUserData = testUtils.createMockUser({ goals: [mockGoal] });
+            
+            mockUser.findById.mockResolvedValue(mockUserData as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: { goalId: testUtils.ids.goal }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getGoalById(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                message: "Retrieving your goal successfully",
+                goal: expect.objectContaining({ _id: testUtils.ids.goal })
+            });
+        });
+
+        it('should get family goal by ID successfully', async () => {
+            const mockGoal = testUtils.createMockGoal({ type: 'family' });
+            const mockUserData = testUtils.createMockUser({ goals: [] });
+            const mockFamilyData = testUtils.createMockFamily({ goals: [mockGoal] });
+            
+            mockUser.findById.mockResolvedValue(mockUserData as any);
+            mockFamily.findById.mockReturnValue({
+                populate: jest.fn().mockResolvedValue(mockFamilyData)
+            } as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: { goalId: testUtils.ids.goal }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getGoalById(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+        });
+
+        it('should return 401 if user not authenticated', async () => {
+            const mockReq = testUtils.createMockRequest({ user: null });
+            const mockRes = testUtils.createMockResponse();
+
+            await getGoalById(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(401);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Unauthorized' });
+        });
+
+        it('should return 404 if goal not found', async () => {
+            const mockUserData = testUtils.createMockUser({ goals: [] });
+            
+            mockUser.findById.mockResolvedValue(mockUserData as any);
+            mockFamily.findById.mockReturnValue({
+                populate: jest.fn().mockResolvedValue(testUtils.createMockFamily({ goals: [] }))
+            } as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: { goalId: testUtils.ids.goal }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getGoalById(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Goal not found' });
+        });
+    });
 });
