@@ -842,4 +842,262 @@ describe('Goal Controller Tests', () => {
             expect(mockRes.json).toHaveBeenCalledWith({ error: 'Task not found' });
         });
     });
+
+    // 10. test completeTask API
+    describe('completeTask', () => {
+        const completeTaskData = {
+            userId: testUtils.ids.user,
+            goalId: testUtils.ids.goal,
+            taskId: testUtils.ids.task
+        };
+
+        it('should complete task successfully', async () => {
+            const mockTask = testUtils.createMockTask({ 
+                isCompleted: false,
+                rewards: { stars: 10, coins: 5 }
+            });
+            const mockGoal = testUtils.createMockGoal({ 
+                tasks: [mockTask],
+                rewards: { stars: 50, coins: 25 }
+            });
+            mockGoal.tasks.filter = jest.fn().mockReturnValue([mockTask]);
+
+            const mockUserData = testUtils.createMockUser({ 
+                goals: [mockGoal],
+                stars: 100,
+                coins: 50,
+                nbOfTasksCompleted: 5,
+                familyId: testUtils.ids.family,
+                save: jest.fn().mockResolvedValue(true)
+            });
+            
+            mockUser.findById.mockResolvedValue(mockUserData as any);
+            mockFamily.findByIdAndUpdate.mockResolvedValue({} as any);
+
+            const mockReq = testUtils.createMockRequest({ body: completeTaskData });
+            const mockRes = testUtils.createMockResponse();
+
+            await completeTask(mockReq as any, mockRes as any);
+
+            expect(mockTask.isCompleted).toBe(true);
+            expect(mockUserData.stars).toBe(160); // 100 + 10 (task) + 50 (goal)
+            expect(mockUserData.coins).toBe(80); // 50 + 5 (task) + 25 (goal)
+            expect(mockUserData.nbOfTasksCompleted).toBe(6);
+            expect(mockGoal.nbOfTasksCompleted).toBe(1);
+            expect(mockUserData.save).toHaveBeenCalled();
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+        });
+
+        it('should complete goal when all tasks are completed', async () => {
+            const mockTask1 = testUtils.createMockTask({ 
+                isCompleted: false,
+                rewards: { stars: 10, coins: 5 }
+            });
+            const mockTask2 = testUtils.createMockTask({ 
+                _id: 'task2id',
+                isCompleted: true,
+                rewards: { stars: 10, coins: 5 }
+            });
+            
+            const mockGoal = testUtils.createMockGoal({ 
+                tasks: [mockTask1, mockTask2],
+                rewards: { stars: 50, coins: 25 },
+                isCompleted: false
+            });
+            
+            // Mock the filter to return all tasks as completed after this task is completed
+            mockGoal.tasks.filter = jest.fn().mockReturnValue([mockTask1, mockTask2]);
+
+            const mockUserData = testUtils.createMockUser({ 
+                goals: [mockGoal],
+                stars: 100,
+                coins: 50,
+                familyId: testUtils.ids.family,
+                save: jest.fn().mockResolvedValue(true)
+            });
+            
+            mockUser.findById.mockResolvedValue(mockUserData as any);
+            mockFamily.findByIdAndUpdate.mockResolvedValue({} as any);
+
+            const mockReq = testUtils.createMockRequest({ body: completeTaskData });
+            const mockRes = testUtils.createMockResponse();
+
+            await completeTask(mockReq as any, mockRes as any);
+
+            expect(mockGoal.isCompleted).toBe(true);
+            expect(mockGoal.progress).toBe(100);
+            expect(mockGoal.completedAt).toBeDefined();
+            expect(mockUserData.stars).toBe(160); // 100 + 10 (task) + 50 (goal)
+            expect(mockUserData.coins).toBe(80); // 50 + 5 (task) + 25 (goal)
+        });
+
+        it('should unlock achievement when goal is completed', async () => {
+            const mockTask = testUtils.createMockTask({ 
+                isCompleted: false,
+                rewards: { stars: 10, coins: 5 }
+            });
+            const mockGoal = testUtils.createMockGoal({ 
+                tasks: [mockTask],
+                rewards: { 
+                    stars: 50, 
+                    coins: 25,
+                    achievementId: testUtils.ids.achievement 
+                },
+                isCompleted: false
+            });
+            mockGoal.tasks.filter = jest.fn().mockReturnValue([mockTask]);
+
+            const mockAchievementData = testUtils.createMockAchievement();
+            const mockUserData = testUtils.createMockUser({ 
+                goals: [mockGoal],
+                achievements: [],
+                familyId: testUtils.ids.family,
+                save: jest.fn().mockResolvedValue(true)
+            });
+            
+            mockUser.findById.mockResolvedValue(mockUserData as any);
+            mockAchievement.findById.mockResolvedValue(mockAchievementData as any);
+            mockFamily.findByIdAndUpdate.mockResolvedValue({} as any);
+
+            const mockReq = testUtils.createMockRequest({ body: completeTaskData });
+            const mockRes = testUtils.createMockResponse();
+
+            await completeTask(mockReq as any, mockRes as any);
+
+            expect(mockUserData.achievements).toHaveLength(1);
+            expect(mockUserData.achievements[0]).toEqual({
+                achievementId: testUtils.ids.achievement,
+                unlockedAt: expect.any(Date)
+            });
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                message: 'Achievement unlocked successfully',
+                achievement: mockAchievementData
+            });
+        });
+
+        it('should update family stats', async () => {
+            const mockTask = testUtils.createMockTask({ 
+                isCompleted: false,
+                rewards: { stars: 10, coins: 5 }
+            });
+            const mockGoal = testUtils.createMockGoal({ 
+                tasks: [mockTask],
+                rewards: { stars: 50, coins: 25 }
+            });
+            mockGoal.tasks.filter = jest.fn().mockReturnValue([mockTask]);
+
+            const mockUserData = testUtils.createMockUser({ 
+                goals: [mockGoal],
+                familyId: testUtils.ids.family,
+                save: jest.fn().mockResolvedValue(true)
+            });
+            
+            mockUser.findById.mockResolvedValue(mockUserData as any);
+            mockFamily.findByIdAndUpdate.mockResolvedValue({} as any);
+
+            const mockReq = testUtils.createMockRequest({ body: completeTaskData });
+            const mockRes = testUtils.createMockResponse();
+
+            await completeTask(mockReq as any, mockRes as any);
+
+            expect(mockFamily.findByIdAndUpdate).toHaveBeenCalledWith(
+                testUtils.ids.family,
+                { $inc: { totalStars: 60, tasks: 1 } } // 10 (task) + 50 (goal)
+            );
+            expect(mockRecalculateFamilyMemberRanks.recalculateFamilyMemberRanks).toHaveBeenCalledWith(
+                testUtils.ids.family,
+                mockUserData
+            );
+        });
+
+        it('should return 400 if task already completed', async () => {
+            const mockTask = testUtils.createMockTask({ isCompleted: true });
+            const mockGoal = testUtils.createMockGoal({ tasks: [mockTask] });
+            const mockUserData = testUtils.createMockUser({ goals: [mockGoal] });
+            
+            mockUser.findById.mockResolvedValue(mockUserData as any);
+
+            const mockReq = testUtils.createMockRequest({ body: completeTaskData });
+            const mockRes = testUtils.createMockResponse();
+
+            await completeTask(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Task already completed' });
+        });
+
+        it('should return 404 if achievement not found', async () => {
+            const mockTask = testUtils.createMockTask({ 
+                isCompleted: false,
+                rewards: { stars: 10, coins: 5 }
+            });
+            const mockGoal = testUtils.createMockGoal({ 
+                tasks: [mockTask],
+                rewards: { 
+                    stars: 50, 
+                    coins: 25,
+                    achievementId: testUtils.ids.achievement 
+                }
+            });
+            mockGoal.tasks.filter = jest.fn().mockReturnValue([mockTask]);
+
+            const mockUserData = testUtils.createMockUser({ 
+                goals: [mockGoal],
+                save: jest.fn().mockResolvedValue(true)
+            });
+            
+            mockUser.findById.mockResolvedValue(mockUserData as any);
+            mockAchievement.findById.mockResolvedValue(null);
+
+            const mockReq = testUtils.createMockRequest({ body: completeTaskData });
+            const mockRes = testUtils.createMockResponse();
+
+            await completeTask(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Achievement not found' });
+        });
+
+        it('should return 404 if user not found', async () => {
+            mockUser.findById.mockResolvedValue(null);
+
+            const mockReq = testUtils.createMockRequest({ body: completeTaskData });
+            const mockRes = testUtils.createMockResponse();
+
+            await completeTask(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'User not found' });
+        });
+
+        it('should return 404 if goal not found', async () => {
+            const mockUserData = testUtils.createMockUser({ goals: [] });
+            mockUser.findById.mockResolvedValue(mockUserData as any);
+
+            const mockReq = testUtils.createMockRequest({ body: completeTaskData });
+            const mockRes = testUtils.createMockResponse();
+
+            await completeTask(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Goal not found' });
+        });
+
+        it('should return 404 if task not found', async () => {
+            const mockGoal = testUtils.createMockGoal({ tasks: [] });
+            const mockUserData = testUtils.createMockUser({ goals: [mockGoal] });
+            
+            mockUser.findById.mockResolvedValue(mockUserData as any);
+
+            const mockReq = testUtils.createMockRequest({ body: completeTaskData });
+            const mockRes = testUtils.createMockResponse();
+
+            await completeTask(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Task not found' });
+        });
+    });
+
 });
