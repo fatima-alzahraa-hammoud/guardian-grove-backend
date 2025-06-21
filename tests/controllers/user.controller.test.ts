@@ -2,7 +2,8 @@ import { testUtils } from '../setup';
 import {  getUsers, getUserById, createUser, editUserProfile,
     deleteUser, updatePassword, getUserStars, updateUserStars,
     getUserCoins, updateUserCoins, getLocation, updateLocation,
-    getUserRank, getUserInterests, startAdventure, 
+    getUserRank, getUserInterests, startAdventure, completeChallenge,
+    
 } from '../../src/controllers/user.controller';
 import { User } from '../../src/models/user.model';
 import * as generateSecurePassword from '../../src/utils/generateSecurePassword';
@@ -1083,6 +1084,211 @@ describe('User Controller Tests', () => {
 
             expect(mockRes.status).toHaveBeenCalledWith(400);
             expect(mockRes.json).toHaveBeenCalledWith({ error: 'Adventure already started' });
+        });
+    });
+
+    // 16. test completeChallenge API
+    describe('completeChallenge', () => {
+        it('should complete challenge successfully', async () => {
+            const mockChallenge = {
+                challengeId: { equals: jest.fn().mockReturnValue(true) },
+                isCompleted: false,
+                completedAt: undefined
+            };
+            const mockAdventureProgress = {
+                adventureId: { equals: jest.fn().mockReturnValue(true) },
+                challenges: [mockChallenge], 
+                progress: 0,
+                isAdventureCompleted: false,
+                status: 'in-progress',
+                starsReward: 100, 
+                coinsReward: 50  
+            };
+            const mockUserData = testUtils.createMockUser({ 
+                adventures: [mockAdventureProgress],
+                stars: 100,
+                coins: 100,
+                familyId: '507f1f77bcf86cd799439012'
+            });
+            
+            const mockAdventureData = {
+                challenges: [{
+                    _id: { equals: jest.fn().mockReturnValue(true) },
+                    starsReward: 25,
+                    coinsReward: 15
+                }]
+            };
+            
+            mockAdventure.findById.mockReturnValue({
+                lean: jest.fn().mockResolvedValue(mockAdventureData)
+            } as any);
+            mockFamily.findByIdAndUpdate.mockResolvedValue({} as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: { 
+                    adventureId: '507f1f77bcf86cd799439015',
+                    challengeId: '507f1f77bcf86cd799439016'
+                }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await completeChallenge(mockReq as any, mockRes as any);
+
+            expect(mockChallenge.isCompleted).toBe(true);
+            expect(mockChallenge.completedAt).toBeDefined();
+            
+            expect(mockUserData.stars).toBe(225);
+            expect(mockUserData.coins).toBe(165);
+            
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+        });
+
+        it('should complete challenge without adventure completion bonus', async () => {
+            const mockChallenge1 = {
+                challengeId: { equals: jest.fn().mockReturnValue(true) },
+                isCompleted: false,
+                completedAt: undefined
+            };
+            const mockChallenge2 = {
+                challengeId: { equals: jest.fn().mockReturnValue(false) },
+                isCompleted: false,
+                completedAt: undefined
+            };
+            const mockAdventureProgress = {
+                adventureId: { equals: jest.fn().mockReturnValue(true) },
+                challenges: [mockChallenge1, mockChallenge2], 
+                progress: 0,
+                isAdventureCompleted: false,
+                status: 'in-progress',
+                starsReward: 100,
+                coinsReward: 50
+            };
+            const mockUserData = testUtils.createMockUser({ 
+                adventures: [mockAdventureProgress],
+                stars: 100,
+                coins: 100,
+                familyId: '507f1f77bcf86cd799439012'
+            });
+            
+            const mockAdventureData = {
+                challenges: [{
+                    _id: { equals: jest.fn().mockReturnValue(true) },
+                    starsReward: 25,
+                    coinsReward: 15
+                }]
+            };
+            
+            mockAdventure.findById.mockReturnValue({
+                lean: jest.fn().mockResolvedValue(mockAdventureData)
+            } as any);
+            mockFamily.findByIdAndUpdate.mockResolvedValue({} as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: { 
+                    adventureId: '507f1f77bcf86cd799439015',
+                    challengeId: '507f1f77bcf86cd799439016'
+                }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await completeChallenge(mockReq as any, mockRes as any);
+
+            expect(mockChallenge1.isCompleted).toBe(true);
+            expect(mockAdventureProgress.progress).toBe(50); 
+            expect(mockAdventureProgress.isAdventureCompleted).toBe(false);
+            
+            expect(mockUserData.stars).toBe(125);
+            expect(mockUserData.coins).toBe(115);
+            
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+        });
+
+        it('should return 401 if user not authenticated', async () => {
+            const mockReq = testUtils.createMockRequest({ user: null });
+            const mockRes = testUtils.createMockResponse();
+
+            await completeChallenge(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(401);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Unauthorized' });
+        });
+
+        it('should return 404 if adventure not found in user profile', async () => {
+            const mockUserData = testUtils.createMockUser({ adventures: [] });
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: { 
+                    adventureId: '507f1f77bcf86cd799439015',
+                    challengeId: '507f1f77bcf86cd799439016'
+                }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await completeChallenge(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: "Adventure not found in user's profile" });
+        });
+
+        it('should return 404 if challenge not found in adventure', async () => {
+            const mockAdventureProgress = {
+                adventureId: { equals: jest.fn().mockReturnValue(true) },
+                challenges: [], // No challenges
+                progress: 0,
+                isAdventureCompleted: false,
+                status: 'in-progress',
+                starsReward: 100,
+                coinsReward: 50
+            };
+            const mockUserData = testUtils.createMockUser({ adventures: [mockAdventureProgress] });
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: { 
+                    adventureId: '507f1f77bcf86cd799439015',
+                    challengeId: '507f1f77bcf86cd799439016'
+                }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await completeChallenge(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Challenge not found in adventure' });
+        });
+
+        it('should return 404 if adventure data not found', async () => {
+            const mockChallenge = {
+                challengeId: { equals: jest.fn().mockReturnValue(true) },
+                isCompleted: false
+            };
+            const mockAdventureProgress = {
+                adventureId: { equals: jest.fn().mockReturnValue(true) },
+                challenges: [mockChallenge],
+                progress: 0
+            };
+            const mockUserData = testUtils.createMockUser({ adventures: [mockAdventureProgress] });
+            
+            mockAdventure.findById.mockReturnValue({
+                lean: jest.fn().mockResolvedValue(null)
+            } as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: { 
+                    adventureId: '507f1f77bcf86cd799439015',
+                    challengeId: '507f1f77bcf86cd799439016'
+                }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await completeChallenge(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Adventure not found' });
         });
     });
 });
