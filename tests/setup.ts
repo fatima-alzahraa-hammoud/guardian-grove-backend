@@ -4,25 +4,6 @@ import { config } from 'dotenv';
 // Load test environment variables from .env.test
 config({ path: '.env.test' });
 
-// 🔒 CRITICAL: Mock mongoose to prevent real database connections
-jest.mock('mongoose', () => ({
-  connect: jest.fn().mockResolvedValue({}),
-  connection: {
-    close: jest.fn(),
-    on: jest.fn(),
-    once: jest.fn(),
-  },
-  model: jest.fn(),
-  Schema: jest.fn(),
-  disconnect: jest.fn(),
-}));
-
-// 🔒 Mock database connection 
-jest.mock('../src/db/connection', () => ({
-  connectDB: jest.fn(),
-  disconnectDB: jest.fn(),
-}));
-
 // Set test timeout (10 seconds for database operations)
 jest.setTimeout(10000);
 
