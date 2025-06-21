@@ -3,6 +3,11 @@ import {  getUsers, getUserById, } from '../../src/controllers/user.controller';
 import { User } from '../../src/models/user.model';
 import * as generateSecurePassword from '../../src/utils/generateSecurePassword';
 import * as checkId from '../../src/utils/checkId';
+import { Adventure } from '../../src/models/adventure.model';
+import { Family } from '../../src/models/family.model';
+import * as emailService from '../../src/services/email.service';
+import * as recalculateFamilyMemberRanks from '../../src/utils/recalculateFamilyMemberRanks';
+import * as bcrypt from 'bcrypt';
 
 // Mock all dependencies
 jest.mock('../../src/models/user.model');
@@ -15,8 +20,13 @@ jest.mock('../../src/utils/checkId');
 jest.mock('bcrypt');
 
 const mockUser = User as jest.Mocked<typeof User>;
+const mockAdventure = Adventure as jest.Mocked<typeof Adventure>;
+const mockFamily = Family as jest.Mocked<typeof Family>;
 const mockGenerateSecurePassword = generateSecurePassword as jest.Mocked<typeof generateSecurePassword>;
 const mockCheckId = checkId as jest.Mocked<typeof checkId>;
+const mockEmailService = emailService as jest.Mocked<typeof emailService>;
+const mockRecalculateFamilyMemberRanks = recalculateFamilyMemberRanks as jest.Mocked<typeof recalculateFamilyMemberRanks>;
+const mockBcrypt = bcrypt as jest.Mocked<typeof bcrypt>;
 
 describe('User Controller Tests', () => {
     beforeEach(() => {
