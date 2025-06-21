@@ -1,6 +1,7 @@
 import { testUtils } from '../setup';
 import { completeFamilyTask, createFamilyTasks, deleteFamily, deleteFamilyGoal, deleteFamilyTask, getAllFamilies, getFamily, getFamilyGoals, getFamilyLeaderboard, getFamilyMembers, 
     getFamilyNameNbMembersStars, 
+    getFamilyProgressStats, 
     getFamilyTaskById, 
     getLeaderboard, 
     updateAllFamilyMembersStars, 
@@ -1622,6 +1623,7 @@ describe('Family Controller Tests', () => {
         });
     });
 
+    // 17. test getFamilyNameNbMembersStars API
     describe('getFamilyNameNbMembersStars', () => {
         it('should return family name, number of members, and stars successfully', async () => {
             const mockFamilyData = {
@@ -1700,4 +1702,231 @@ describe('Family Controller Tests', () => {
             expect(mockRes.status).toHaveBeenCalledWith(500);
         });
     });
+
+    // 18. test getFamilyProgressStats API
+    describe('getFamilyProgressStats', () => {
+        it('should return family progress stats successfully using user familyId', async () => {
+            const mockGoals = [
+                {
+                    _id: 'goal1',
+                    isCompleted: true,
+                    createdAt: new Date('2024-01-15'),
+                    tasks: [
+                        { _id: 'task1', isCompleted: true, createdAt: new Date('2024-01-10') },
+                        { _id: 'task2', isCompleted: false, createdAt: new Date('2024-01-12') }
+                    ]
+                },
+                {
+                    _id: 'goal2',
+                    isCompleted: false,
+                    createdAt: new Date('2024-01-20'),
+                    tasks: [
+                        { _id: 'task3', isCompleted: true, createdAt: new Date('2024-01-18') }
+                    ]
+                }
+            ];
+
+            const mockFamilyData = {
+                ...testUtils.createMockFamily(),
+                goals: mockGoals,
+                achievements: ['achievement1', 'achievement2', 'achievement3']
+            };
+            
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+            mockAchievement.countDocuments.mockResolvedValue(10);
+
+            const mockReq = testUtils.createMockRequest({
+                user: testUtils.createMockUser({ familyId: '507f1f77bcf86cd799439011' }),
+                body: { timeFrame: 'monthly' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getFamilyProgressStats(mockReq as any, mockRes as any);
+
+            expect(mockGetTimePeriod.getTimePeriod).toHaveBeenCalledWith('monthly');
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                totalTasks: 3,
+                completedTasks: 2,
+                totalGoals: 2,
+                completedGoals: 1,
+                totalAchievements: 10,
+                unlockedAchievements: 3
+            });
+        });
+
+        it('should return family progress stats using provided familyId', async () => {
+            const mockFamilyData = {
+                ...testUtils.createMockFamily(),
+                goals: [],
+                achievements: []
+            };
+            
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+            mockAchievement.countDocuments.mockResolvedValue(5);
+
+            const mockReq = testUtils.createMockRequest({
+                user: testUtils.createMockUser({ familyId: '507f1f77bcf86cd799439011' }),
+                body: { 
+                    familyId: '507f1f77bcf86cd799439012',
+                    timeFrame: 'weekly' 
+                }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getFamilyProgressStats(mockReq as any, mockRes as any);
+
+            expect(mockFamily.findById).toHaveBeenCalledWith('507f1f77bcf86cd799439012');
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                totalTasks: 0,
+                completedTasks: 0,
+                totalGoals: 0,
+                completedGoals: 0,
+                totalAchievements: 5,
+                unlockedAchievements: 0
+            });
+        });
+
+        it('should filter tasks and goals by time period correctly', async () => {
+            const mockGoals = [
+                {
+                    _id: 'goal1',
+                    isCompleted: true,
+                    createdAt: new Date('2024-01-15'), // Within period
+                    tasks: [
+                        { _id: 'task1', isCompleted: true, createdAt: new Date('2024-01-10') }, // Within period
+                        { _id: 'task2', isCompleted: false, createdAt: new Date('2023-12-25') } // Outside period
+                    ]
+                },
+                {
+                    _id: 'goal2',
+                    isCompleted: false,
+                    createdAt: new Date('2023-12-20'), // Outside period
+                    tasks: [
+                        { _id: 'task3', isCompleted: true, createdAt: new Date('2024-01-18') } // Within period
+                    ]
+                }
+            ];
+
+            const mockFamilyData = {
+                ...testUtils.createMockFamily(),
+                goals: mockGoals,
+                achievements: ['achievement1']
+            };
+            
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+            mockAchievement.countDocuments.mockResolvedValue(8);
+
+            const mockReq = testUtils.createMockRequest({
+                user: testUtils.createMockUser({ familyId: '507f1f77bcf86cd799439011' }),
+                body: { timeFrame: 'monthly' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getFamilyProgressStats(mockReq as any, mockRes as any);
+
+            expect(mockRes.json).toHaveBeenCalledWith({
+                totalTasks: 2, // Only tasks within the time period
+                completedTasks: 2, // Both tasks within period are completed
+                totalGoals: 1, // Only goal1 is within the time period
+                completedGoals: 1, // goal1 is completed
+                totalAchievements: 8,
+                unlockedAchievements: 1
+            });
+        });
+
+        it('should handle tasks without createdAt dates', async () => {
+            const mockGoals = [
+                {
+                    _id: 'goal1',
+                    isCompleted: true,
+                    createdAt: new Date('2024-01-15'),
+                    tasks: [
+                        { _id: 'task1', isCompleted: true, createdAt: new Date('2024-01-10') },
+                        { _id: 'task2', isCompleted: false, createdAt: null }, // No createdAt
+                        { _id: 'task3', isCompleted: true } // No createdAt property
+                    ]
+                }
+            ];
+
+            const mockFamilyData = {
+                ...testUtils.createMockFamily(),
+                goals: mockGoals,
+                achievements: []
+            };
+            
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+            mockAchievement.countDocuments.mockResolvedValue(0);
+
+            const mockReq = testUtils.createMockRequest({
+                user: testUtils.createMockUser({ familyId: '507f1f77bcf86cd799439011' }),
+                body: { timeFrame: 'monthly' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getFamilyProgressStats(mockReq as any, mockRes as any);
+
+            expect(mockRes.json).toHaveBeenCalledWith({
+                totalTasks: 1, // Only task1 has createdAt within period
+                completedTasks: 1, // task1 is completed
+                totalGoals: 1,
+                completedGoals: 1,
+                totalAchievements: 0,
+                unlockedAchievements: 0
+            });
+        });
+
+        it('should return 401 if user not authenticated', async () => {
+            const mockReq = testUtils.createMockRequest({ user: null });
+            const mockRes = testUtils.createMockResponse();
+
+            await getFamilyProgressStats(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(401);
+        });
+
+        it('should return error if invalid ID', async () => {
+            mockCheckId.checkId.mockReturnValue(false);
+
+            const mockReq = testUtils.createMockRequest({
+                user: testUtils.createMockUser({ familyId: '507f1f77bcf86cd799439011' }),
+                body: { familyId: 'invalid-id', timeFrame: 'monthly' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getFamilyProgressStats(mockReq as any, mockRes as any);
+
+            expect(mockFamily.findById).not.toHaveBeenCalled();
+        });
+
+        it('should return 404 if family not found', async () => {
+            mockFamily.findById.mockResolvedValue(null);
+
+            const mockReq = testUtils.createMockRequest({
+                user: testUtils.createMockUser({ familyId: '507f1f77bcf86cd799439011' }),
+                body: { timeFrame: 'monthly' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getFamilyProgressStats(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+        });
+
+        it('should handle database errors', async () => {
+            mockFamily.findById.mockRejectedValue(new Error('Database connection failed'));
+
+            const mockReq = testUtils.createMockRequest({
+                user: testUtils.createMockUser({ familyId: '507f1f77bcf86cd799439011' }),
+                body: { timeFrame: 'monthly' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getFamilyProgressStats(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(500);
+        });
+    });
+
 });
