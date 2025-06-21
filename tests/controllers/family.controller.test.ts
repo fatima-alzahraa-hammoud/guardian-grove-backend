@@ -1,6 +1,7 @@
 import { testUtils } from '../setup';
 import { completeFamilyTask, createFamilyTasks, deleteFamily, deleteFamilyGoal, deleteFamilyTask, getAllFamilies, getFamily, getFamilyGoals, getFamilyMembers, 
     getFamilyTaskById, 
+    getLeaderboard, 
     updateFamily, updateFamilyGoal, 
     updateFamilyTask
 } from '../../src/controllers/family.controller';
@@ -1242,6 +1243,140 @@ describe('Family Controller Tests', () => {
             await completeFamilyTask(mockReq as any, mockRes as any);
 
             expect(mockRes.status).toHaveBeenCalledWith(404);
+        });
+    });
+
+    // 14. test getLeaderboard API
+    describe('getLeaderboard', () => {
+        it('should get leaderboard successfully with family rank', async () => {
+            const mockFamilies = [
+                { 
+                    _id: '507f1f77bcf86cd799439011',
+                    familyName: 'Top Family',
+                    familyAvatar: '/avatar1.png',
+                    get: jest.fn((field) => {
+                        if (field === 'stars.daily') return 100;
+                        if (field === 'taskCounts.daily') return 10;
+                        return 0;
+                    })
+                },
+                { 
+                    _id: '507f1f77bcf86cd799439012',
+                    familyName: 'Second Family',
+                    familyAvatar: '/avatar2.png',
+                    get: jest.fn((field) => {
+                        if (field === 'stars.daily') return 80;
+                        if (field === 'taskCounts.daily') return 8;
+                        return 0;
+                    })
+                }
+            ];
+
+            const mockFamilyDoc = {
+                select: jest.fn().mockReturnValue({
+                    sort: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue(mockFamilies)
+                    })
+                })
+            };
+            mockFamily.find.mockReturnValue(mockFamilyDoc as any);
+
+            const mockReq = testUtils.createMockRequest({
+                query: { familyId: '507f1f77bcf86cd799439011' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getLeaderboard(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                message: 'Leaderboard fetched successfully',
+                dailyTop10: expect.arrayContaining([
+                    expect.objectContaining({
+                        familyName: 'Top Family',
+                        rank: 1,
+                        stars: 100,
+                        tasks: 10
+                    })
+                ]),
+                dailyFamilyRank: expect.objectContaining({
+                    familyName: 'Top Family',
+                    rank: 1
+                }),
+                weeklyTop10: expect.any(Array),
+                weeklyFamilyRank: expect.any(Object),
+                monthlyTop10: expect.any(Array),
+                monthlyFamilyRank: expect.any(Object),
+                yearlyTop10: expect.any(Array),
+                yearlyFamilyRank: expect.any(Object)
+            });
+        });
+
+        it('should handle empty leaderboard', async () => {
+            const mockFamilyDoc = {
+                select: jest.fn().mockReturnValue({
+                    sort: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue([])
+                    })
+                })
+            };
+            mockFamily.find.mockReturnValue(mockFamilyDoc as any);
+
+            const mockReq = testUtils.createMockRequest({
+                query: {}
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getLeaderboard(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                message: "Leaderboard fetched successfully",
+                dailyTop10: [],
+                weeklyTop10: [],
+                monthlyTop10: [],
+                yearlyTop10: [],
+                dailyFamilyRank: null,
+                weeklyFamilyRank: null,
+                monthlyFamilyRank: null,
+                yearlyFamilyRank: null
+            });
+        });
+
+        it('should get leaderboard without specific family', async () => {
+            const mockFamilies = [
+                { 
+                    _id: '507f1f77bcf86cd799439011',
+                    familyName: 'Family 1',
+                    get: jest.fn(() => 50)
+                }
+            ];
+
+            const mockFamilyDoc = {
+                select: jest.fn().mockReturnValue({
+                    sort: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue(mockFamilies)
+                    })
+                })
+            };
+            mockFamily.find.mockReturnValue(mockFamilyDoc as any);
+
+            const mockReq = testUtils.createMockRequest({
+                query: {} // No familyId
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getLeaderboard(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            // Should not include family rank fields
+            expect(mockRes.json).toHaveBeenCalledWith({
+                message: 'Leaderboard fetched successfully',
+                dailyTop10: expect.any(Array),
+                weeklyTop10: expect.any(Array),
+                monthlyTop10: expect.any(Array),
+                yearlyTop10: expect.any(Array)
+            });
         });
     });
 });
