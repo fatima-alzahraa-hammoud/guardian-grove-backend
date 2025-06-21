@@ -1,5 +1,5 @@
 import { testUtils } from '../setup';
-import { getAllFamilies, getFamily } from '../../src/controllers/family.controller';
+import { getAllFamilies, getFamily, getFamilyMembers } from '../../src/controllers/family.controller';
 import { Family } from '../../src/models/family.model';
 import { User } from '../../src/models/user.model';
 import { Achievement } from '../../src/models/achievements.model';
@@ -153,6 +153,68 @@ describe('Family Controller Tests', () => {
             await getFamily(mockReq as any, mockRes as any);
 
             expect(mockFamily.findById).not.toHaveBeenCalled();
+        });
+    });
+
+    // 3. test getFamilyMembers API
+    describe('getFamilyMembers', () => {
+        it('should return family members successfully', async () => {
+            const mockMemberUser = testUtils.createMockUser({ name: 'John Doe' });
+            const mockFamilyData = {
+                ...testUtils.createMockFamily(),
+                members: [{
+                    _id: mockMemberUser,
+                    role: 'child',
+                    gender: 'male',
+                    avatar: '/avatar.png'
+                }]
+            };
+            const mockFamilyDoc = {
+                populate: jest.fn().mockReturnValue({
+                    lean: jest.fn().mockResolvedValue(mockFamilyData)
+                })
+            };
+            mockFamily.findById.mockReturnValue(mockFamilyDoc as any);
+
+            const mockReq = testUtils.createMockRequest({
+                body: { familyId: '507f1f77bcf86cd799439011' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getFamilyMembers(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                message: "Retrieving family members successfully",
+                familyWithMembers: expect.objectContaining({
+                    members: expect.arrayContaining([
+                        expect.objectContaining({
+                            name: 'John Doe',
+                            role: 'child',
+                            gender: 'male',
+                            avatar: '/avatar.png'
+                        })
+                    ])
+                })
+            });
+        });
+
+        it('should return 404 if family not found', async () => {
+            const mockFamilyDoc = {
+                populate: jest.fn().mockReturnValue({
+                    lean: jest.fn().mockResolvedValue(null)
+                })
+            };
+            mockFamily.findById.mockReturnValue(mockFamilyDoc as any);
+
+            const mockReq = testUtils.createMockRequest({
+                body: { familyId: '507f1f77bcf86cd799439011' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getFamilyMembers(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
         });
     });
 });
