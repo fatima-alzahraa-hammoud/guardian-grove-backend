@@ -43,4 +43,154 @@ describe('Goal Controller Tests', () => {
         jest.spyOn(mockRecalculateFamilyMemberRanks, 'recalculateFamilyMemberRanks').mockResolvedValue(undefined);
     });
 
+    // 1. test createoal API
+    describe('createGoal', () => {
+        const validGoalData = {
+            title: 'Test Goal',
+            description: 'Test goal description',
+            type: 'personal',
+            userId: testUtils.ids.user,
+            dueDate: '2024-12-31',
+            rewards: { stars: 50, coins: 25 }
+        };
+
+        it('should create personal goal successfully', async () => {
+            const mockUserData = testUtils.createMockUser();
+            const mockUpdatedUser = { ...mockUserData, goals: [expect.any(Object)] };
+            
+            mockUser.findById.mockResolvedValue(mockUserData as any);
+            mockUser.findOneAndUpdate.mockResolvedValue(mockUpdatedUser as any);
+
+            const mockReq = testUtils.createMockRequest({ body: validGoalData });
+            const mockRes = testUtils.createMockResponse();
+
+            await createGoal(mockReq as any, mockRes as any);
+
+            expect(mockUser.findById).toHaveBeenCalledWith(testUtils.ids.user);
+            expect(mockUser.findOneAndUpdate).toHaveBeenCalled();
+            expect(mockRes.status).toHaveBeenCalledWith(201);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                message: 'Goal created successfully',
+                goal: expect.objectContaining({
+                    title: 'Test Goal',
+                    description: 'Test goal description',
+                    type: 'personal'
+                })
+            });
+        });
+
+        it('should create family goal successfully', async () => {
+            const familyGoalData = { ...validGoalData, type: 'family', familyId: testUtils.ids.family };
+            const mockFamilyData = testUtils.createMockFamily();
+            const mockUpdatedFamily = { ...mockFamilyData, goals: [expect.any(Object)] };
+            
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+            mockFamily.findOneAndUpdate.mockResolvedValue(mockUpdatedFamily as any);
+
+            const mockReq = testUtils.createMockRequest({ body: familyGoalData });
+            const mockRes = testUtils.createMockResponse();
+
+            await createGoal(mockReq as any, mockRes as any);
+
+            expect(mockFamily.findById).toHaveBeenCalledWith({ _id: testUtils.ids.family });
+            expect(mockFamily.findOneAndUpdate).toHaveBeenCalled();
+            expect(mockRes.status).toHaveBeenCalledWith(201);
+        });
+
+        it('should default to personal type if not specified', async () => {
+            const goalDataWithoutType = { ...validGoalData };
+            delete (goalDataWithoutType as any).type;
+            
+            const mockUserData = testUtils.createMockUser();
+            mockUser.findById.mockResolvedValue(mockUserData as any);
+            mockUser.findOneAndUpdate.mockResolvedValue(mockUserData as any);
+
+            const mockReq = testUtils.createMockRequest({ body: goalDataWithoutType });
+            const mockRes = testUtils.createMockResponse();
+
+            await createGoal(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(201);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                message: 'Goal created successfully',
+                goal: expect.objectContaining({ type: 'personal' })
+            });
+        });
+
+        it('should return 400 if required fields missing', async () => {
+            const incompleteData = { title: 'Test Goal' }; // Missing description
+
+            const mockReq = testUtils.createMockRequest({ body: incompleteData });
+            const mockRes = testUtils.createMockResponse();
+
+            await createGoal(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'All required fields must be filled.' });
+        });
+
+        it('should return 404 if user not found for personal goal', async () => {
+            mockUser.findById.mockResolvedValue(null);
+
+            const mockReq = testUtils.createMockRequest({ body: validGoalData });
+            const mockRes = testUtils.createMockResponse();
+
+            await createGoal(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'User not found' });
+        });
+
+        it('should return 404 if family not found for family goal', async () => {
+            const familyGoalData = { ...validGoalData, type: 'family', familyId: testUtils.ids.family };
+            mockFamily.findById.mockResolvedValue(null);
+
+            const mockReq = testUtils.createMockRequest({ body: familyGoalData });
+            const mockRes = testUtils.createMockResponse();
+
+            await createGoal(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Family not found' });
+        });
+
+        it('should handle achievement rewards', async () => {
+            const goalWithAchievement = {
+                ...validGoalData,
+                rewards: { achievementId: testUtils.ids.achievement }
+            };
+            
+            const mockAchievementData = testUtils.createMockAchievement();
+            const mockUserData = testUtils.createMockUser();
+            
+            mockAchievement.findById.mockResolvedValue(mockAchievementData as any);
+            mockUser.findById.mockResolvedValue(mockUserData as any);
+            mockUser.findOneAndUpdate.mockResolvedValue(mockUserData as any);
+
+            const mockReq = testUtils.createMockRequest({ body: goalWithAchievement });
+            const mockRes = testUtils.createMockResponse();
+
+            await createGoal(mockReq as any, mockRes as any);
+
+            expect(mockAchievement.findById).toHaveBeenCalledWith(testUtils.ids.achievement);
+            expect(mockRes.status).toHaveBeenCalledWith(201);
+        });
+
+        it('should return 404 if achievement not found', async () => {
+            const goalWithAchievement = {
+                ...validGoalData,
+                rewards: { achievementId: testUtils.ids.achievement }
+            };
+            
+            mockAchievement.findById.mockResolvedValue(null);
+
+            const mockReq = testUtils.createMockRequest({ body: goalWithAchievement });
+            const mockRes = testUtils.createMockResponse();
+
+            await createGoal(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Achievement not found.' });
+        });
+    });
 });
