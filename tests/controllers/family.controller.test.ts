@@ -1,5 +1,5 @@
 import { testUtils } from '../setup';
-import { deleteFamily, getAllFamilies, getFamily, getFamilyGoals, getFamilyMembers, 
+import { deleteFamily, deleteFamilyGoal, getAllFamilies, getFamily, getFamilyGoals, getFamilyMembers, 
     updateFamily, updateFamilyGoal 
 } from '../../src/controllers/family.controller';
 import { Family } from '../../src/models/family.model';
@@ -609,4 +609,51 @@ describe('Family Controller Tests', () => {
         });
     });
 
+    // 8. test deleteFamilyGoal API
+    describe('deleteFamilyGoal', () => {
+        it('should delete family goal successfully', async () => {
+            const mockGoal = {
+                _id: { toString: () => '507f1f77bcf86cd799439020' },
+                title: 'Goal to delete'
+            };
+            const mockFamilyData = testUtils.createMockFamily({
+                goals: [mockGoal],
+                save: jest.fn().mockResolvedValue(true)
+            });
+            mockFamilyData.goals.splice = jest.fn();
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+            mockFamilyData.goals.findIndex = jest.fn().mockReturnValue(0);
+
+            const mockReq = testUtils.createMockRequest({
+                body: {
+                    familyId: '507f1f77bcf86cd799439011',
+                    goalId: '507f1f77bcf86cd799439020'
+                }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await deleteFamilyGoal(mockReq as any, mockRes as any);
+
+            expect(mockFamilyData.goals.splice).toHaveBeenCalledWith(0, 1);
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+        });
+
+        it('should return 404 if goal not found', async () => {
+            const mockFamilyData = testUtils.createMockFamily({ goals: [] });
+            mockFamilyData.goals.findIndex = jest.fn().mockReturnValue(-1);
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+
+            const mockReq = testUtils.createMockRequest({
+                body: {
+                    familyId: '507f1f77bcf86cd799439011',
+                    goalId: '507f1f77bcf86cd799439020'
+                }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await deleteFamilyGoal(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+        });
+    });
 });
