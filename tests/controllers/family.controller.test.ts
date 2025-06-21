@@ -1,5 +1,5 @@
 import { testUtils } from '../setup';
-import { deleteFamily, deleteFamilyGoal, getAllFamilies, getFamily, getFamilyGoals, getFamilyMembers, 
+import { createFamilyTasks, deleteFamily, deleteFamilyGoal, getAllFamilies, getFamily, getFamilyGoals, getFamilyMembers, 
     updateFamily, updateFamilyGoal 
 } from '../../src/controllers/family.controller';
 import { Family } from '../../src/models/family.model';
@@ -654,6 +654,141 @@ describe('Family Controller Tests', () => {
             await deleteFamilyGoal(mockReq as any, mockRes as any);
 
             expect(mockRes.status).toHaveBeenCalledWith(404);
+        });
+    });
+    
+    // 9. test createFamilyTasks API
+    describe('createFamilyTasks', () => {
+        it('should create family task successfully', async () => {
+            const mockPush = jest.fn();
+            const mockGoal = {
+                _id: { toString: () => testUtils.ids.goal },
+                title: 'Test Goal',
+                description: 'Test goal description',
+                type: 'family',
+                tasks: Object.assign([], { push: mockPush }),
+                nbOfTasksCompleted: 0,
+                isCompleted: false,
+                dueDate: new Date('2024-12-31'),
+                createdAt: new Date('2024-01-01'),
+                completedAt: undefined,
+                rewards: { 
+                    stars: 50, 
+                    coins: 25,
+                    achievementName: undefined,
+                    achievementId: undefined
+                }
+            };
+            const mockFamilyData = testUtils.createMockFamily({
+                goals: [mockGoal],
+                save: jest.fn().mockResolvedValue(true)
+            });
+            mockFamilyData.goals.find = jest.fn().mockReturnValue(mockGoal);
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+
+            const mockReq = testUtils.createMockRequest({
+                body: {
+                    familyId: testUtils.ids.family,
+                    goalId: testUtils.ids.goal,
+                    title: 'New Task',
+                    description: 'Task description',
+                    rewards: { stars: 5, coins: 3 }
+                }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await createFamilyTasks(mockReq as any, mockRes as any);
+
+            expect(mockPush).toHaveBeenCalled();
+            expect(mockRes.status).toHaveBeenCalledWith(201);
+        });
+
+        it('should return 400 if required fields missing', async () => {
+            const mockGoal = {
+                _id: { toString: () => testUtils.ids.goal },
+                title: 'Test Goal',
+                description: 'Test goal description',
+                type: 'family',
+                tasks: [],
+                nbOfTasksCompleted: 0,
+                isCompleted: false,
+                dueDate: new Date('2024-12-31'),
+                createdAt: new Date('2024-01-01'),
+                completedAt: undefined,
+                rewards: { 
+                    stars: 50, 
+                    coins: 25,
+                    achievementName: undefined,
+                    achievementId: undefined
+                }
+            };
+            const mockFamilyData = testUtils.createMockFamily({ 
+                goals: [mockGoal] 
+            });
+            mockFamilyData.goals.find = jest.fn().mockReturnValue(mockGoal);
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+
+            const mockReq = testUtils.createMockRequest({
+                body: {
+                    familyId: testUtils.ids.family,
+                    goalId: testUtils.ids.goal,
+                    title: '', // Missing title
+                    description: 'Task description'
+                }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await createFamilyTasks(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({ 
+                error: 'All required fields must be filled.' 
+            });
+        });
+
+        it('should use default rewards if not provided', async () => {
+            const mockPush = jest.fn();
+            const mockGoal = {
+                _id: { toString: () => testUtils.ids.goal },
+                title: 'Test Goal',
+                description: 'Test goal description',
+                type: 'family',
+                tasks: Object.assign([], { push: mockPush }),
+                nbOfTasksCompleted: 0,
+                isCompleted: false,
+                dueDate: new Date('2024-12-31'),
+                createdAt: new Date('2024-01-01'),
+                completedAt: undefined,
+                rewards: { 
+                    stars: 50, 
+                    coins: 25,
+                    achievementName: undefined,
+                    achievementId: undefined
+                }
+            };
+            const mockFamilyData = testUtils.createMockFamily({
+                goals: [mockGoal],
+                save: jest.fn().mockResolvedValue(true)
+            });
+            mockFamilyData.goals.find = jest.fn().mockReturnValue(mockGoal);
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+
+            const mockReq = testUtils.createMockRequest({
+                body: {
+                    familyId: testUtils.ids.family,
+                    goalId: testUtils.ids.goal,
+                    title: 'New Task',
+                    description: 'Task description'
+                    // No rewards provided
+                }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await createFamilyTasks(mockReq as any, mockRes as any);
+
+            const capturedTask = mockPush.mock.calls[0][0];
+            expect(capturedTask.rewards).toEqual({ stars: 2, coins: 1 });
+            expect(mockRes.status).toHaveBeenCalledWith(201);
         });
     });
 });
