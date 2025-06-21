@@ -33,6 +33,7 @@ describe('User Controller Tests', () => {
         mockCheckId.checkId.mockReturnValue(true);
     });
 
+    // test getUsers API
     describe('getUsers', () => {
         it('should return all users successfully', async () => {
             const mockUsers = [
