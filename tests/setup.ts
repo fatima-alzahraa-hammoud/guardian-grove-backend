@@ -269,6 +269,18 @@ export const testUtils = {
         ...overrides
     }),
 
+    // Create mock challenge based on your Challenge interface
+    createMockChallenge: (overrides = {}) => ({
+        _id: '507f1f77bcf86cd799439016',
+        title: 'Test Challenge',
+        content: 'Test challenge content',
+        starsReward: 10,
+        coinsReward: 5,
+        // Mock methods
+        toString: jest.fn(() => '507f1f77bcf86cd799439016'),
+        ...overrides
+    }),
+
     // Create mock adventure based on your Adventure model
     createMockAdventure: (overrides = {}) => ({
         _id: '507f1f77bcf86cd799439015',
@@ -278,18 +290,44 @@ export const testUtils = {
             {
                 _id: '507f1f77bcf86cd799439016',
                 title: 'Test Challenge',
-                description: 'A test challenge',
+                content: 'A test challenge content',
                 starsReward: 10,
                 coinsReward: 5,
-                equals: jest.fn((id: any) => id === '507f1f77bcf86cd799439016')
+                toString: jest.fn(() => '507f1f77bcf86cd799439016')
             }
         ],
         starsReward: 100,
         coinsReward: 50,
-        difficulty: 'easy',
-        category: 'learning',
+        startDate: new Date('2024-01-01'),
+        endDate: new Date('2024-01-31'),
+        // Mock Mongoose methods
+        save: jest.fn().mockResolvedValue(true),
+        toString: jest.fn(() => '507f1f77bcf86cd799439015'),
         ...overrides
     }),
+
+    // Create mock adventure with challenges - ADDED FOR CHALLENGE CONTROLLER TESTS
+    createMockAdventureWithChallenges: (challenges = []) => {
+        const defaultChallenges = challenges.length > 0 ? challenges : [
+            {
+                _id: '507f1f77bcf86cd799439016', // testUtils.ids.challenge
+                title: 'Test Challenge',
+                content: 'Test challenge content',
+                starsReward: 10,
+                coinsReward: 5,
+                toString: jest.fn(() => '507f1f77bcf86cd799439016')
+            }
+        ];
+
+        return testUtils.createMockAdventure({
+            challenges: Object.assign(defaultChallenges, {
+                push: jest.fn(),
+                find: jest.fn(),
+                findIndex: jest.fn(),
+                splice: jest.fn()
+            })
+        });
+    },
 
     // Add this to your testUtils object in setup.js/ts
     createMockStoreItem: (overrides = {}) => ({
