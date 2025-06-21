@@ -3,7 +3,7 @@ import {  getUsers, getUserById, createUser, editUserProfile,
     deleteUser, updatePassword, getUserStars, updateUserStars,
     getUserCoins, updateUserCoins, getLocation, updateLocation,
     getUserRank, getUserInterests, startAdventure, completeChallenge,
-    getUserAdventures, 
+    getUserAdventures, getUserPurchasedItems
 } from '../../src/controllers/user.controller';
 import { User } from '../../src/models/user.model';
 import * as generateSecurePassword from '../../src/utils/generateSecurePassword';
@@ -1319,6 +1319,78 @@ describe('User Controller Tests', () => {
 
             expect(mockRes.status).toHaveBeenCalledWith(401);
             expect(mockRes.json).toHaveBeenCalledWith({ error: 'Unauthorized' });
+        });
+    });
+
+    // 18. test getUserPurchasedItems API
+    describe('getUserPurchasedItems', () => {
+        it('should get user purchased items successfully', async () => {
+            const mockPurchasedItems = [
+                { itemId: '507f1f77bcf86cd799439020' },
+                { itemId: '507f1f77bcf86cd799439021' }
+            ];
+            const mockUserData = {
+                purchasedItems: mockPurchasedItems
+            };
+            const mockUserDoc = {
+                select: jest.fn().mockResolvedValue(mockUserData)
+            };
+            mockUser.findById.mockReturnValue(mockUserDoc as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: testUtils.createMockUser(),
+                body: { userId: '507f1f77bcf86cd799439011' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getUserPurchasedItems(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                message: "Purchased items retrieved successfully",
+                purchasedItems: ['507f1f77bcf86cd799439020', '507f1f77bcf86cd799439021']
+            });
+        });
+
+        it('should return 401 if user not authenticated', async () => {
+            const mockReq = testUtils.createMockRequest({ user: null });
+            const mockRes = testUtils.createMockResponse();
+
+            await getUserPurchasedItems(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(401);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Unauthorized' });
+        });
+
+        it('should return 403 if trying to access other user items', async () => {
+            const mockReq = testUtils.createMockRequest({ 
+                user: testUtils.createMockUser({ _id: 'different-user-id' }),
+                body: { userId: '507f1f77bcf86cd799439011' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getUserPurchasedItems(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(403);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Forbidden' });
+        });
+
+        it('should return 404 if user not found', async () => {
+            const mockUserDoc = {
+                select: jest.fn().mockResolvedValue(null)
+            };
+            mockUser.findById.mockReturnValue(mockUserDoc as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: testUtils.createMockUser(),
+                body: { userId: '507f1f77bcf86cd799439011' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getUserPurchasedItems(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'User not found' });
         });
     });
 });
