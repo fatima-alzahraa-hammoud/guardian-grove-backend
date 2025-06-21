@@ -193,4 +193,79 @@ describe('Goal Controller Tests', () => {
             expect(mockRes.json).toHaveBeenCalledWith({ error: 'Achievement not found.' });
         });
     });
+
+    // 2. test getGoals API
+    describe('getGoals', () => {
+        it('should get user goals successfully', async () => {
+            const mockUserData = testUtils.createMockUser({ goals: [testUtils.createMockGoal()] });
+            const mockFamilyData = testUtils.createMockFamily({ goals: [testUtils.createMockGoal({ type: 'family' })] });
+            
+            mockUser.findById.mockResolvedValue(mockUserData as any);
+            mockFamily.findById.mockReturnValue({
+                populate: jest.fn().mockResolvedValue(mockFamilyData)
+            } as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                body: { userId: testUtils.ids.user }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getGoals(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                message: "Retrieving user goals successfully",
+                goals: expect.any(Array)
+            });
+        });
+
+        it('should get all users goals for admin', async () => {
+            const mockUsers = [testUtils.createMockUser()];
+            const mockFamilies = [testUtils.createMockFamily()];
+            
+            mockUser.find.mockResolvedValue(mockUsers as any);
+            mockFamily.find.mockReturnValue({
+                populate: jest.fn().mockResolvedValue(mockFamilies)
+            } as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: testUtils.createMockUser({ role: 'admin' })
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getGoals(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                message: "Retrieving all users' goals successfully",
+                goals: expect.any(Array)
+            });
+        });
+
+        it('should return 401 for unauthorized admin access', async () => {
+            const mockReq = testUtils.createMockRequest({ 
+                user: testUtils.createMockUser({ role: 'child' })
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getGoals(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(401);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Unauthorized' });
+        });
+
+        it('should return 404 if user not found', async () => {
+            mockUser.findById.mockResolvedValue(null);
+
+            const mockReq = testUtils.createMockRequest({ 
+                body: { userId: testUtils.ids.user }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getGoals(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'User not found' });
+        });
+    });
 });
