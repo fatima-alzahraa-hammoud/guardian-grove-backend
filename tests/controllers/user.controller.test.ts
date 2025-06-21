@@ -1,6 +1,6 @@
 import { testUtils } from '../setup';
 import {  getUsers, getUserById, createUser, editUserProfile,
-    deleteUser, updatePassword, getUserStars
+    deleteUser, updatePassword, getUserStars, updateUserStars
 } from '../../src/controllers/user.controller';
 import { User } from '../../src/models/user.model';
 import * as generateSecurePassword from '../../src/utils/generateSecurePassword';
@@ -596,6 +596,200 @@ describe('User Controller Tests', () => {
 
             expect(mockRes.status).toHaveBeenCalledWith(401);
             expect(mockRes.json).toHaveBeenCalledWith({ error: 'Unauthorized' });
+        });
+    });
+
+    // 7. test updateUserStars API
+    describe('updateUserStars', () => {
+        it('should update user stars successfully', async () => {
+            const mockUserData = testUtils.createMockUser({ 
+                stars: 100, 
+                familyId: '507f1f77bcf86cd799439012' 
+            });
+            mockFamily.findByIdAndUpdate.mockResolvedValue({} as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: { stars: 50 }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateUserStars(mockReq as any, mockRes as any);
+
+            expect(mockUserData.stars).toBe(150); // 100 + 50
+            expect(mockFamily.findByIdAndUpdate).toHaveBeenCalledWith(
+                '507f1f77bcf86cd799439012',
+                { $inc: { totalStars: 50 } }
+            );
+            expect(mockRecalculateFamilyMemberRanks.recalculateFamilyMemberRanks).toHaveBeenCalledWith(
+                '507f1f77bcf86cd799439012',
+                mockUserData
+            );
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.send).toHaveBeenCalledWith({
+                message: "User stars updated successfully",
+                user: mockUserData
+            });
+        });
+
+        it('should return 401 if user not authenticated', async () => {
+            const mockReq = testUtils.createMockRequest({ 
+                user: null,
+                body: { stars: 50 }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateUserStars(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(401);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Unauthorized' });
+        });
+
+        it('should return 400 if stars is undefined', async () => {
+            const mockUserData = testUtils.createMockUser();
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: {} // No stars field
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateUserStars(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Stars must be a valid number.' });
+        });
+
+        it('should return 400 if stars is not a number', async () => {
+            const mockUserData = testUtils.createMockUser();
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: { stars: 'invalid' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateUserStars(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Stars must be a valid number.' });
+        });
+
+        it('should return 400 if stars is negative', async () => {
+            const mockUserData = testUtils.createMockUser();
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: { stars: -10 }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateUserStars(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Stars must be a valid number.' });
+        });
+
+        it('should return 400 if user has no family id', async () => {
+            const mockUserData = testUtils.createMockUser({ 
+                stars: 100,
+                familyId: null // No family ID
+            });
+            
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: { stars: 50 }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateUserStars(mockReq as any, mockRes as any);
+
+            expect(mockUserData.stars).toBe(150); // Stars still get added
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'No family id' });
+        });
+
+        it('should handle zero stars correctly', async () => {
+            const mockUserData = testUtils.createMockUser({ 
+                stars: 100, 
+                familyId: '507f1f77bcf86cd799439012' 
+            });
+            mockFamily.findByIdAndUpdate.mockResolvedValue({} as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: { stars: 0 }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateUserStars(mockReq as any, mockRes as any);
+
+            expect(mockUserData.stars).toBe(100); // 100 + 0 = 100
+            expect(mockFamily.findByIdAndUpdate).toHaveBeenCalledWith(
+                '507f1f77bcf86cd799439012',
+                { $inc: { totalStars: 0 } }
+            );
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+        });
+
+        it('should handle database error gracefully', async () => {
+            const mockUserData = testUtils.createMockUser({ 
+                stars: 100, 
+                familyId: '507f1f77bcf86cd799439012' 
+            });
+            // Mock save to throw an error
+            mockUserData.save = jest.fn().mockRejectedValue(new Error('Database error'));
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: { stars: 50 }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateUserStars(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(500);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Error updating user stars' });
+        });
+
+        it('should handle family update error gracefully', async () => {
+            const mockUserData = testUtils.createMockUser({ 
+                stars: 100, 
+                familyId: '507f1f77bcf86cd799439012' 
+            });
+            // Mock family update to throw an error
+            mockFamily.findByIdAndUpdate.mockRejectedValue(new Error('Family update failed'));
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: { stars: 50 }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateUserStars(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(500);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Error updating user stars' });
+        });
+
+        it('should handle rank recalculation error gracefully', async () => {
+            const mockUserData = testUtils.createMockUser({ 
+                stars: 100, 
+                familyId: '507f1f77bcf86cd799439012' 
+            });
+            mockFamily.findByIdAndUpdate.mockResolvedValue({} as any);
+            // Mock rank recalculation to throw an error
+            mockRecalculateFamilyMemberRanks.recalculateFamilyMemberRanks.mockRejectedValue(
+                new Error('Rank calculation failed')
+            );
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: { stars: 50 }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateUserStars(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(500);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Error updating user stars' });
         });
     });
 });
