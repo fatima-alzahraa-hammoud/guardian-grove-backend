@@ -1,5 +1,5 @@
 import { testUtils } from '../setup';
-import { createAchievement, deleteAchievement, getAchievements, getLastUnlockedAchievement, getLockedAchievements, getUnLockedAchievements, getUserAchievements, unlockAchievement, unlockFamilyAchievement, updateAchievement } from '../../src/controllers/achievement.controller';
+import { createAchievement, deleteAchievement, getAchievements, getLastFamilyUnlockedAchievement, getLastUnlockedAchievement, getLockedAchievements, getUnLockedAchievements, getUserAchievements, unlockAchievement, unlockFamilyAchievement, updateAchievement } from '../../src/controllers/achievement.controller';
 import { Achievement } from '../../src/models/achievements.model';
 import { User } from '../../src/models/user.model';
 import { Family } from '../../src/models/family.model';
@@ -956,6 +956,232 @@ describe('Achievements Controller Tests', () => {
                 path: "achievements.achievementId",
                 select: "title photo description"
             });
+        });
+    });
+
+    // 11. test getLastFamilyUnlockedAchievement API
+    describe('getLastFamilyUnlockedAchievement', () => {
+        const familyId = testUtils.ids.family;
+
+        it('should get last family unlocked achievement successfully', async () => {
+            const mockFamilyData = testUtils.createMockFamily({
+                _id: familyId,
+                achievements: [
+                    { 
+                        achievementId: {
+                            title: 'First Family Achievement',
+                            photo: '/family1.png',
+                            description: 'First family description'
+                        },
+                        unlockedAt: new Date('2024-01-10')
+                    },
+                    { 
+                        achievementId: {
+                            title: 'Latest Family Achievement',
+                            photo: '/family2.png',
+                            description: 'Latest family description'
+                        },
+                        unlockedAt: new Date('2024-01-20')
+                    }
+                ]
+            });
+
+            mockFamily.findById.mockReturnValue({
+                populate: jest.fn().mockResolvedValue(mockFamilyData)
+            } as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: testUtils.createMockUser(),
+                body: { familyId }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getLastFamilyUnlockedAchievement(mockReq as any, mockRes as any);
+
+            expect(mockFamily.findById).toHaveBeenCalledWith(familyId);
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.send).toHaveBeenCalledWith({
+                message: 'Retrieve last unlocked family achievement successfully',
+                lastUnlockedAchievement: {
+                    title: 'Latest Family Achievement',
+                    photo: '/family2.png',
+                    description: 'Latest family description',
+                    unlockedAt: expect.any(Date)
+                }
+            });
+        });
+
+        it('should return 401 if user not authenticated', async () => {
+            const mockReq = testUtils.createMockRequest({ 
+                user: null,
+                body: { familyId }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getLastFamilyUnlockedAchievement(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(401);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Unauthorized' });
+            expect(mockFamily.findById).not.toHaveBeenCalled();
+        });
+
+        it('should return early if checkId fails for familyId', async () => {
+            mockCheckId.checkId.mockReturnValue(false);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: testUtils.createMockUser(),
+                body: { familyId: 'invalid-family-id' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getLastFamilyUnlockedAchievement(mockReq as any, mockRes as any);
+
+            expect(mockFamily.findById).not.toHaveBeenCalled();
+        });
+
+        it('should return 404 if family not found', async () => {
+            mockFamily.findById.mockReturnValue({
+                populate: jest.fn().mockResolvedValue(null)
+            } as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: testUtils.createMockUser(),
+                body: { familyId }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getLastFamilyUnlockedAchievement(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Family not found' });
+        });
+
+        it('should handle family with no achievements', async () => {
+            const mockFamilyData = testUtils.createMockFamily({
+                achievements: [] // Empty achievements array
+            });
+
+            mockFamily.findById.mockReturnValue({
+                populate: jest.fn().mockResolvedValue(mockFamilyData)
+            } as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: testUtils.createMockUser(),
+                body: { familyId }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getLastFamilyUnlockedAchievement(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.send).toHaveBeenCalledWith({
+                message: 'No achievements'
+            });
+        });
+
+        it('should handle database errors and return 500', async () => {
+            mockFamily.findById.mockReturnValue({
+                populate: jest.fn().mockRejectedValue(new Error('Family database error'))
+            } as any);
+
+            // Mock console.error to avoid log output during tests
+            const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: testUtils.createMockUser(),
+                body: { familyId }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getLastFamilyUnlockedAchievement(mockReq as any, mockRes as any);
+            expect(mockRes.status).toHaveBeenCalledWith(500);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'An error occurred while getting last unlocked family achievement.' });
+
+            consoleErrorSpy.mockRestore();
+        });
+
+        it('should populate family achievements with correct fields', async () => {
+            const mockFamilyData = testUtils.createMockFamily({
+                achievements: [
+                    { 
+                        achievementId: {
+                            title: 'Family Test Achievement',
+                            photo: '/family-test.png',
+                            description: 'Family test description'
+                        },
+                        unlockedAt: new Date('2024-01-15')
+                    }
+                ]
+            });
+
+            const populateMock = jest.fn().mockResolvedValue(mockFamilyData);
+            mockFamily.findById.mockReturnValue({ populate: populateMock } as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: testUtils.createMockUser(),
+                body: { familyId }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getLastFamilyUnlockedAchievement(mockReq as any, mockRes as any);
+
+            expect(populateMock).toHaveBeenCalledWith({
+                path: "achievements.achievementId",
+                select: "title photo description"
+            });
+        });
+
+        it('should handle single achievement correctly', async () => {
+            const mockFamilyData = testUtils.createMockFamily({
+                achievements: [
+                    { 
+                        achievementId: {
+                            title: 'Only Family Achievement',
+                            photo: '/only.png',
+                            description: 'Only description'
+                        },
+                        unlockedAt: new Date('2024-01-15')
+                    }
+                ]
+            });
+
+            mockFamily.findById.mockReturnValue({
+                populate: jest.fn().mockResolvedValue(mockFamilyData)
+            } as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: testUtils.createMockUser(),
+                body: { familyId }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getLastFamilyUnlockedAchievement(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.send).toHaveBeenCalledWith({
+                message: 'Retrieve last unlocked family achievement successfully',
+                lastUnlockedAchievement: {
+                    title: 'Only Family Achievement',
+                    photo: '/only.png',
+                    description: 'Only description',
+                    unlockedAt: expect.any(Date)
+                }
+            });
+        });
+
+        it('should handle missing familyId in request body', async () => {
+            const mockReq = testUtils.createMockRequest({ 
+                user: testUtils.createMockUser(),
+                body: {} // No familyId provided
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            // checkId should return false for undefined familyId
+            mockCheckId.checkId.mockReturnValue(false);
+
+            await getLastFamilyUnlockedAchievement(mockReq as any, mockRes as any);
+
+            expect(mockFamily.findById).not.toHaveBeenCalled();
         });
     });
 });
