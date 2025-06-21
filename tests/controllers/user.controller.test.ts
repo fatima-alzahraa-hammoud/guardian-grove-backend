@@ -2,7 +2,7 @@ import { testUtils } from '../setup';
 import {  getUsers, getUserById, createUser, editUserProfile,
     deleteUser, updatePassword, getUserStars, updateUserStars,
     getUserCoins, updateUserCoins, getLocation, updateLocation,
-    getUserRank, getUserInterests, 
+    getUserRank, getUserInterests, startAdventure, 
 } from '../../src/controllers/user.controller';
 import { User } from '../../src/models/user.model';
 import * as generateSecurePassword from '../../src/utils/generateSecurePassword';
@@ -1007,4 +1007,82 @@ describe('User Controller Tests', () => {
         });
     });
 
+    // 15. test startAdventure API
+    describe('startAdventure', () => {
+        it('should start adventure successfully', async () => {
+            const mockUserData = testUtils.createMockUser({ adventures: [] });
+            const mockAdventureData = testUtils.createMockAdventure();
+            
+            mockAdventure.findById.mockResolvedValue(mockAdventureData as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: { adventureId: '507f1f77bcf86cd799439015' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await startAdventure(mockReq as any, mockRes as any);
+
+            expect(mockAdventure.findById).toHaveBeenCalledWith('507f1f77bcf86cd799439015');
+            expect(mockUserData.adventures).toHaveLength(1);
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.send).toHaveBeenCalledWith({
+                message: "Adventure started successfully",
+                user: mockUserData
+            });
+        });
+
+        it('should return 401 if user not authenticated', async () => {
+            const mockReq = testUtils.createMockRequest({ user: null });
+            const mockRes = testUtils.createMockResponse();
+
+            await startAdventure(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(401);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Unauthorized' });
+        });
+
+        it('should return 404 if adventure not found', async () => {
+            const mockUserData = testUtils.createMockUser({ adventures: [] });
+            mockAdventure.findById.mockResolvedValue(null);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: { adventureId: '507f1f77bcf86cd799439015' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await startAdventure(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Adventure not found' });
+        });
+
+        it('should return 400 if adventure already started', async () => {
+            const existingAdventure = {
+                adventureId: { equals: jest.fn().mockReturnValue(true) },
+                challenges: [],
+                status: 'in-progress',
+                isAdventureCompleted: false,
+                starsReward: 100,
+                coinsReward: 50,
+                progress: 0
+            };
+            const mockUserData = testUtils.createMockUser({ adventures: [existingAdventure] });
+            const mockAdventureData = testUtils.createMockAdventure();
+            
+            mockAdventure.findById.mockResolvedValue(mockAdventureData as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: { adventureId: '507f1f77bcf86cd799439015' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await startAdventure(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Adventure already started' });
+        });
+    });
 });
