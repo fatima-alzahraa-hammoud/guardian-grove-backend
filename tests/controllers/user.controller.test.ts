@@ -1,6 +1,6 @@
 import { testUtils } from '../setup';
 import {  getUsers, getUserById, createUser, editUserProfile,
-    deleteUser, 
+    deleteUser, updatePassword
 } from '../../src/controllers/user.controller';
 import { User } from '../../src/models/user.model';
 import * as generateSecurePassword from '../../src/utils/generateSecurePassword';
@@ -464,6 +464,119 @@ describe('User Controller Tests', () => {
             expect(mockRes.status).toHaveBeenCalledWith(400);
             expect(mockRes.json).toHaveBeenCalledWith({ 
                 error: 'Cannot delete the last parent in the family' 
+            });
+        });
+    });
+
+    // 6. test updatePassword API
+    describe('updatePassword', () => {
+        it('should update password successfully', async () => {
+            const mockUserData = testUtils.createMockUser();
+            mockUser.findById.mockResolvedValue(mockUserData as any);
+            
+            // ✅ Fix: Use mockImplementation for sequential calls
+            (mockBcrypt.compare as jest.Mock)
+                .mockResolvedValueOnce(true)   // Old password matches
+                .mockResolvedValueOnce(false); // New password is different
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: { 
+                    userId: '507f1f77bcf86cd799439011',
+                    oldPassword: 'oldPass123!',
+                    newPassword: 'NewPass123!',
+                    confirmPassword: 'NewPass123!'
+                }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await updatePassword(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.send).toHaveBeenCalledWith({
+                message: "Password updated successfully.",
+                password: 'NewPass123!'
+            });
+        });
+
+        // Also fix this test:
+        it('should return 400 if old password incorrect', async () => {
+            const mockUserData = testUtils.createMockUser();
+            mockUser.findById.mockResolvedValue(mockUserData as any);
+            
+            // ✅ Fix: Cast to jest.Mock
+            (mockBcrypt.compare as jest.Mock).mockResolvedValue(false);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: { 
+                    userId: '507f1f77bcf86cd799439011',
+                    oldPassword: 'wrongPass',
+                    newPassword: 'NewPass123!',
+                    confirmPassword: 'NewPass123!'
+                }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await updatePassword(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Old password is incorrect.' });
+        });
+
+        // And this one:
+        it('should return 400 if new password same as old', async () => {
+            const mockUserData = testUtils.createMockUser();
+            mockUser.findById.mockResolvedValue(mockUserData as any);
+            
+            // ✅ Fix: Cast to jest.Mock
+            (mockBcrypt.compare as jest.Mock).mockResolvedValue(true);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: { 
+                    userId: '507f1f77bcf86cd799439011',
+                    oldPassword: 'samePass123!',
+                    newPassword: 'samePass123!',
+                    confirmPassword: 'samePass123!'
+                }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await updatePassword(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({ 
+                error: 'New password cannot be the same as the old password.' 
+            });
+        });
+
+        // And this one:
+        it('should return 400 if password does not meet requirements', async () => {
+            const mockUserData = testUtils.createMockUser();
+            mockUser.findById.mockResolvedValue(mockUserData as any);
+            
+            // ✅ Fix: Cast to jest.Mock for sequential calls
+            (mockBcrypt.compare as jest.Mock)
+                .mockResolvedValueOnce(true)   // Old password matches
+                .mockResolvedValueOnce(false); // New password is different
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockUserData,
+                body: { 
+                    userId: '507f1f77bcf86cd799439011',
+                    oldPassword: 'oldPass123!',
+                    newPassword: 'weak', // Weak password
+                    confirmPassword: 'weak'
+                }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await updatePassword(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({ 
+                error: 'Password must be at least 8 characters long, include an uppercase letter, lowercase letter, a number, and a special character.' 
             });
         });
     });
