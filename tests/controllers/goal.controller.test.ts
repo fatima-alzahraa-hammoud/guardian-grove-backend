@@ -630,4 +630,112 @@ describe('Goal Controller Tests', () => {
             expect(mockRes.json).toHaveBeenCalledWith({ error: 'Task not found' });
         });
     });
+
+    // 8. test updateTask API
+    describe('updateTask', () => {
+        const updateTaskData = {
+            userId: testUtils.ids.user,
+            goalId: testUtils.ids.goal,
+            taskId: testUtils.ids.task,
+            title: 'Updated Task Title',
+            description: 'Updated task description',
+            rewards: { stars: 15, coins: 8 }
+        };
+
+        it('should update task successfully', async () => {
+            const mockTask = testUtils.createMockTask();
+            const mockGoal = testUtils.createMockGoal({ tasks: [mockTask] });
+            const mockUserData = testUtils.createMockUser({ 
+                goals: [mockGoal],
+                save: jest.fn().mockResolvedValue(true)
+            });
+            
+            mockUser.findById.mockResolvedValue(mockUserData as any);
+
+            const mockReq = testUtils.createMockRequest({ body: updateTaskData });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateTask(mockReq as any, mockRes as any);
+
+            expect(mockUserData.save).toHaveBeenCalled();
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                message: 'Task updated successfully',
+                task: expect.objectContaining({
+                    title: 'Updated Task Title',
+                    description: 'Updated task description'
+                })
+            });
+        });
+
+        it('should update only provided fields', async () => {
+            const partialUpdateData = {
+                userId: testUtils.ids.user,
+                goalId: testUtils.ids.goal,
+                taskId: testUtils.ids.task,
+                title: 'Only Title Updated'
+            };
+
+            const mockTask = testUtils.createMockTask({ 
+                title: 'Original Title',
+                description: 'Original Description'
+            });
+            const mockGoal = testUtils.createMockGoal({ tasks: [mockTask] });
+            const mockUserData = testUtils.createMockUser({ 
+                goals: [mockGoal],
+                save: jest.fn().mockResolvedValue(true)
+            });
+            
+            mockUser.findById.mockResolvedValue(mockUserData as any);
+
+            const mockReq = testUtils.createMockRequest({ body: partialUpdateData });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateTask(mockReq as any, mockRes as any);
+
+            expect(mockTask.title).toBe('Only Title Updated');
+            expect(mockTask.description).toBe('Original Description'); // Should remain unchanged
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+        });
+
+        it('should return 404 if user not found', async () => {
+            mockUser.findById.mockResolvedValue(null);
+
+            const mockReq = testUtils.createMockRequest({ body: updateTaskData });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateTask(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'User not found' });
+        });
+
+        it('should return 404 if goal not found', async () => {
+            const mockUserData = testUtils.createMockUser({ goals: [] });
+            mockUser.findById.mockResolvedValue(mockUserData as any);
+
+            const mockReq = testUtils.createMockRequest({ body: updateTaskData });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateTask(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Goal not found' });
+        });
+
+        it('should return 404 if task not found', async () => {
+            const mockGoal = testUtils.createMockGoal({ tasks: [] });
+            const mockUserData = testUtils.createMockUser({ goals: [mockGoal] });
+            
+            mockUser.findById.mockResolvedValue(mockUserData as any);
+
+            const mockReq = testUtils.createMockRequest({ body: updateTaskData });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateTask(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Task not found' });
+        });
+    });
 });
