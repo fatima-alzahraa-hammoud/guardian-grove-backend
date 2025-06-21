@@ -18,7 +18,6 @@ export const getUsers = async(req: Request, res: Response): Promise<void> => {
         const users = await User.find();
         res.status(200).send(users);
     }catch(error){
-        console.error("Error retrieving users:", error);
         return throwError({ message: "Error retrieving users", res, status: 500});
     }
 };
