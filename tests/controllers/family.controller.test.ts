@@ -419,8 +419,7 @@ describe('Family Controller Tests', () => {
             expect(mockRes.status).toHaveBeenCalledWith(401);
         });
     });
-
-    // 6. test updateFamilyGoal API
+// 6. test updateFamilyGoal API
     describe('updateFamilyGoal', () => {
         it('should update family goal successfully', async () => {
             const mockGoal = {
@@ -493,22 +492,39 @@ describe('Family Controller Tests', () => {
             const mockGoal = {
                 _id: { toString: () => '507f1f77bcf86cd799439020' },
                 title: 'Original Goal',
-                rewards: { stars: 10, coins: 5 }
+                description: 'Original Description',
+                type: 'family',
+                tasks: [],
+                nbOfTasksCompleted: 0,
+                isCompleted: false,
+                dueDate: new Date('2024-12-31'),
+                createdAt: new Date('2024-01-01'),
+                completedAt: undefined,
+                rewards: { 
+                    stars: 10, 
+                    coins: 5,
+                    achievementName: undefined, // Start as undefined
+                    achievementId: undefined
+                }
             };
             const mockFamilyData = testUtils.createMockFamily({
                 email: 'parent@test.com',
                 goals: [mockGoal],
                 save: jest.fn().mockResolvedValue(true)
             });
-            const mockAchievementData = testUtils.createMockAchievement({ title: 'Great Achievement' });
+            const mockAchievementData = testUtils.createMockAchievement({ 
+                _id: '507f1f77bcf86cd799439025',
+                title: 'Great Achievement' 
+            });
             
             mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+            mockFamilyData.goals.find = jest.fn().mockReturnValue(mockGoal);
             mockAchievement.findById.mockResolvedValue(mockAchievementData as any);
 
             const mockReq = testUtils.createMockRequest({
                 user: testUtils.createMockUser({ role: 'parent', email: 'parent@test.com' }),
                 body: {
-                    familyId: '507f1f77bcf86cd799439011',
+                    familyId: testUtils.ids.family,
                     goalId: '507f1f77bcf86cd799439020',
                     rewards: {
                         achievementId: '507f1f77bcf86cd799439025'
@@ -521,6 +537,7 @@ describe('Family Controller Tests', () => {
 
             expect(mockGoal.rewards.achievementName).toBe('Great Achievement');
             expect(mockGoal.rewards.achievementId).toBe('507f1f77bcf86cd799439025');
+            expect(mockRes.status).toHaveBeenCalledWith(200);
         });
 
         it('should return 404 if achievement not found', async () => {
