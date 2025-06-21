@@ -422,4 +422,51 @@ describe('Goal Controller Tests', () => {
             expect(mockRes.json).toHaveBeenCalledWith({ error: 'Goal not found' });
         });
     });
+
+    // 5. test deleteGoal API
+    describe('deleteGoal', () => {
+        const deleteData = {
+            userId: testUtils.ids.user,
+            goalId: testUtils.ids.goal
+        };
+
+        it('should delete goal successfully', async () => {
+            const mockGoal = testUtils.createMockGoal();
+            const mockUserData = testUtils.createMockUser({ 
+                goals: [mockGoal],
+                save: jest.fn().mockResolvedValue(true)
+            });
+            
+            mockUser.findById.mockResolvedValue(mockUserData as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: testUtils.createMockUser({ role: 'parent' }),
+                body: deleteData
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await deleteGoal(mockReq as any, mockRes as any);
+
+            expect(mockUserData.save).toHaveBeenCalled();
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                message: 'Goal deleted successfully',
+                DeletedGoal: expect.any(Object)
+            });
+        });
+
+        it('should return 401 if user not authorized', async () => {
+            const mockReq = testUtils.createMockRequest({ 
+                user: testUtils.createMockUser({ role: 'child' }),
+                body: deleteData
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await deleteGoal(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(401);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Unauthorized' });
+        });
+    });
+
 });
