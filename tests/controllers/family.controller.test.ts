@@ -2,6 +2,7 @@ import { testUtils } from '../setup';
 import { completeFamilyTask, createFamilyTasks, deleteFamily, deleteFamilyGoal, deleteFamilyTask, getAllFamilies, getFamily, getFamilyGoals, getFamilyLeaderboard, getFamilyMembers, 
     getFamilyTaskById, 
     getLeaderboard, 
+    updateAllFamilyMembersStars, 
     updateFamily, updateFamilyGoal, 
     updateFamilyTask
 } from '../../src/controllers/family.controller';
@@ -1473,6 +1474,150 @@ describe('Family Controller Tests', () => {
             await getFamilyLeaderboard(mockReq as any, mockRes as any);
 
             expect(mockRes.status).toHaveBeenCalledWith(404);
+        });
+    });
+
+    // 16. test updateAllFamilyMembersStars API
+    describe('updateAllFamilyMembersStars', () => {
+        it('should update stars for all family members successfully', async () => {
+            const mockFamilyData = {
+                ...testUtils.createMockFamily(),
+                members: [
+                    { _id: 'member1', role: 'parent' },
+                    { _id: 'member2', role: 'child' },
+                    { _id: 'member3', role: 'child' }
+                ],
+                totalStars: 100,
+                save: jest.fn().mockResolvedValue(true)
+            };
+            
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+            mockUser.updateMany.mockResolvedValue({} as any);
+            mockUser.aggregate.mockResolvedValue([{ totalStars: 150 }]);
+
+            const mockReq = testUtils.createMockRequest({
+                user: testUtils.createMockUser({ familyId: '507f1f77bcf86cd799439011' }),
+                body: { stars: 10 }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateAllFamilyMembersStars(mockReq as any, mockRes as any);
+
+            expect(mockUser.updateMany).toHaveBeenCalledWith(
+                { _id: { $in: ['member1', 'member2', 'member3'] } },
+                { $inc: { stars: 10 } }
+            );
+            expect(mockUser.aggregate).toHaveBeenCalledWith([
+                { $match: { _id: { $in: ['member1', 'member2', 'member3'] } } },
+                { $group: { _id: null, totalStars: { $sum: "$stars" } } }
+            ]);
+            expect(mockFamilyData.totalStars).toBe(150);
+            expect(mockFamilyData.save).toHaveBeenCalled();
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                message: "All family members' stars updated successfully",
+                totalStars: 150
+            });
+        });
+
+        it('should handle case when total stars calculation returns empty array', async () => {
+            const mockFamilyData = {
+                ...testUtils.createMockFamily(),
+                members: [{ _id: 'member1', role: 'parent' }],
+                totalStars: 0,
+                save: jest.fn().mockResolvedValue(true)
+            };
+            
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+            mockUser.updateMany.mockResolvedValue({} as any);
+            mockUser.aggregate.mockResolvedValue([]); // Empty array
+
+            const mockReq = testUtils.createMockRequest({
+                user: testUtils.createMockUser({ familyId: '507f1f77bcf86cd799439011' }),
+                body: { stars: 5 }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateAllFamilyMembersStars(mockReq as any, mockRes as any);
+
+            expect(mockFamilyData.totalStars).toBe(0);
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                message: "All family members' stars updated successfully",
+                totalStars: 0
+            });
+        });
+
+        it('should return 401 if user not authenticated', async () => {
+            const mockReq = testUtils.createMockRequest({ user: null });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateAllFamilyMembersStars(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(401);
+        });
+
+        it('should return 401 if user has no familyId', async () => {
+            const mockReq = testUtils.createMockRequest({
+                user: testUtils.createMockUser({ familyId: undefined })
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateAllFamilyMembersStars(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(401);
+        });
+
+        it('should return 400 if stars value is not an integer', async () => {
+            const mockReq = testUtils.createMockRequest({
+                user: testUtils.createMockUser({ familyId: '507f1f77bcf86cd799439011' }),
+                body: { stars: 'invalid' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateAllFamilyMembersStars(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+        });
+
+        it('should return 400 if stars value is a float', async () => {
+            const mockReq = testUtils.createMockRequest({
+                user: testUtils.createMockUser({ familyId: '507f1f77bcf86cd799439011' }),
+                body: { stars: 10.5 }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateAllFamilyMembersStars(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+        });
+
+        it('should return 404 if family not found', async () => {
+            mockFamily.findById.mockResolvedValue(null);
+
+            const mockReq = testUtils.createMockRequest({
+                user: testUtils.createMockUser({ familyId: '507f1f77bcf86cd799439011' }),
+                body: { stars: 10 }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateAllFamilyMembersStars(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+        });
+
+        it('should handle database errors', async () => {
+            mockFamily.findById.mockRejectedValue(new Error('Database connection failed'));
+
+            const mockReq = testUtils.createMockRequest({
+                user: testUtils.createMockUser({ familyId: '507f1f77bcf86cd799439011' }),
+                body: { stars: 10 }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateAllFamilyMembersStars(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(500);
         });
     });
 });
