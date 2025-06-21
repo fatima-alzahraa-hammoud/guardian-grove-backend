@@ -558,4 +558,76 @@ describe('Goal Controller Tests', () => {
             expect(mockRes.json).toHaveBeenCalledWith({ error: 'All required fields must be filled.' });
         });
     });
+
+    // 7. test getTaskById API
+    describe('getTaskById', () => {
+        const taskData = {
+            userId: testUtils.ids.user,
+            goalId: testUtils.ids.goal,
+            taskId: testUtils.ids.task
+        };
+
+        it('should get task by ID successfully', async () => {
+            const mockTask = testUtils.createMockTask();
+            const mockGoal = testUtils.createMockGoal({ tasks: [mockTask] });
+            const mockUserData = testUtils.createMockUser({ goals: [mockGoal] });
+            
+            mockUser.findById.mockResolvedValue(mockUserData as any);
+
+            const mockReq = testUtils.createMockRequest({ body: taskData });
+            const mockRes = testUtils.createMockResponse();
+
+            await getTaskById(mockReq as any, mockRes as any);
+
+            expect(mockUser.findById).toHaveBeenCalledWith(testUtils.ids.user);
+            expect(mockRes.status).toHaveBeenCalledWith(201);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                message: 'Retrieve task successfully',
+                Task: expect.objectContaining({
+                    _id: testUtils.ids.task,
+                    title: 'Test Task'
+                })
+            });
+        });
+
+        it('should return 404 if user not found', async () => {
+            mockUser.findById.mockResolvedValue(null);
+
+            const mockReq = testUtils.createMockRequest({ body: taskData });
+            const mockRes = testUtils.createMockResponse();
+
+            await getTaskById(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'User not found' });
+        });
+
+        it('should return 404 if goal not found', async () => {
+            const mockUserData = testUtils.createMockUser({ goals: [] });
+            mockUser.findById.mockResolvedValue(mockUserData as any);
+
+            const mockReq = testUtils.createMockRequest({ body: taskData });
+            const mockRes = testUtils.createMockResponse();
+
+            await getTaskById(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Goal not found' });
+        });
+
+        it('should return 404 if task not found', async () => {
+            const mockGoal = testUtils.createMockGoal({ tasks: [] });
+            const mockUserData = testUtils.createMockUser({ goals: [mockGoal] });
+            
+            mockUser.findById.mockResolvedValue(mockUserData as any);
+
+            const mockReq = testUtils.createMockRequest({ body: taskData });
+            const mockRes = testUtils.createMockResponse();
+
+            await getTaskById(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Task not found' });
+        });
+    });
 });

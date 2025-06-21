@@ -193,7 +193,9 @@ export const testUtils = {
         dueDate: new Date('2024-12-31'),
         isCompleted: false,
         progress: 0,
+        nbOfTasksCompleted: 0, // Add this property
         createdAt: new Date('2024-01-01'),
+        completedAt: undefined, // Add this property
         rewards: {
             stars: 50,
             coins: 25,
