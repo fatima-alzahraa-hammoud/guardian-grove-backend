@@ -1,4 +1,4 @@
-import { createAdventure, getAdventureById, getAllAdventures } from '../../src/controllers/adventure.controller';
+import { createAdventure, getAdventureById, getAllAdventures, updateAdventure } from '../../src/controllers/adventure.controller';
 import { Adventure } from '../../src/models/adventure.model';
 import * as checkId from '../../src/utils/checkId';
 import { testUtils } from '../setup';
@@ -375,6 +375,153 @@ describe('Adventure Controller Tests', () => {
             expect(mockCheckId.checkId).toHaveBeenCalledWith({
                 id: undefined,
                 res: mockRes
+            });
+        });
+    });
+
+    // 4. test updateAdventure API
+    describe('updateAdventure', () => {
+        it('should update adventure successfully', async () => {
+            const updateData = {
+                adventureId: '507f1f77bcf86cd799439015',
+                title: 'Updated Adventure',
+                description: 'Updated description',
+                starsReward: 75
+            };
+            const mockUpdatedAdventure = testUtils.createMockAdventure(updateData);
+            mockAdventure.findByIdAndUpdate.mockResolvedValue(mockUpdatedAdventure as any);
+
+            const mockReq = testUtils.createMockRequest({ body: updateData });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateAdventure(mockReq as any, mockRes as any);
+
+            expect(mockCheckId.checkId).toHaveBeenCalledWith({
+                id: '507f1f77bcf86cd799439015',
+                res: mockRes
+            });
+            expect(mockAdventure.findByIdAndUpdate).toHaveBeenCalledWith(
+                '507f1f77bcf86cd799439015',
+                updateData,
+                { new: true, runValidators: true }
+            );
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                message: "Adventure Updated Successfully",
+                adventure: mockUpdatedAdventure
+            });
+        });
+
+        it('should return early if checkId fails', async () => {
+            mockCheckId.checkId.mockReturnValue(false);
+
+            const mockReq = testUtils.createMockRequest({
+                body: { adventureId: 'invalid-id', title: 'New Title' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateAdventure(mockReq as any, mockRes as any);
+
+            expect(mockCheckId.checkId).toHaveBeenCalledWith({
+                id: 'invalid-id',
+                res: mockRes
+            });
+            expect(mockAdventure.findByIdAndUpdate).not.toHaveBeenCalled();
+        });
+
+        it('should return 400 if no update data provided', async () => {
+            const mockReq = testUtils.createMockRequest({
+                body: { adventureId: '507f1f77bcf86cd799439015' } // Only adventureId
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateAdventure(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                error: 'No other data provided to update'
+            });
+        });
+
+        it('should return 404 if adventure not found', async () => {
+            mockAdventure.findByIdAndUpdate.mockResolvedValue(null as any);
+
+            const mockReq = testUtils.createMockRequest({
+                body: {
+                    adventureId: '507f1f77bcf86cd799439015',
+                    title: 'Updated Title'
+                }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateAdventure(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                error: 'Adventure not found'
+            });
+        });
+
+        it('should handle database errors', async () => {
+            mockAdventure.findByIdAndUpdate.mockRejectedValue(new Error('Database error'));
+
+            const mockReq = testUtils.createMockRequest({
+                body: {
+                    adventureId: '507f1f77bcf86cd799439015',
+                    title: 'Updated Title'
+                }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateAdventure(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(500);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                error: 'Failed to update. An unknown error occurred.'
+            });
+        });
+
+        it('should update adventure with partial data', async () => {
+            const partialUpdateData = {
+                adventureId: '507f1f77bcf86cd799439015',
+                starsReward: 100
+            };
+            const mockUpdatedAdventure = testUtils.createMockAdventure({
+                starsReward: 100
+            });
+            mockAdventure.findByIdAndUpdate.mockResolvedValue(mockUpdatedAdventure as any);
+
+            const mockReq = testUtils.createMockRequest({ body: partialUpdateData });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateAdventure(mockReq as any, mockRes as any);
+
+            expect(mockAdventure.findByIdAndUpdate).toHaveBeenCalledWith(
+                '507f1f77bcf86cd799439015',
+                partialUpdateData,
+                { new: true, runValidators: true }
+            );
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+        });
+
+        it('should handle updating with zero values', async () => {
+            const zeroUpdateData = {
+                adventureId: '507f1f77bcf86cd799439015',
+                starsReward: 0,
+                coinsReward: 0
+            };
+            const mockUpdatedAdventure = testUtils.createMockAdventure(zeroUpdateData);
+            mockAdventure.findByIdAndUpdate.mockResolvedValue(mockUpdatedAdventure as any);
+
+            const mockReq = testUtils.createMockRequest({ body: zeroUpdateData });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateAdventure(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                message: "Adventure Updated Successfully",
+                adventure: mockUpdatedAdventure
             });
         });
     });
