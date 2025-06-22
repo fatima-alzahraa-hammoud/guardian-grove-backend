@@ -200,7 +200,7 @@ export const editUserProfile = async(req: CustomRequest, res: Response):Promise<
             return throwError({ message: "Unauthorized", res, status: 401 });
         }
 
-        if ((role) && !['parent', 'admin', 'owner'].includes(req.user.role)) {
+        if ((role) && !['parent', 'admin'].includes(req.user.role)) {
             return throwError({ message: "Forbidden: You cannot change role nor email", res, status: 403 });
         }
 
@@ -208,7 +208,7 @@ export const editUserProfile = async(req: CustomRequest, res: Response):Promise<
 
         if(userId){
             if(!checkId({id: userId, res})) return;
-            if (req.user._id.toString() !== userId && !['parent', 'admin', 'owner'].includes(req.user.role)) {
+            if (req.user._id.toString() !== userId && !['parent', 'admin'].includes(req.user.role)) {
                 return throwError({ message: "Forbidden", res, status: 403 });
             }
 
@@ -261,7 +261,7 @@ export const deleteUser = async(req: CustomRequest, res:Response):Promise<void> 
         let user;
         if(userId){
             if(!checkId({id: userId, res})) return;
-            if (req.user._id.toString() !== userId && !['parent', 'admin', 'owner'].includes(req.user.role)) {
+            if (req.user._id.toString() !== userId && !['parent', 'admin'].includes(req.user.role)) {
                 return throwError({ message: "Forbidden", res, status: 403 });
             }
 

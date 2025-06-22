@@ -78,7 +78,7 @@ export const getFamilyMembers = async (req: Request, res: Response): Promise<voi
 export const updateFamily = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
 
-        if(!req.user || !['parent', 'admin', 'owner'].includes(req.user.role)){
+        if(!req.user || !['parent', 'admin'].includes(req.user.role)){
             return throwError({ message: "Unauthorized", res, status: 401 });
         }
 
@@ -138,7 +138,7 @@ export const updateFamily = async (req: CustomRequest, res: Response): Promise<v
 export const deleteFamily = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
         // Check for authorized user roles
-        if (!req.user ||  !['parent', 'admin', 'owner'].includes(req.user.role)) {
+        if (!req.user ||  !['parent', 'admin'].includes(req.user.role)) {
             return throwError({ message: "Unauthorized", res, status: 401 });
         }
 
@@ -174,7 +174,7 @@ export const deleteFamily = async (req: CustomRequest, res: Response): Promise<v
 export const updateFamilyGoal = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
 
-        if(!req.user || !['parent', 'admin', 'owner'].includes(req.user.role)){
+        if(!req.user || !['parent', 'admin'].includes(req.user.role)){
             return throwError({ message: "Unauthorized", res, status: 401 });
         }
 
@@ -350,7 +350,7 @@ export const updateFamilyTask = async(req: Request, res: Response): Promise<void
 export const deleteFamilyTask = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
 
-        if(!req.user || (req.user.role !== 'parent' && req.user.role !== 'admin' && req.user.role !== 'owner')){
+        if(!req.user || (req.user.role !== 'parent' && req.user.role !== 'admin')){
             return throwError({ message: "Unauthorized", res, status: 401 });
         }
 
