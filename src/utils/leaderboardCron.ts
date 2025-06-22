@@ -1,5 +1,5 @@
 import schedule from 'node-schedule';
-import { Family } from '../models/family.model';  // Adjust path based on your project structure
+import { Family } from '../models/family.model';
 
 // Utility function to reset leaderboard fields
 const resetLeaderboard = async (starsField: string, tasksField: string, period: string): Promise<void> => {
