@@ -1,4 +1,4 @@
-import { createAdventure, getAllAdventures } from '../../src/controllers/adventure.controller';
+import { createAdventure, getAdventureById, getAllAdventures } from '../../src/controllers/adventure.controller';
 import { Adventure } from '../../src/models/adventure.model';
 import * as checkId from '../../src/utils/checkId';
 import { testUtils } from '../setup';
@@ -289,6 +289,92 @@ describe('Adventure Controller Tests', () => {
             expect(mockRes.status).toHaveBeenCalledWith(500);
             expect(mockRes.json).toHaveBeenCalledWith({
                 error: 'An unknown error occurred while getting all adventures.'
+            });
+        });
+    });
+
+    // 3. test getAdventureById API
+    describe('getAdventureById', () => {
+        it('should return adventure by ID successfully', async () => {
+            const mockAdventureData = testUtils.createMockAdventure();
+            mockAdventure.findById.mockResolvedValue(mockAdventureData as any);
+
+            const mockReq = testUtils.createMockRequest({
+                body: { adventureId: '507f1f77bcf86cd799439015' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getAdventureById(mockReq as any, mockRes as any);
+
+            expect(mockCheckId.checkId).toHaveBeenCalledWith({
+                id: '507f1f77bcf86cd799439015',
+                res: mockRes
+            });
+            expect(mockAdventure.findById).toHaveBeenCalledWith('507f1f77bcf86cd799439015');
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith(mockAdventureData);
+        });
+
+        it('should return early if checkId fails', async () => {
+            mockCheckId.checkId.mockReturnValue(false);
+
+            const mockReq = testUtils.createMockRequest({
+                body: { adventureId: 'invalid-id' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getAdventureById(mockReq as any, mockRes as any);
+
+            expect(mockCheckId.checkId).toHaveBeenCalledWith({
+                id: 'invalid-id',
+                res: mockRes
+            });
+            expect(mockAdventure.findById).not.toHaveBeenCalled();
+        });
+
+        it('should return 404 if adventure not found', async () => {
+            mockAdventure.findById.mockResolvedValue(null as any);
+
+            const mockReq = testUtils.createMockRequest({
+                body: { adventureId: '507f1f77bcf86cd799439015' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getAdventureById(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                error: 'Adventure not found'
+            });
+        });
+
+        it('should handle database errors', async () => {
+            mockAdventure.findById.mockRejectedValue(new Error('Database error'));
+
+            const mockReq = testUtils.createMockRequest({
+                body: { adventureId: '507f1f77bcf86cd799439015' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getAdventureById(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(500);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                error: 'An unknown error occurred while getting the adventure.'
+            });
+        });
+
+        it('should handle missing adventureId in request body', async () => {
+            const mockReq = testUtils.createMockRequest({
+                body: {} // No adventureId
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await getAdventureById(mockReq as any, mockRes as any);
+
+            expect(mockCheckId.checkId).toHaveBeenCalledWith({
+                id: undefined,
+                res: mockRes
             });
         });
     });
