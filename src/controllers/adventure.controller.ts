@@ -9,17 +9,21 @@ import { checkId } from '../utils/checkId';
 // API to create new adventure
 export const createAdventure = async (req: Request, res: Response): Promise<void> => {
     try {
-
         const data = req.body;
 
         const { title, description, starsReward, coinsReward } = data;
-        if (!title || !description) {
+        
+        // Trim whitespace and check if fields are empty
+        const trimmedTitle = title?.trim();
+        const trimmedDescription = description?.trim();
+        
+        if (!trimmedTitle || !trimmedDescription) {
             return throwError({ message: "All required fields must be filled.", res, status: 400});
         }
 
         const newAdventure: IAdventure = new Adventure({
-            title,
-            description,
+            title: trimmedTitle,
+            description: trimmedDescription,
             starsReward: starsReward || 10,
             coinsReward: coinsReward || 5, 
             challenges: [], 
