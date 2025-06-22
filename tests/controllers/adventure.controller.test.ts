@@ -1,4 +1,4 @@
-import { createAdventure } from '../../src/controllers/adventure.controller';
+import { createAdventure, getAllAdventures } from '../../src/controllers/adventure.controller';
 import { Adventure } from '../../src/models/adventure.model';
 import * as checkId from '../../src/utils/checkId';
 import { testUtils } from '../setup';
@@ -220,6 +220,75 @@ describe('Adventure Controller Tests', () => {
                     starsReward: 0,
                     coinsReward: 0
                 })
+            });
+        });
+    });
+
+    // 2. test getAllAdventures API
+    describe('getAllAdventures', () => {
+        it('should return all adventures successfully', async () => {
+            const mockAdventures = [
+                testUtils.createMockAdventure({ title: 'Adventure 1' }),
+                testUtils.createMockAdventure({ 
+                    _id: '507f1f77bcf86cd799439016',
+                    title: 'Adventure 2' 
+                })
+            ];
+            mockAdventure.find.mockResolvedValue(mockAdventures as any);
+
+            const mockReq = testUtils.createMockRequest();
+            const mockRes = testUtils.createMockResponse();
+
+            await getAllAdventures(mockReq as any, mockRes as any);
+
+            expect(mockAdventure.find).toHaveBeenCalledTimes(1);
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                message: "Getting all adventures Successfully",
+                adventures: mockAdventures
+            });
+        });
+
+        it('should return 400 when no adventures found', async () => {
+            mockAdventure.find.mockResolvedValue(null as any);
+
+            const mockReq = testUtils.createMockRequest();
+            const mockRes = testUtils.createMockResponse();
+
+            await getAllAdventures(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                error: 'No adventures found'
+            });
+        });
+
+        it('should return empty array when adventures exist but empty', async () => {
+            mockAdventure.find.mockResolvedValue([] as any);
+
+            const mockReq = testUtils.createMockRequest();
+            const mockRes = testUtils.createMockResponse();
+
+            await getAllAdventures(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                message: "Getting all adventures Successfully",
+                adventures: []
+            });
+        });
+
+        it('should handle database errors', async () => {
+            mockAdventure.find.mockRejectedValue(new Error('Database connection failed'));
+
+            const mockReq = testUtils.createMockRequest();
+            const mockRes = testUtils.createMockResponse();
+
+            await getAllAdventures(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(500);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                error: 'An unknown error occurred while getting all adventures.'
             });
         });
     });
