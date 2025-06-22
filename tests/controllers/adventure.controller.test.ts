@@ -1,4 +1,4 @@
-import { createAdventure, getAdventureById, getAllAdventures, updateAdventure } from '../../src/controllers/adventure.controller';
+import { createAdventure, deleteAdventure, getAdventureById, getAllAdventures, updateAdventure } from '../../src/controllers/adventure.controller';
 import { Adventure } from '../../src/models/adventure.model';
 import * as checkId from '../../src/utils/checkId';
 import { testUtils } from '../setup';
@@ -522,6 +522,95 @@ describe('Adventure Controller Tests', () => {
             expect(mockRes.json).toHaveBeenCalledWith({
                 message: "Adventure Updated Successfully",
                 adventure: mockUpdatedAdventure
+            });
+        });
+    });
+
+    // 5. test deleteAdventure API
+    describe('deleteAdventure', () => {
+        it('should delete adventure successfully', async () => {
+            const mockDeletedAdventure = testUtils.createMockAdventure();
+            mockAdventure.findByIdAndDelete.mockResolvedValue(mockDeletedAdventure as any);
+
+            const mockReq = testUtils.createMockRequest({
+                body: { adventureId: '507f1f77bcf86cd799439015' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await deleteAdventure(mockReq as any, mockRes as any);
+
+            expect(mockCheckId.checkId).toHaveBeenCalledWith({
+                id: '507f1f77bcf86cd799439015',
+                res: mockRes
+            });
+            expect(mockAdventure.findByIdAndDelete).toHaveBeenCalledWith('507f1f77bcf86cd799439015');
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                message: "Adventure deleted successfully",
+                adventure: mockDeletedAdventure
+            });
+        });
+
+        it('should return early if checkId fails', async () => {
+            mockCheckId.checkId.mockReturnValue(false);
+
+            const mockReq = testUtils.createMockRequest({
+                body: { adventureId: 'invalid-id' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await deleteAdventure(mockReq as any, mockRes as any);
+
+            expect(mockCheckId.checkId).toHaveBeenCalledWith({
+                id: 'invalid-id',
+                res: mockRes
+            });
+            expect(mockAdventure.findByIdAndDelete).not.toHaveBeenCalled();
+        });
+
+        it('should return 404 if adventure not found', async () => {
+            mockAdventure.findByIdAndDelete.mockResolvedValue(null as any);
+
+            const mockReq = testUtils.createMockRequest({
+                body: { adventureId: '507f1f77bcf86cd799439015' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await deleteAdventure(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(404);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                error: 'Adventure not found'
+            });
+        });
+
+        it('should handle database errors', async () => {
+            mockAdventure.findByIdAndDelete.mockRejectedValue(new Error('Database error'));
+
+            const mockReq = testUtils.createMockRequest({
+                body: { adventureId: '507f1f77bcf86cd799439015' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await deleteAdventure(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(500);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                error: 'Failed to delete. An unknown error occurred.'
+            });
+        });
+
+        it('should handle missing adventureId in request body', async () => {
+            const mockReq = testUtils.createMockRequest({
+                body: {} // No adventureId
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await deleteAdventure(mockReq as any, mockRes as any);
+
+            expect(mockCheckId.checkId).toHaveBeenCalledWith({
+                id: undefined,
+                res: mockRes
             });
         });
     });
