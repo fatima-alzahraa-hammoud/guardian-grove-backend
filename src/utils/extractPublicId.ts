@@ -1,6 +1,6 @@
 // function to extract public id
 
-export const extractPublicIdImproved = (url: string): string => {
+export const extractPublicId = (url: string): string => {
     // Handle empty or invalid input
     if (!url || typeof url !== 'string') {
         return '';
