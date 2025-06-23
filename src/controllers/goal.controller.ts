@@ -488,6 +488,8 @@ export const completeTask = async (req: CustomRequest, res: Response): Promise<v
             }
         }
 
+        await user.save();
+
         // Update the family total stars
         if (user.familyId) {
             const totalStars = starsTaskReward + starsGoalReward;
@@ -496,8 +498,6 @@ export const completeTask = async (req: CustomRequest, res: Response): Promise<v
             });
             await recalculateFamilyMemberRanks(user.familyId, user);
         }
-
-        await user.save();
 
         res.status(200).json({ message: "Task marked as done", task, goal });
     } catch (error) {
