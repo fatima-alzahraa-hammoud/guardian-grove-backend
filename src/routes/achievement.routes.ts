@@ -1,7 +1,7 @@
 import express from "express";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { createAchievement, deleteAchievement, getAchievements, getLastFamilyUnlockedAchievement, getLastUnlockedAchievement, getLockedAchievements, getUnLockedAchievements, getUserAchievements, unlockAchievement, unlockFamilyAchievement, updateAchievement } from "../controllers/achievement.controller";
-import { adminMiddleware } from "../middlewares/adminMiddleware";
+import { adminMiddleware } from "../middlewares/admin.middleware";
 
 const router =  express.Router();
 

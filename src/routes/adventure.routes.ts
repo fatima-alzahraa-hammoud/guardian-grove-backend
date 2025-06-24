@@ -2,7 +2,7 @@ import express from "express";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { createAdventure, deleteAdventure, getAdventureById, getAllAdventures, updateAdventure } from "../controllers/adventure.controller";
 import { createChallenge, deleteChallenge, getAllChallenges, getChallengeById, updateChallenge } from "../controllers/challenge.controller";
-import { adminMiddleware } from "../middlewares/adminMiddleware";
+import { adminMiddleware } from "../middlewares/admin.middleware";
 
 const router =  express.Router();
 

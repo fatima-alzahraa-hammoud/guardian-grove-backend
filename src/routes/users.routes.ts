@@ -12,7 +12,7 @@ import {
   getUserAvatar
 } from "../controllers/user.controller";
 import { authMiddleware } from "../middlewares/auth.middleware";
-import { adminMiddleware } from "../middlewares/adminMiddleware";
+import { adminMiddleware } from "../middlewares/admin.middleware";
 import { checkQuestionCompletion, generateDailyAdventure, generateGrowthPlans, generateLearningZone, generateQuickTips, generateStory, generateTaskCompletionQuestion, generateTrackDay, generateViewTasks, regenerateGoalsAndTasksRoute } from "../controllers/ai.controller";
 
 const router = express.Router();
