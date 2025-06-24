@@ -1,6 +1,6 @@
 import express from "express";
 import { deleteBook, downloadBook, getUserBooks, updateBook, uploadBook } from "../controllers/book.controller";
-import { bookUploadMiddleware } from "../middlewares/bookUploadMiddleware";
+import { bookUploadMiddleware } from "../middlewares/bookUpload.middleware";
 import { authMiddleware } from "../middlewares/auth.middleware";
 
 const router =  express.Router();
