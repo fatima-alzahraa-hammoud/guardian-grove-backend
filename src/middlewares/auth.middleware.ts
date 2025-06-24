@@ -18,20 +18,23 @@ export const authMiddleware = async (req: CustomRequest, res: Response, next: Ne
 
     const splitted = authHeader?.split(" ");
 
-    if (splitted?.length !== 2 || splitted[0] !== "Bearer"){
+    if (splitted?.length !== 2 || splitted[0] !== "Bearer" || !splitted[1] || splitted[1].trim() === ''){
         throwError({message: "Unauthorized", res, status: 401});
         return;
     }
 
     const token = splitted[1];
 
-    if (!JWT_SECRET_KEY) {
-        throwError({ message: "JWT_SECRET_KEY is not defined", res, status: 500 });
-        return;
+    if (!process.env.JWT_SECRET || process.env.JWT_SECRET.trim() === '') {
+        return throwError({
+            message: "JWT_SECRET_KEY is not defined",
+            res,
+            status: 500
+        });
     }
 
     try{
-        const payload = await jwt.verify(token, JWT_SECRET_KEY) as JwtPayload;
+        const payload = await jwt.verify(token, process.env.JWT_SECRET) as JwtPayload;
 
         const id = payload.userId;
         const user = await User.findById(id);
