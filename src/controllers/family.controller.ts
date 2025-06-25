@@ -67,7 +67,7 @@ export const getFamilyMembers = async (req: Request, res: Response): Promise<voi
             return throwError({ message: "No family members found.", res, status: 404 });
         }
 
-        res.status(200).json({ message:"Retrieving family members successfully", members: family.members});
+        res.status(200).json({ message:"Retrieving family members successfully", familyWithMembers: family});
 
     } catch (error) {
         return throwError({ message: "Failed to retrieve family members.", res, status: 500 });

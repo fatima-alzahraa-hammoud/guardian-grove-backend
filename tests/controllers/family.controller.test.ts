@@ -188,11 +188,13 @@ describe('Family Controller Tests', () => {
             expect(mockRes.status).toHaveBeenCalledWith(200);
             expect(mockRes.json).toHaveBeenCalledWith({
                 message: "Retrieving family members successfully",
-                members: expect.arrayContaining([
-                    expect.objectContaining({
-                        name: 'John Doe'
-                    })
-                ])
+                familyWithMembers: expect.objectContaining({
+                    members: expect.arrayContaining([
+                        expect.objectContaining({
+                            name: 'John Doe'
+                        })
+                    ])
+                })
             });
         });
 
