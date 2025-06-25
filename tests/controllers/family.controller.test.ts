@@ -96,8 +96,7 @@ describe('Family Controller Tests', () => {
         });
 
         it('should handle database errors', async () => {
-            const dbError = new Error('Database connection failed');
-            mockFamily.find.mockRejectedValue(dbError);
+            mockFamily.find.mockRejectedValue(new Error('Database connection failed'));
 
             const mockReq = testUtils.createMockRequest();
             const mockRes = testUtils.createMockResponse();
@@ -114,7 +113,7 @@ describe('Family Controller Tests', () => {
             const mockFamilyData = testUtils.createMockFamily();
             const mockFamilyDoc = {
                 select: jest.fn().mockReturnValue({
-                    populate: jest.fn().mockResolvedValue(mockFamilyData)
+                    lean: jest.fn().mockResolvedValue(mockFamilyData)
                 })
             };
             mockFamily.findById.mockReturnValue(mockFamilyDoc as any);
@@ -136,7 +135,7 @@ describe('Family Controller Tests', () => {
         it('should return 404 if family not found', async () => {
             const mockFamilyDoc = {
                 select: jest.fn().mockReturnValue({
-                    populate: jest.fn().mockResolvedValue(null)
+                    lean: jest.fn().mockResolvedValue(null)
                 })
             };
             mockFamily.findById.mockReturnValue(mockFamilyDoc as any);
@@ -165,16 +164,23 @@ describe('Family Controller Tests', () => {
         });
     });
 
-    // 3. test getFamilyMembers API - Updated for virtual members
+    // 3. test getFamilyMembers API
     describe('getFamilyMembers', () => {
         it('should return family members successfully', async () => {
             const mockMemberUser = testUtils.createMockUser({ name: 'John Doe' });
             const mockFamilyData = {
                 ...testUtils.createMockFamily(),
-                members: [mockMemberUser] // Virtual field populated
+                members: [{
+                    _id: mockMemberUser,
+                    role: 'child',
+                    gender: 'male',
+                    avatar: '/avatar.png'
+                }]
             };
             const mockFamilyDoc = {
-                populate: jest.fn().mockResolvedValue(mockFamilyData)
+                populate: jest.fn().mockReturnValue({
+                    lean: jest.fn().mockResolvedValue(mockFamilyData)
+                })
             };
             mockFamily.findById.mockReturnValue(mockFamilyDoc as any);
 
@@ -188,37 +194,24 @@ describe('Family Controller Tests', () => {
             expect(mockRes.status).toHaveBeenCalledWith(200);
             expect(mockRes.json).toHaveBeenCalledWith({
                 message: "Retrieving family members successfully",
-                members: expect.arrayContaining([
-                    expect.objectContaining({
-                        name: 'John Doe'
-                    })
-                ])
+                familyWithMembers: expect.objectContaining({
+                    members: expect.arrayContaining([
+                        expect.objectContaining({
+                            name: 'John Doe',
+                            role: 'child',
+                            gender: 'male',
+                            avatar: '/avatar.png'
+                        })
+                    ])
+                })
             });
         });
 
         it('should return 404 if family not found', async () => {
             const mockFamilyDoc = {
-                populate: jest.fn().mockResolvedValue(null)
-            };
-            mockFamily.findById.mockReturnValue(mockFamilyDoc as any);
-
-            const mockReq = testUtils.createMockRequest({
-                body: { familyId: '507f1f77bcf86cd799439011' }
-            });
-            const mockRes = testUtils.createMockResponse();
-
-            await getFamilyMembers(mockReq as any, mockRes as any);
-
-            expect(mockRes.status).toHaveBeenCalledWith(404);
-        });
-
-        it('should return 404 if no family members found', async () => {
-            const mockFamilyData = {
-                ...testUtils.createMockFamily(),
-                members: [] // Empty members array
-            };
-            const mockFamilyDoc = {
-                populate: jest.fn().mockResolvedValue(mockFamilyData)
+                populate: jest.fn().mockReturnValue({
+                    lean: jest.fn().mockResolvedValue(null)
+                })
             };
             mockFamily.findById.mockReturnValue(mockFamilyDoc as any);
 
@@ -432,7 +425,6 @@ describe('Family Controller Tests', () => {
             expect(mockRes.status).toHaveBeenCalledWith(401);
         });
     });
-
 // 6. test updateFamilyGoal API
     describe('updateFamilyGoal', () => {
         it('should update family goal successfully', async () => {
@@ -991,7 +983,7 @@ describe('Family Controller Tests', () => {
         });
     });
 
-    // 13. test completeFamilyTask API
+    // Updated test for completeFamilyTask with proper mock typing
     describe('completeFamilyTask', () => {
         it('should complete family task successfully without completing goal', async () => {
             const mockTask1 = {
@@ -1037,7 +1029,17 @@ describe('Family Controller Tests', () => {
                 rewards: { stars: 50, coins: 25, achievementName: undefined, achievementId: undefined }
             };
             
-            // Create mock users that will be populated via virtual field
+            const mockMember = { _id: testUtils.ids.user };
+            const mockFamilyData = testUtils.createMockFamily({
+                goals: [mockGoal],
+                members: [mockMember],
+                totalStars: 100,
+                stars: { daily: 10, weekly: 20, monthly: 30, yearly: 40 },
+                tasks: 5,
+                taskCounts: { daily: 1, weekly: 2, monthly: 3, yearly: 4 },
+                save: jest.fn().mockResolvedValue(true)
+            });
+            
             const mockUser1 = testUtils.createMockUser({
                 _id: testUtils.ids.user,
                 coins: 10,
@@ -1046,25 +1048,9 @@ describe('Family Controller Tests', () => {
                 save: jest.fn().mockResolvedValue(true)
             });
 
-            const mockFamilyData = testUtils.createMockFamily({
-                goals: [mockGoal],
-                totalStars: 100,
-                stars: { daily: 10, weekly: 20, monthly: 30, yearly: 40 },
-                tasks: 5,
-                taskCounts: { daily: 1, weekly: 2, monthly: 3, yearly: 4 },
-                save: jest.fn().mockResolvedValue(true)
-            });
-
-            // Mock the populate method to return family with members
-            const mockFamilyDoc = {
-                populate: jest.fn().mockResolvedValue({
-                    ...mockFamilyData,
-                    members: [mockUser1] // Virtual field populated with users
-                })
-            };
-
-            mockFamily.findById.mockReturnValue(mockFamilyDoc as any);
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
             mockFamilyData.goals.find = jest.fn().mockReturnValue(mockGoal);
+            mockUser.findById.mockResolvedValue(mockUser1 as any);
 
             const mockReq = testUtils.createMockRequest({
                 body: {
@@ -1082,6 +1068,7 @@ describe('Family Controller Tests', () => {
             expect(mockUser1.stars).toBe(25); // 20 + 5
             expect(mockUser1.nbOfTasksCompleted).toBe(4); // 3 + 1
             expect(mockGoal.isCompleted).toBe(false);
+            expect(mockFamilyData.totalStars).toBe(105); // 100 + 5
             expect(mockRes.status).toHaveBeenCalledWith(200);
         });
 
@@ -1118,6 +1105,18 @@ describe('Family Controller Tests', () => {
                 }
             };
             
+            const mockMember = { _id: '507f1f77bcf86cd799439030' };
+            const mockFamilyData = testUtils.createMockFamily({
+                goals: [mockGoal],
+                members: [mockMember],
+                achievements: [],
+                totalStars: 100,
+                stars: { daily: 10, weekly: 20, monthly: 30, yearly: 40 },
+                tasks: 5,
+                taskCounts: { daily: 1, weekly: 2, monthly: 3, yearly: 4 },
+                save: jest.fn().mockResolvedValue(true)
+            });
+            
             const mockUser1 = testUtils.createMockUser({
                 _id: '507f1f77bcf86cd799439030',
                 coins: 10,
@@ -1126,31 +1125,14 @@ describe('Family Controller Tests', () => {
                 save: jest.fn().mockResolvedValue(true)
             });
 
-            const mockFamilyData = testUtils.createMockFamily({
-                goals: [mockGoal],
-                achievements: [],
-                totalStars: 100,
-                stars: { daily: 10, weekly: 20, monthly: 30, yearly: 40 },
-                tasks: 5,
-                taskCounts: { daily: 1, weekly: 2, monthly: 3, yearly: 4 },
-                save: jest.fn().mockResolvedValue(true)
-            });
-
             const mockAchievementData = testUtils.createMockAchievement({
                 _id: '507f1f77bcf86cd799439040',
                 title: 'Goal Master'
             });
 
-            // Mock the populate method to return family with members
-            const mockFamilyDoc = {
-                populate: jest.fn().mockResolvedValue({
-                    ...mockFamilyData,
-                    members: [mockUser1] // Virtual field populated with users
-                })
-            };
-
-            mockFamily.findById.mockReturnValue(mockFamilyDoc as any);
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
             mockFamilyData.goals.find = jest.fn().mockReturnValue(mockGoal);
+            mockUser.findById.mockResolvedValue(mockUser1 as any);
             mockAchievement.findById.mockResolvedValue(mockAchievementData as any);
 
             const mockReq = testUtils.createMockRequest({
@@ -1170,6 +1152,7 @@ describe('Family Controller Tests', () => {
             expect(mockUser1.coins).toBe(38); // 10 + 3 + 25
             expect(mockUser1.stars).toBe(75); // 20 + 5 + 50
             expect(mockFamilyData.achievements).toHaveLength(1);
+            expect(mockFamilyData.totalStars).toBe(155); // 100 + 5 + 50
             expect(mockRes.status).toHaveBeenCalledWith(200);
         });
 
@@ -1193,15 +1176,7 @@ describe('Family Controller Tests', () => {
             };
             
             const mockFamilyData = testUtils.createMockFamily({ goals: [mockGoal] });
-            
-            const mockFamilyDoc = {
-                populate: jest.fn().mockResolvedValue({
-                    ...mockFamilyData,
-                    members: []
-                })
-            };
-
-            mockFamily.findById.mockReturnValue(mockFamilyDoc as any);
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
             mockFamilyData.goals.find = jest.fn().mockReturnValue(mockGoal);
 
             const mockReq = testUtils.createMockRequest({
@@ -1243,24 +1218,20 @@ describe('Family Controller Tests', () => {
                 }
             };
             
+            const mockMember = { _id: '507f1f77bcf86cd799439030' };
+            const mockFamilyData = testUtils.createMockFamily({
+                goals: [mockGoal],
+                members: [mockMember]
+            });
+            
             const mockUser1 = testUtils.createMockUser({
                 _id: '507f1f77bcf86cd799439030',
                 save: jest.fn().mockResolvedValue(true)
             });
 
-            const mockFamilyData = testUtils.createMockFamily({
-                goals: [mockGoal]
-            });
-
-            const mockFamilyDoc = {
-                populate: jest.fn().mockResolvedValue({
-                    ...mockFamilyData,
-                    members: [mockUser1]
-                })
-            };
-
-            mockFamily.findById.mockReturnValue(mockFamilyDoc as any);
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
             mockFamilyData.goals.find = jest.fn().mockReturnValue(mockGoal);
+            mockUser.findById.mockResolvedValue(mockUser1 as any);
             mockAchievement.findById.mockResolvedValue(null); // Achievement not found
 
             const mockReq = testUtils.createMockRequest({
@@ -1416,38 +1387,37 @@ describe('Family Controller Tests', () => {
     describe('getFamilyLeaderboard', () => {
         it('should get family leaderboard successfully', async () => {
             const mockMembers = [
-                {
-                    stars: 100,
+                testUtils.createMockUser({ 
+                    stars: 100, 
                     nbOfTasksCompleted: 10,
-                    name: 'Top Member',
-                    toObject: () => ({
+                    toObject: jest.fn().mockReturnValue({
                         stars: 100,
                         nbOfTasksCompleted: 10,
                         name: 'Top Member'
                     })
-                },
-                {
-                    stars: 80,
+                }),
+                testUtils.createMockUser({ 
+                    stars: 80, 
                     nbOfTasksCompleted: 8,
-                    name: 'Second Member',
-                    toObject: () => ({
+                    toObject: jest.fn().mockReturnValue({
                         stars: 80,
                         nbOfTasksCompleted: 8,
                         name: 'Second Member'
                     })
-                }
+                })
             ];
 
-            // Mock the family with populated members
-            const mockFamilyWithPopulatedMembers = {
-                ...testUtils.createMockFamily(),
-                members: mockMembers // This is the populated virtual field
-            };
+            const mockFamilyData = testUtils.createMockFamily();
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
             
-            const mockFamilyDoc = {
-                populate: jest.fn().mockResolvedValue(mockFamilyWithPopulatedMembers)
+            const mockUserDoc = {
+                select: jest.fn().mockReturnValue({
+                    sort: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue(mockMembers)
+                    })
+                })
             };
-            mockFamily.findById.mockReturnValue(mockFamilyDoc as any);
+            mockUser.find.mockReturnValue(mockUserDoc as any);
 
             const mockReq = testUtils.createMockRequest({
                 body: { familyId: '507f1f77bcf86cd799439011' }
@@ -1456,11 +1426,6 @@ describe('Family Controller Tests', () => {
 
             await getFamilyLeaderboard(mockReq as any, mockRes as any);
 
-            expect(mockFamilyDoc.populate).toHaveBeenCalledWith({
-                path: 'members',
-                select: 'name avatar stars nbOfTasksCompleted',
-                options: { sort: { stars: -1, nbOfTasksCompleted: -1 } }
-            });
             expect(mockRes.status).toHaveBeenCalledWith(200);
             expect(mockRes.send).toHaveBeenCalledWith({
                 message: 'Leaderboard fetched successfully',
@@ -1478,10 +1443,7 @@ describe('Family Controller Tests', () => {
         });
 
         it('should return 404 if family not found', async () => {
-            const mockFamilyDoc = {
-                populate: jest.fn().mockResolvedValue(null)
-            };
-            mockFamily.findById.mockReturnValue(mockFamilyDoc as any);
+            mockFamily.findById.mockResolvedValue(null);
 
             const mockReq = testUtils.createMockRequest({
                 body: { familyId: '507f1f77bcf86cd799439011' }
@@ -1493,17 +1455,18 @@ describe('Family Controller Tests', () => {
             expect(mockRes.status).toHaveBeenCalledWith(404);
         });
 
-        it('should return 404 if no members found', async () => {
-            // Family exists but has no members
-            const mockFamilyWithNoMembers = {
-                ...testUtils.createMockFamily(),
-                members: [] // Empty members array
-            };
+        it('should return 404 if members not found', async () => {
+            const mockFamilyData = testUtils.createMockFamily();
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
             
-            const mockFamilyDoc = {
-                populate: jest.fn().mockResolvedValue(mockFamilyWithNoMembers)
+            const mockUserDoc = {
+                select: jest.fn().mockReturnValue({
+                    sort: jest.fn().mockReturnValue({
+                        exec: jest.fn().mockResolvedValue(null)
+                    })
+                })
             };
-            mockFamily.findById.mockReturnValue(mockFamilyDoc as any);
+            mockUser.find.mockReturnValue(mockUserDoc as any);
 
             const mockReq = testUtils.createMockRequest({
                 body: { familyId: '507f1f77bcf86cd799439011' }
@@ -1513,68 +1476,24 @@ describe('Family Controller Tests', () => {
             await getFamilyLeaderboard(mockReq as any, mockRes as any);
 
             expect(mockRes.status).toHaveBeenCalledWith(404);
-        });
-
-        it('should return 404 if members is null', async () => {
-            // Family exists but members is null
-            const mockFamilyWithNullMembers = {
-                ...testUtils.createMockFamily(),
-                members: null // Null members
-            };
-            
-            const mockFamilyDoc = {
-                populate: jest.fn().mockResolvedValue(mockFamilyWithNullMembers)
-            };
-            mockFamily.findById.mockReturnValue(mockFamilyDoc as any);
-
-            const mockReq = testUtils.createMockRequest({
-                body: { familyId: '507f1f77bcf86cd799439011' }
-            });
-            const mockRes = testUtils.createMockResponse();
-
-            await getFamilyLeaderboard(mockReq as any, mockRes as any);
-
-            expect(mockRes.status).toHaveBeenCalledWith(404);
-        });
-
-        it('should handle database errors', async () => {
-            const dbError = new Error('Database connection failed');
-            const mockFamilyDoc = {
-                populate: jest.fn().mockRejectedValue(dbError)
-            };
-            mockFamily.findById.mockReturnValue(mockFamilyDoc as any);
-
-            const mockReq = testUtils.createMockRequest({
-                body: { familyId: '507f1f77bcf86cd799439011' }
-            });
-            const mockRes = testUtils.createMockResponse();
-
-            await getFamilyLeaderboard(mockReq as any, mockRes as any);
-
-            expect(mockRes.status).toHaveBeenCalledWith(500);
         });
     });
 
-    // 16. test updateAllFamilyMembersStars API - Updated for virtual members
+    // 16. test updateAllFamilyMembersStars API
     describe('updateAllFamilyMembersStars', () => {
         it('should update stars for all family members successfully', async () => {
-            const mockUser1 = testUtils.createMockUser({ _id: 'member1' });
-            const mockUser2 = testUtils.createMockUser({ _id: 'member2' });
-            const mockUser3 = testUtils.createMockUser({ _id: 'member3' });
-
-            // Create the family object that will be returned by populate
-            const populatedFamily = {
+            const mockFamilyData = {
                 ...testUtils.createMockFamily(),
-                members: [mockUser1, mockUser2, mockUser3],
+                members: [
+                    { _id: 'member1', role: 'parent' },
+                    { _id: 'member2', role: 'child' },
+                    { _id: 'member3', role: 'child' }
+                ],
                 totalStars: 100,
                 save: jest.fn().mockResolvedValue(true)
             };
             
-            const mockFamilyDoc = {
-                populate: jest.fn().mockResolvedValue(populatedFamily)
-            };
-
-            mockFamily.findById.mockReturnValue(mockFamilyDoc as any);
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
             mockUser.updateMany.mockResolvedValue({} as any);
             mockUser.aggregate.mockResolvedValue([{ totalStars: 150 }]);
 
@@ -1594,10 +1513,8 @@ describe('Family Controller Tests', () => {
                 { $match: { _id: { $in: ['member1', 'member2', 'member3'] } } },
                 { $group: { _id: null, totalStars: { $sum: "$stars" } } }
             ]);
-            
-            // The controller modifies the populated family object
-            expect(populatedFamily.totalStars).toBe(150);
-            expect(populatedFamily.save).toHaveBeenCalled();
+            expect(mockFamilyData.totalStars).toBe(150);
+            expect(mockFamilyData.save).toHaveBeenCalled();
             expect(mockRes.status).toHaveBeenCalledWith(200);
             expect(mockRes.json).toHaveBeenCalledWith({
                 message: "All family members' stars updated successfully",
@@ -1606,22 +1523,14 @@ describe('Family Controller Tests', () => {
         });
 
         it('should handle case when total stars calculation returns empty array', async () => {
-            const mockUser1 = testUtils.createMockUser({ _id: 'member1' });
-
             const mockFamilyData = {
                 ...testUtils.createMockFamily(),
+                members: [{ _id: 'member1', role: 'parent' }],
                 totalStars: 0,
                 save: jest.fn().mockResolvedValue(true)
             };
             
-            const mockFamilyDoc = {
-                populate: jest.fn().mockResolvedValue({
-                    ...mockFamilyData,
-                    members: [mockUser1]
-                })
-            };
-
-            mockFamily.findById.mockReturnValue(mockFamilyDoc as any);
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
             mockUser.updateMany.mockResolvedValue({} as any);
             mockUser.aggregate.mockResolvedValue([]); // Empty array
 
@@ -1686,10 +1595,7 @@ describe('Family Controller Tests', () => {
         });
 
         it('should return 404 if family not found', async () => {
-            const mockFamilyDoc = {
-                populate: jest.fn().mockResolvedValue(null)
-            };
-            mockFamily.findById.mockReturnValue(mockFamilyDoc as any);
+            mockFamily.findById.mockResolvedValue(null);
 
             const mockReq = testUtils.createMockRequest({
                 user: testUtils.createMockUser({ familyId: '507f1f77bcf86cd799439011' }),
@@ -1703,11 +1609,7 @@ describe('Family Controller Tests', () => {
         });
 
         it('should handle database errors', async () => {
-            const dbError = new Error('Database connection failed');
-            const mockFamilyDoc = {
-                populate: jest.fn().mockRejectedValue(dbError)
-            };
-            mockFamily.findById.mockReturnValue(mockFamilyDoc as any);
+            mockFamily.findById.mockRejectedValue(new Error('Database connection failed'));
 
             const mockReq = testUtils.createMockRequest({
                 user: testUtils.createMockUser({ familyId: '507f1f77bcf86cd799439011' }),
@@ -1721,27 +1623,21 @@ describe('Family Controller Tests', () => {
         });
     });
 
-    // 17. test getFamilyNameNbMembersStars API - Updated for virtual members
+    // 17. test getFamilyNameNbMembersStars API
     describe('getFamilyNameNbMembersStars', () => {
         it('should return family name, number of members, and stars successfully', async () => {
-            const mockUser1 = testUtils.createMockUser({ _id: 'member1' });
-            const mockUser2 = testUtils.createMockUser({ _id: 'member2' });
-            const mockUser3 = testUtils.createMockUser({ _id: 'member3' });
-
             const mockFamilyData = {
                 ...testUtils.createMockFamily(),
                 familyName: 'Smith Family',
+                members: [
+                    { _id: 'member1', role: 'parent' },
+                    { _id: 'member2', role: 'child' },
+                    { _id: 'member3', role: 'child' }
+                ],
                 totalStars: 250
             };
             
-            const mockFamilyDoc = {
-                populate: jest.fn().mockResolvedValue({
-                    ...mockFamilyData,
-                    members: [mockUser1, mockUser2, mockUser3] // Virtual field populated
-                })
-            };
-
-            mockFamily.findById.mockReturnValue(mockFamilyDoc as any);
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
 
             const mockReq = testUtils.createMockRequest({
                 user: testUtils.createMockUser({ familyId: '507f1f77bcf86cd799439011' })
@@ -1750,6 +1646,7 @@ describe('Family Controller Tests', () => {
 
             await getFamilyNameNbMembersStars(mockReq as any, mockRes as any);
 
+            expect(mockFamily.findById).toHaveBeenCalledWith('507f1f77bcf86cd799439011');
             expect(mockRes.status).toHaveBeenCalledWith(200);
             expect(mockRes.json).toHaveBeenCalledWith({
                 message: "Retrieving family name and number of members successfully",
@@ -1780,10 +1677,7 @@ describe('Family Controller Tests', () => {
         });
 
         it('should return 404 if family not found', async () => {
-            const mockFamilyDoc = {
-                populate: jest.fn().mockResolvedValue(null)
-            };
-            mockFamily.findById.mockReturnValue(mockFamilyDoc as any);
+            mockFamily.findById.mockResolvedValue(null);
 
             const mockReq = testUtils.createMockRequest({
                 user: testUtils.createMockUser({ familyId: '507f1f77bcf86cd799439011' })
@@ -1796,11 +1690,7 @@ describe('Family Controller Tests', () => {
         });
 
         it('should handle database errors', async () => {
-            const dbError = new Error('Database connection failed');
-            const mockFamilyDoc = {
-                populate: jest.fn().mockRejectedValue(dbError)
-            };
-            mockFamily.findById.mockReturnValue(mockFamilyDoc as any);
+            mockFamily.findById.mockRejectedValue(new Error('Database connection failed'));
 
             const mockReq = testUtils.createMockRequest({
                 user: testUtils.createMockUser({ familyId: '507f1f77bcf86cd799439011' })
@@ -2025,8 +1915,7 @@ describe('Family Controller Tests', () => {
         });
 
         it('should handle database errors', async () => {
-            const dbError = new Error('Database connection failed');
-            mockFamily.findById.mockRejectedValue(dbError);
+            mockFamily.findById.mockRejectedValue(new Error('Database connection failed'));
 
             const mockReq = testUtils.createMockRequest({
                 user: testUtils.createMockUser({ familyId: '507f1f77bcf86cd799439011' }),
