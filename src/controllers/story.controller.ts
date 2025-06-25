@@ -37,10 +37,7 @@ export const createStory = async (req: CustomRequest, res: Response): Promise<vo
         
         else if (type === 'family' && req.user.familyId) {
 
-            const family = await Family.findById(req.user.familyId).populate({
-                path: 'members',
-                select: '_id name' // Only select what you need for collaborators
-            });
+            const family = await Family.findById(req.user.familyId);
 
             if (!family) {
                 return throwError({ message: 'Family not found', res, status: 404 });
