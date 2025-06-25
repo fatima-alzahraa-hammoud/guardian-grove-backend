@@ -122,7 +122,6 @@ export const register = async (req: Request, res: Response) : Promise<void> => {
                 familyName: familyName,
                 email,
                 familyAvatar: familyAvatar,
-                members: [],
                 createdAt: new Date()
             });
             await family.save();
@@ -141,13 +140,6 @@ export const register = async (req: Request, res: Response) : Promise<void> => {
 
         // Create the user and link to family
         const newUser = await User.create({...data, password: hashedPassword, familyId: family._id}); 
-
-        // Add user to the family members list if not already present
-        if (!family.members.includes(newUser.id)) {
-            family.members.push({_id: newUser.id, role, name, gender, avatar});
-            await family.save();
-        }
-
 
         if (!JWT_SECRET_KEY) {
             return throwError({ message: "JWT_SECRET_KEY is not defined", res, status: 500 });
