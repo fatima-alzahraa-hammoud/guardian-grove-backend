@@ -122,6 +122,12 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
             familyId: family._id  // Link to parent's family
         });
 
+        // Add the new user to the family's members list
+        if (!family.members.includes(user.id)) {
+            family.members.push({_id: user.id, role, name, gender, avatar});
+            await family.save();
+        }
+
         // Recalculate the ranks after adding the new user
         await recalculateFamilyMemberRanks(family._id, user);
 
@@ -281,6 +287,10 @@ export const deleteUser = async(req: CustomRequest, res:Response):Promise<void> 
             if (user.role === 'parent' && parentsCount <= 1) {
                 return throwError({ message: "Cannot delete the last parent in the family", res, status: 400 });
             }
+
+            // Remove user from the family members list
+            family.members = family.members.filter((member) => member._id.toString() !== user._id.toString());
+            await family.save();
         }
 
         // Delete the user
