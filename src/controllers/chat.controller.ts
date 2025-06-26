@@ -93,7 +93,7 @@ export const handleChat = async (req: CustomRequest, res: Response) => {
 
         // Generate AI response
         const response = await openai.chat.completions.create({
-            model: "gpt-4",
+            model: "deepseek-chat", 
             messages: aiPrompt,
         });
 
