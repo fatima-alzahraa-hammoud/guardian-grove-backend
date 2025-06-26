@@ -291,7 +291,7 @@ export const generateStory = async (req: Request, res: Response) => {
 
     // Call OpenAI to generate the story
     const response = await openai.chat.completions.create({
-        model: "gpt-4",
+        model: "deepseek-chat",
         messages: [{ role: "system", content: aiPrompt }],
     });
 
