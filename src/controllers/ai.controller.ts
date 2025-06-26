@@ -500,12 +500,6 @@ export const checkQuestionCompletion = async (req: Request, res: Response) => {
 // API to generate a daily adventure with challenges
 export const generateDailyAdventure = async () => {
     try {
-        // Check if openai is initialized
-        if (!openai) {
-            console.error("OpenAI client is not initialized");
-            return;
-        }
-
         // Get the current date
         const today = new Date();
         const startDate = today;
@@ -553,45 +547,26 @@ export const generateDailyAdventure = async () => {
             - Generate a solvable, not hard challenges 
 
         `;
-        
-        let response;
-        try {
-            response = await openai.chat.completions.create({
-                model: "deepseek-chat",
-                messages: [{ role: "system", content: aiPrompt }],
-                temperature: 0.8,
-                max_tokens: 1000,
-            });
-        } catch (apiError) {
-            console.error("OpenAI API Error:", apiError);
-            return;
-        }
-        
+
+        const response = await openai.chat.completions.create({
+            model: "deepseek-chat",
+            messages: [{ role: "system", content: aiPrompt }],
+            temperature: 0.8,
+            max_tokens: 1000,
+        });
+
         // Extract the generated adventure from the AI response
-        const adventureText = response?.choices?.[0]?.message?.content;
+        const adventureText = response?.choices[0]?.message?.content;
 
         if (!adventureText) {
-            console.error("Failed to generate adventure content - no text returned");
+            console.error("Failed to generate adventure content");
             return;
         }
-
-        console.log("Adventure text generated successfully");
 
         let adventure;
         try {
-            // Clean the response by removing markdown code blocks
-            let cleanedText = adventureText.trim();
-            
-            // Remove ```json and ``` if present
-            if (cleanedText.startsWith('```json')) {
-                cleanedText = cleanedText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-            } else if (cleanedText.startsWith('```')) {
-                cleanedText = cleanedText.replace(/^```\s*/, '').replace(/\s*```$/, '');
-            }
-                        
-            // Attempt to parse the cleaned response
-            adventure = JSON.parse(cleanedText);
-            console.log("Adventure JSON parsed successfully:", adventure.title);
+            // Attempt to parse the response directly
+            adventure = JSON.parse(adventureText);
         } catch (error) {
             console.error("AI Response Parsing Error:", error);
             return;
@@ -618,17 +593,6 @@ export const generateDailyAdventure = async () => {
 
     } catch (error) {
         console.error("Error generating scheduled adventure:", error);
-    }
-};
-
-// Route version for manual testing
-export const generateDailyAdventureRoute = async (req: Request, res: Response) => {
-    try {
-        await generateDailyAdventure();
-        res.status(200).json({ message: "Daily adventure generated successfully!" });
-    } catch (error) {
-        console.error("Error in generateDailyAdventureRoute:", error);
-        res.status(500).json({ message: "Internal server error" });
     }
 };
 
@@ -672,3 +636,4 @@ const startDailyGeneratesSchedule = async () => {
 };
 
 startDailyGeneratesSchedule();
+generateDailyAdventure();

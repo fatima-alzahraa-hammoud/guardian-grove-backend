@@ -119,6 +119,7 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
             ...data,
             email: email,
             password: hashedPassword,
+            isTempPassword: true,  // Mark as temporary password
             familyId: family._id  // Link to parent's family
         });
 
@@ -164,6 +165,8 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
 
         // Send email with the temporary password
         await sendMail(from, to, subject, html);
+
+
 
         await user.save();
         res.status(200).send({ message: "User created successfully, password email sent.", user });
