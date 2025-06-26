@@ -191,7 +191,7 @@ export const generateLearningZone = async (req: Request, res: Response) => {
         `;
 
         const response = await openai.chat.completions.create({
-            model: "gpt-4",
+            model: "deepseek-chat",
             messages: [{ role: "system", content: aiPrompt }],
         });
 
