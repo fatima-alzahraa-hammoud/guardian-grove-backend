@@ -467,7 +467,7 @@ export const generateTaskCompletionQuestion = async (req: Request, res: Response
 
         // Call OpenAI API to generate the question
         const response = await openai.chat.completions.create({
-            model: "gpt-4",
+            model: "deepseek-chat",
             messages: [{ role: "system", content: aiPrompt }],
             temperature: 0.7,
             max_tokens: 40,
