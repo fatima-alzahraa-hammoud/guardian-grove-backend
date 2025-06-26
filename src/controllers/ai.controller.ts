@@ -672,4 +672,3 @@ const startDailyGeneratesSchedule = async () => {
 };
 
 startDailyGeneratesSchedule();
-generateDailyAdventure();
