@@ -217,7 +217,7 @@ export const getUserChatsOrCreate = async (req: CustomRequest, res: Response) =>
         ];
 
         const aiResponse = await openai.chat.completions.create({
-            model: "gpt-4",
+            model: "deepseek-chat",
             messages: aiPrompt,
             max_tokens: 200,
         });
