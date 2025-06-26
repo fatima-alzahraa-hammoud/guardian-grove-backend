@@ -621,6 +621,17 @@ export const generateDailyAdventure = async () => {
     }
 };
 
+// Route version for manual testing
+export const generateDailyAdventureRoute = async (req: Request, res: Response) => {
+    try {
+        await generateDailyAdventure();
+        res.status(200).json({ message: "Daily adventure generated successfully!" });
+    } catch (error) {
+        console.error("Error in generateDailyAdventureRoute:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
 // Function to calculate the time until 10:30 AM tomorrow
 const getTimeUntilNextRun = () => {
     const now = new Date();
