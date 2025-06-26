@@ -723,3 +723,24 @@ export const getUserAvatar = async (req: CustomRequest, res: Response) => {
         return throwError({ message: "Error fetching avatar", res, status: 500});
     }
 };
+
+export const saveFcmToken = async (req: Request, res: Response) => {
+    try {
+        const { userId, fcmToken } = req.body;
+
+        if (!userId || !fcmToken) {
+            return res.status(400).json({ message: "Missing userId or fcmToken" });
+        }
+
+        if(!checkId({id: userId, res})) return;
+
+        // Add token to user's fcmTokens array if it doesn't exist
+        await User.findByIdAndUpdate(userId, {
+            $addToSet: { fcmTokens: fcmToken },  // $addToSet avoids duplicates
+        });
+
+        return res.status(200).json({ message: "FCM token saved successfully" });
+    } catch (error) {
+        return throwError({ message: "Internal server error", res, status: 500});
+    }
+};
