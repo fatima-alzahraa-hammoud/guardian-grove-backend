@@ -500,6 +500,12 @@ export const checkQuestionCompletion = async (req: Request, res: Response) => {
 // API to generate a daily adventure with challenges
 export const generateDailyAdventure = async () => {
     try {
+        // Check if openai is initialized
+        if (!openai) {
+            console.error("OpenAI client is not initialized");
+            return;
+        }
+
         // Get the current date
         const today = new Date();
         const startDate = today;
@@ -547,26 +553,45 @@ export const generateDailyAdventure = async () => {
             - Generate a solvable, not hard challenges 
 
         `;
-
-        const response = await openai.chat.completions.create({
-            model: "deepseek-chat",
-            messages: [{ role: "system", content: aiPrompt }],
-            temperature: 0.8,
-            max_tokens: 1000,
-        });
-
+        
+        let response;
+        try {
+            response = await openai.chat.completions.create({
+                model: "deepseek-chat",
+                messages: [{ role: "system", content: aiPrompt }],
+                temperature: 0.8,
+                max_tokens: 1000,
+            });
+        } catch (apiError) {
+            console.error("OpenAI API Error:", apiError);
+            return;
+        }
+        
         // Extract the generated adventure from the AI response
-        const adventureText = response?.choices[0]?.message?.content;
+        const adventureText = response?.choices?.[0]?.message?.content;
 
         if (!adventureText) {
-            console.error("Failed to generate adventure content");
+            console.error("Failed to generate adventure content - no text returned");
+            console.error("Response structure:", JSON.stringify(response, null, 2));
             return;
         }
 
+        console.log("Adventure text generated successfully");
+
         let adventure;
         try {
-            // Attempt to parse the response directly
-            adventure = JSON.parse(adventureText);
+            // Clean the response by removing markdown code blocks
+            let cleanedText = adventureText.trim();
+            
+            // Remove ```json and ``` if present
+            if (cleanedText.startsWith('```json')) {
+                cleanedText = cleanedText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+            } else if (cleanedText.startsWith('```')) {
+                cleanedText = cleanedText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+            }
+                        
+            // Attempt to parse the cleaned response
+            adventure = JSON.parse(cleanedText);
         } catch (error) {
             console.error("AI Response Parsing Error:", error);
             return;
