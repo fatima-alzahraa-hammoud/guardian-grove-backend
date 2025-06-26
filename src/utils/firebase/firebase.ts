@@ -1,9 +1,10 @@
-var admin = require("firebase-admin");
+import admin from "firebase-admin";
+import path from "path";
 
-var serviceAccount = require("./firebaseAdminSDK.json");
+const serviceAccount = require(path.resolve("firebaseAdminSDK.json"));
 
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
 });
 
-module.exports = admin;
+export const firebaseAdmin = admin;
