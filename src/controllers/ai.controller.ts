@@ -124,44 +124,6 @@ export const generateDailyMessage = async(userId: string) => {
     }
 }
 
-// Function to calculate the time until 10:30 AM tomorrow
-const getTimeUntilNextRun = () => {
-    const now = new Date();
-    const nextRun = new Date();
-
-    nextRun.setHours(0, 8, 0, 0); 
-    if (now > nextRun) {
-        nextRun.setDate(nextRun.getDate() + 1);
-    }
-
-    return nextRun.getTime() - now.getTime(); 
-};
-
-// Function to start the interval and timeout for daily messages for all users
-const startDailyMessageSchedule = async () => {
-    const users = await User.find();
-    if (users.length === 0) {
-        console.log("No users found."); 
-        return;
-    }
-
-    const timeUntilNextRun = getTimeUntilNextRun();
-
-    setTimeout(() => {
-        users.forEach(user => {
-            generateDailyMessage(user._id.toString());
-        });
-
-        setInterval(() => {
-            users.forEach(user => {
-                generateDailyMessage(user._id.toString());
-            });
-        }, 24 * 60 * 60 * 1000); 
-    }, timeUntilNextRun); 
-};
-
-startDailyMessageSchedule();
-
 export const generateLearningZone = async (req: Request, res: Response) => {
     try {
         const {userId} = req.body;
@@ -636,3 +598,41 @@ export const generateDailyAdventure = async (req: Request, res: Response) => {
         res.status(500).json({ message: "Internal server error" });
     }
 };
+
+// Function to calculate the time until 10:30 AM tomorrow
+const getTimeUntilNextRun = () => {
+    const now = new Date();
+    const nextRun = new Date();
+
+    nextRun.setHours(0, 8, 0, 0); 
+    if (now > nextRun) {
+        nextRun.setDate(nextRun.getDate() + 1);
+    }
+
+    return nextRun.getTime() - now.getTime(); 
+};
+
+// Function to start the interval and timeout for daily messages for all users
+const startDailyMessageSchedule = async () => {
+    const users = await User.find();
+    if (users.length === 0) {
+        console.log("No users found."); 
+        return;
+    }
+
+    const timeUntilNextRun = getTimeUntilNextRun();
+
+    setTimeout(() => {
+        users.forEach(user => {
+            generateDailyMessage(user._id.toString());
+        });
+
+        setInterval(() => {
+            users.forEach(user => {
+                generateDailyMessage(user._id.toString());
+            });
+        }, 24 * 60 * 60 * 1000); 
+    }, timeUntilNextRun); 
+};
+
+startDailyMessageSchedule();
