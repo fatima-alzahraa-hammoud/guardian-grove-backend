@@ -498,7 +498,7 @@ export const checkQuestionCompletion = async (req: Request, res: Response) => {
 };
 
 // API to generate a daily adventure with challenges
-export const generateDailyAdventure = async (req: Request, res: Response) => {
+export const generateDailyAdventure = async () => {
     try {
         // Get the current date
         const today = new Date();
@@ -559,7 +559,8 @@ export const generateDailyAdventure = async (req: Request, res: Response) => {
         const adventureText = response?.choices[0]?.message?.content;
 
         if (!adventureText) {
-            return throwError({ message: "Failed to generate adventure.", res, status: 500 });
+            console.error("Failed to generate adventure content");
+            return;
         }
 
         let adventure;
@@ -568,6 +569,7 @@ export const generateDailyAdventure = async (req: Request, res: Response) => {
             adventure = JSON.parse(adventureText);
         } catch (error) {
             console.error("AI Response Parsing Error:", error);
+            return;
         }
         const newAdventure = new Adventure({
             title: adventure.title,
@@ -587,15 +589,10 @@ export const generateDailyAdventure = async (req: Request, res: Response) => {
 
         // Save the adventure to the database
         await newAdventure.save();
-
-        res.status(200).json({
-            message: "Adventure generated successfully.",
-            adventure: newAdventure,
-        });
+        console.log("Daily adventure generated successfully:", adventure.title);
 
     } catch (error) {
-        console.error("Error generating adventure:", error);
-        res.status(500).json({ message: "Internal server error" });
+        console.error("Error generating scheduled adventure:", error);
     }
 };
 
