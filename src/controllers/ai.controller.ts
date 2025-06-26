@@ -587,7 +587,7 @@ export const generateDailyAdventure = async (req: Request, res: Response) => {
         `;
 
         const response = await openai.chat.completions.create({
-            model: "gpt-4",
+            model: "deepseek-chat",
             messages: [{ role: "system", content: aiPrompt }],
             temperature: 0.8,
             max_tokens: 1000,
