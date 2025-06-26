@@ -110,7 +110,7 @@ export const generateDailyMessage = async(userId: string) => {
             Make it organized, beautiful and friendly and not more than two lines
         `
         const response = await openai.chat.completions.create({
-            model: "gpt-4",
+            model: "deepseek-chat",
             messages: [{ role: "system", content: aiPrompt }],
         });
 
