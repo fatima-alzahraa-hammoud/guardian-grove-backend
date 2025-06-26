@@ -24,6 +24,7 @@ export interface IUser extends Document{
     avatar: string; 
     interests: string[];
     memberSince: Date;
+    fcmTokens: string[]; // Firebase Cloud Messaging tokens for push notifications
     currentLocation?: string;
     stars: number;
     coins: number;
