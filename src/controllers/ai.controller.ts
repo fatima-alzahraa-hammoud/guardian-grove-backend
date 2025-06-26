@@ -395,7 +395,7 @@ export const generateQuickTips = async (req: Request, res: Response) => {
         `;
 
         const response = await openai.chat.completions.create({
-            model: "gpt-4",
+            model: "deepseek-chat",
             messages: [{ role: "system", content: aiPrompt }],
             temperature: 1,
             max_tokens: 50,
