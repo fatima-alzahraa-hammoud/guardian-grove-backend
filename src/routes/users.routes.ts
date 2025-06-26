@@ -9,7 +9,8 @@ import {
   completeChallenge,
   getUserAdventures,
   getUserPurchasedItems,
-  getUserAvatar
+  getUserAvatar,
+  saveFcmToken
 } from "../controllers/user.controller";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { adminMiddleware } from "../middlewares/admin.middleware";
@@ -23,6 +24,7 @@ router.post("/", authMiddleware, createUser);
 router.put("/", authMiddleware, editUserProfile);
 router.delete("/", authMiddleware, deleteUser);
 router.put("/updatePassword", authMiddleware, updatePassword);
+router.post("/save-fcm-token", authMiddleware, saveFcmToken);
 
 // Routes for managing user's stars
 router.get("/stars", authMiddleware, getUserStars); 
