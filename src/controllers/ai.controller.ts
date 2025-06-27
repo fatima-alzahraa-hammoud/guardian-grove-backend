@@ -478,12 +478,17 @@ export const generateTaskCompletionQuestion = async (req: Request, res: Response
 
         // Construct the AI prompt to generate a question
         const aiPrompt = `
-            You are a helpful assistant. The user has given the following task: "${taskDescription}".
-            Generate a clear and concise question that can test if the task is completed.
-            The question should be directly related to the task.
-            Make sure the question is simple and understandable.
-
-            Generated question:
+            Generate a clear and concise question that can test if this task is completed: "${taskDescription}".
+            
+            Requirements:
+            - The question should be directly related to the task
+            - Make it simple and understandable
+            - Return ONLY the question text, nothing else
+            - Do not include explanations, examples, or additional text
+            - Do not use quotes around the question
+            
+            Task: ${taskDescription}
+            Question:
         `;
 
         // Call OpenAI API to generate the question
@@ -491,15 +496,41 @@ export const generateTaskCompletionQuestion = async (req: Request, res: Response
             model: "deepseek-chat",
             messages: [{ role: "system", content: aiPrompt }],
             temperature: 0.7,
-            max_tokens: 40,
+            max_tokens: 50, // Increased slightly for longer questions
         });
 
         // Extract the generated question from the AI response
-        const generatedQuestion = response?.choices[0]?.message?.content;
+        let generatedQuestion = response?.choices[0]?.message?.content?.trim();
 
         if (!generatedQuestion) {
             return throwError({ message: "Failed to generate a question.", res, status: 500 });
         }
+
+        // Clean up the response - remove any extra text after the question
+        // Split by common separators and take only the first part (the actual question)
+        const cleanupPatterns = [
+            /\?\s+This/i,  // "? This question is..."
+            /\?\s+It/i,    // "? It checks..."
+            /\?\s+The/i,   // "? The question..."
+            /\?\s*\n/,     // "?\n" (newline after question)
+        ];
+
+        for (const pattern of cleanupPatterns) {
+            if (pattern.test(generatedQuestion)) {
+                generatedQuestion = generatedQuestion.split(pattern)[0] + '?';
+                break;
+            }
+        }
+
+        // Remove any trailing quotes or extra characters
+        generatedQuestion = generatedQuestion.replace(/^["']|["']$/g, '').trim();
+
+        // Ensure the question ends with a question mark
+        if (!generatedQuestion.endsWith('?')) {
+            generatedQuestion += '?';
+        }
+
+        console.log("Generated question:", generatedQuestion); // Debug log
 
         // Send the generated question to the user
         res.status(200).json({
