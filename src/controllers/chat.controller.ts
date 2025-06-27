@@ -49,7 +49,7 @@ export const handleChat = async (req: CustomRequest, res: Response) => {
         // Check if chat title is "New Chat" and there are 3 messages
         if (chat.title === "New Chat" && chat.messages.length >= 3) {
             const generatedTitle = await generateChatTitle(chat.messages);
-            chat.title = generatedTitle; // Update chat title
+            chat.title = generatedTitle.replace(/^["']|["']$/g, '').trim();
         }
 
         // Prepare last 6 messages for AI context
