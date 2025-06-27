@@ -329,7 +329,6 @@ export const generateQuickTips = async (req: Request, res: Response) => {
     try {
         const { userId } = req.body;
 
-        // Check if the user ID is valid
         if (!checkId({ id: userId, res })) return;
 
         const user = await User.findById(userId);
@@ -349,18 +348,19 @@ export const generateQuickTips = async (req: Request, res: Response) => {
             - title: A concise, small, and creative name for the tip. 
             - message: A small tip content, brief, be general and creative, I need it small.
 
-            Example of structure:
+            Example of structure: 
             Tip {
                 title: "Stay Active",
                 message: "Even a 10-minute walk can boost your energy and mood!"
             }
+            IMPORTANT: Return ONLY a valid JSON object.
         `;
 
         const response = await openai.chat.completions.create({
             model: "deepseek-chat",
             messages: [{ role: "system", content: aiPrompt }],
             temperature: 1,
-            max_tokens: 50,
+            max_tokens: 100,
         });
 
         let generatedQuickTip = response?.choices[0]?.message?.content;
@@ -369,14 +369,74 @@ export const generateQuickTips = async (req: Request, res: Response) => {
             return throwError({ message: "Failed to generate quick tip", res, status: 500 });
         }
 
-        const tipMatch = generatedQuickTip.match(/Tip\s\{\s*title:\s*"([^"]+)",\s*message:\s*"([^"]+)"\s*\}/);
+        let title: string = "Default Title";
+        let message: string = "Default Message";
 
-        if (!tipMatch) {
-            return throwError({ message: "Failed to parse quick tip", res, status: 500 });
+        try {
+            // Strategy 1: Try to parse as JSON directly
+            let cleanedText = generatedQuickTip.trim();
+            
+            // Remove markdown code blocks if present
+            if (cleanedText.startsWith('```json')) {
+                cleanedText = cleanedText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+            } else if (cleanedText.startsWith('```')) {
+                cleanedText = cleanedText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+            }
+
+            const parsedTip = JSON.parse(cleanedText);
+            title = parsedTip.title;
+            message = parsedTip.message;
+
+        } catch (jsonError) {
+            console.log("JSON parsing failed, trying regex patterns...");
+            
+            // Strategy 2: Multiple regex patterns
+            const patterns = [
+                // Original pattern
+                /Tip\s*\{\s*title:\s*"([^"]+)",\s*message:\s*"([^"]+)"\s*\}/,
+                // Without "Tip" prefix
+                /\{\s*title:\s*"([^"]+)",\s*message:\s*"([^"]+)"\s*\}/,
+                // With single quotes
+                /\{\s*title:\s*'([^']+)',\s*message:\s*'([^']+)'\s*\}/,
+                // JSON-like with "title" and "message" keys
+                /"title":\s*"([^"]+)",\s*"message":\s*"([^"]+)"/,
+                // More flexible spacing
+                /title:\s*"([^"]+)"[\s\S]*?message:\s*"([^"]+)"/i,
+            ];
+
+            let matched = false;
+            for (const pattern of patterns) {
+                const match = generatedQuickTip.match(pattern);
+                if (match) {
+                    title = match[1];
+                    message = match[2];
+                    matched = true;
+                    console.log("Matched with pattern:", pattern);
+                    break;
+                }
+            }
+
+            if (!matched) {
+                console.error("All parsing strategies failed. Response:", generatedQuickTip);
+                
+                // Strategy 3: Fallback - extract any quoted strings
+                const quotes = generatedQuickTip.match(/"([^"]+)"/g);
+                if (quotes && quotes.length >= 2) {
+                    title = quotes[0].replace(/"/g, '');
+                    message = quotes[1].replace(/"/g, '');
+                } else {
+                    // Last resort - generate a default tip
+                    title = "Daily Motivation";
+                    message = "Every step forward is progress, no matter how small!";
+                }
+            }
         }
 
-        const title = tipMatch[1]; // Extract title
-        const message = tipMatch[2]; // Extract message
+        // Validate extracted data
+        if (!title || !message) {
+            title = "Stay Positive";
+            message = "Believe in yourself and keep moving forward!";
+        }
 
         // Create a notification for the tip
         const newNotification = ({
@@ -390,7 +450,6 @@ export const generateQuickTips = async (req: Request, res: Response) => {
         } as unknown as INotification);
 
         user.notifications.push(newNotification); 
-
         await user.save();
 
         res.status(200).json({
