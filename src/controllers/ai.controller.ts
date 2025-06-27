@@ -547,6 +547,7 @@ export const generateTaskCompletionQuestion = async (req: Request, res: Response
 export const checkQuestionCompletion = async (req: Request, res: Response) => {
     try {
         const { userId, question, userAnswer } = req.body;
+        console.log("Checking question completion for user:", userId, "Question:", question, "User Answer:", userAnswer);
 
         if (!checkId({id: userId, res})) return;
 
@@ -555,31 +556,62 @@ export const checkQuestionCompletion = async (req: Request, res: Response) => {
         }
 
         const aiPrompt = `
-            The user has been assigned the following question: "${question}".
-            The user has provided the following answer: "${userAnswer}".
-            Please analyze the answer and determine if it is true or not.
-            Return only "true" if the answer is correct, otherwise return "false".
-            The answer may be vague, so please make a decision based on context and clarity.
+            You are evaluating whether a user has completed a task based on their question and answer.
+            
+            Question: "${question}"
+            User's Answer: "${userAnswer}"
+            
+            Your job is to determine if the user's answer demonstrates they have completed or attempted the task described in the question.
+            
+            Guidelines:
+            - Be lenient and understanding - the user may not express themselves perfectly
+            - Look for evidence that they engaged with the task, not perfect answers
+            - Accept reasonable attempts, partial completions, or honest efforts
+            - Consider context and intent behind the answer
+            - If the answer shows any genuine effort or understanding, lean towards "true"
+            - Only return "false" if the answer is clearly unrelated, nonsensical, or shows no effort
+            
+            Examples:
+            - Question: "Did you read for 30 minutes?" Answer: "yes" → true
+            - Question: "Did you exercise today?" Answer: "I walked to the store" → true  
+            - Question: "Did you practice piano?" Answer: "I tried but only for 10 minutes" → true
+            - Question: "Did you clean your room?" Answer: "banana" → false
+            
+            Respond with ONLY "true" or "false" - nothing else.
         `;
 
         const response = await openai.chat.completions.create({
             model: "deepseek-chat",
             messages: [{ role: "system", content: aiPrompt }],
-            temperature: 0.7,
-            max_tokens: 10,
+            temperature: 0.3, // Lower temperature for more consistent responses
+            max_tokens: 5, // Reduced to ensure only "true" or "false"
         });
 
         // Extract the result (true/false) from the AI response
         const aiResponse = response?.choices[0]?.message?.content?.trim().toLowerCase();
+        console.log("AI Response:", aiResponse); // Debug log
 
-        // Validate the response and send appropriate result
-        if (aiResponse === "true" || aiResponse === "false") {
+        // More robust response validation
+        const isTrue = aiResponse?.includes("true");
+        const isFalse = aiResponse?.includes("false");
+        
+        if (isTrue && !isFalse) {
             res.status(200).json({
                 message: "Completion status checked successfully.",
-                questionAnswered: aiResponse === "true",
+                questionAnswered: true,
+            });
+        } else if (isFalse && !isTrue) {
+            res.status(200).json({
+                message: "Completion status checked successfully.",
+                questionAnswered: false,
             });
         } else {
-            return throwError({ message: "Failed to determine completion.", res, status: 500 });
+            // If response is ambiguous or unexpected, log it and default to false
+            console.error("Unexpected AI response:", aiResponse);
+            res.status(200).json({
+                message: "Completion status checked successfully.",
+                questionAnswered: false,
+            });
         }
     } catch (error) {
         console.error("Error checking completion:", error);
