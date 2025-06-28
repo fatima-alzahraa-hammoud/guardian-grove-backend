@@ -10,13 +10,6 @@ type TimePeriod = 'daily' | 'weekly' | 'monthly' | 'yearly';
 export interface IFamily extends Document {
     _id: Types.ObjectId;
     familyName: string;
-    members: Array<{
-        _id: Types.ObjectId;
-        name: string;
-        role: string;
-        gender: string;
-        avatar: string;
-    }>;
     email: string;
     createdAt: Date;
     totalStars: number;
@@ -28,4 +21,5 @@ export interface IFamily extends Document {
     taskCounts: Record<TimePeriod, number>;
     familyAvatar: string;
     sharedStories: IStory[];
+    members: IUser[];
 }

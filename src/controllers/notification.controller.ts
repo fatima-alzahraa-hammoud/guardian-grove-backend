@@ -7,6 +7,7 @@ import { checkId } from "../utils/checkId";
 import { Types } from "mongoose";
 import { Family } from "../models/family.model";
 import { INotification } from "../interfaces/INotification";
+import { createNotificationToMultiple } from "../services/notification.service";
 
 //API to get notifications based on category
 export const getNotifications = async (req: CustomRequest, res: Response): Promise<void> => {
@@ -88,24 +89,44 @@ export const sendNotification = async (req: CustomRequest, res: Response): Promi
                 return throwError({ message: "User not found", res, status: 404 });
             }
 
-            await User.findOneAndUpdate(
-                { _id: userId },
-                { $push: { notifications: newNotification } },
-                { new: true }
-            );
+            await User.findByIdAndUpdate(userId, {
+                $push: { notifications: newNotification },
+            });
+
+            if (user.fcmTokens?.length > 0) {
+                await createNotificationToMultiple({
+                    tokens: user.fcmTokens,
+                    title,
+                    body: message,
+                    data: { category, type: "personal", userId },
+                });
+            }
+
 
             res.status(201).json({ message: 'Notification created successfully', notification: newNotification });
         } else if (type === 'family') {
-            const family = await Family.findById(familyId);
+            const family = await Family.findById(familyId).populate("members");
             if (!family) {
                 return throwError({ message: "Family not found", res, status: 404 });
             }
 
-            await Family.findOneAndUpdate(
-                { _id: familyId },
-                { $push: { notifications: newNotification } },
-                { new: true }
-            );
+            await Family.findByIdAndUpdate(familyId, {
+                $push: { notifications: newNotification },
+            });
+
+            // 🔔 Send to all family members who have FCM tokens
+            const allTokens: string[] = family.members
+                .map((member: any) => member.fcmTokens || [])
+                .flat();
+
+            if (allTokens.length > 0) {
+                await createNotificationToMultiple({
+                    tokens: allTokens,
+                    title,
+                    body: message,
+                    data: { category, type: "family", familyId },
+                });
+            }
 
             res.status(201).json({ message: "Shared notification created successfully", notification: newNotification });
         } else {

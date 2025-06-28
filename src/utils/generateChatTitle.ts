@@ -11,7 +11,7 @@ export const generateChatTitle = async (messages: IMessage[]): Promise<string> =
     try {
         // Get the AI response for summarization
         const response = await openai.chat.completions.create({
-            model: "gpt-3.5-turbo",
+            model: "deepseek-chat",
             messages: [
                 { role: "system", content: "You are a helpful assistant that summarizes messages into concise titles of maximum two three words without word title:." },
                 { role: "user", content: aiPrompt }

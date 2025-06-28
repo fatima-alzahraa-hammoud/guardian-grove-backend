@@ -9,15 +9,6 @@ import { storySchema } from "./schemas/story.schema";
 const familySchema = new Schema<IFamily>({
     _id: { type: Schema.Types.ObjectId, auto: true },
     familyName: { type: String, required: true, unique: true },
-    members: [
-        {
-            _id: { type: Types.ObjectId, ref: "User", required: true },
-            name: { type: String, required: true },
-            role: { type: String, required: true, enum: ['parent', 'admin', 'child'] },
-            gender: { type: String, required: true, enum: ['female', 'male'] },
-            avatar: { type: String, required: true },
-        },
-    ],
     email: { type: String, required: true, unique: true },
     createdAt: { type: Date, required: true },
     totalStars: { type: Number, default: 0 },
@@ -39,6 +30,13 @@ const familySchema = new Schema<IFamily>({
     },
     familyAvatar: { type: String, required: true },
     sharedStories: { type: [storySchema], default: [] },
+});
+
+// virtual field to get members dynamically
+familySchema.virtual('members', {
+    ref: 'User',
+    localField: '_id',
+    foreignField: 'familyId'
 });
 
 // Ensure virtuals are included in JSON response

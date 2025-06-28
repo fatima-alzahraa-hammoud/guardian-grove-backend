@@ -1,7 +1,7 @@
 import express from "express";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import {deleteNotification, getNotificationById, getNotifications, markAllNotificationsAsRead, markNotificationAsRead, sendNotification, updateNotification } from "../controllers/notification.controller";
-import { adminMiddleware } from "../middlewares/adminMiddleware";
+import { adminMiddleware } from "../middlewares/admin.middleware";
 
 const router =  express.Router();
 

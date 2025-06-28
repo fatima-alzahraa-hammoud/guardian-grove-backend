@@ -1,8 +1,8 @@
 import express from "express";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { createAdventure, deleteAdventure, getAdventureById, getAllAdventures, updateAdventure } from "../controllers/adventure.controller";
-import { createChallenge, deleteChallenge, getAllChallenges, getChallengeById, updateChallege } from "../controllers/challenge.controller";
-import { adminMiddleware } from "../middlewares/adminMiddleware";
+import { createChallenge, deleteChallenge, getAllChallenges, getChallengeById, updateChallenge } from "../controllers/challenge.controller";
+import { adminMiddleware } from "../middlewares/admin.middleware";
 
 const router =  express.Router();
 
@@ -15,7 +15,7 @@ router.delete("/", authMiddleware, deleteAdventure);
 router.post("/adventure/challenges", authMiddleware, createChallenge);
 router.get("/adventure/challenges", authMiddleware, getAllChallenges);
 router.get("/adventure/challenges/challenge", authMiddleware, getChallengeById);
-router.put("/adventure/challenges", authMiddleware, updateChallege);
+router.put("/adventure/challenges", authMiddleware, updateChallenge);
 router.delete("/adventure/challenges", authMiddleware, adminMiddleware, deleteChallenge);
 
 

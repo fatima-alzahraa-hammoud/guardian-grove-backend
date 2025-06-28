@@ -9,11 +9,12 @@ import {
   completeChallenge,
   getUserAdventures,
   getUserPurchasedItems,
-  getUserAvatar
-} from "../controllers/users.controller";
+  getUserAvatar,
+  saveFcmToken
+} from "../controllers/user.controller";
 import { authMiddleware } from "../middlewares/auth.middleware";
-import { adminMiddleware } from "../middlewares/adminMiddleware";
-import { checkQuestionCompletion, generateDailyAdventure, generateGrowthPlans, generateLearningZone, generateQuickTips, generateStory, generateTaskCompletionQuestion, generateTrackDay, generateViewTasks, regenerateGoalsAndTasksRoute } from "../controllers/ai.controller";
+import { adminMiddleware } from "../middlewares/admin.middleware";
+import { checkQuestionCompletion, generateDailyAdventureRoute, generateGrowthPlans, generateLearningZone, generateQuickTips, generateStory, generateTaskCompletionQuestion, generateTrackDay, generateViewTasks, regenerateGoalsAndTasksRoute } from "../controllers/ai.controller";
 
 const router = express.Router();
 
@@ -23,6 +24,7 @@ router.post("/", authMiddleware, createUser);
 router.put("/", authMiddleware, editUserProfile);
 router.delete("/", authMiddleware, deleteUser);
 router.put("/updatePassword", authMiddleware, updatePassword);
+router.post("/save-fcm-token", authMiddleware, saveFcmToken);
 
 // Routes for managing user's stars
 router.get("/stars", authMiddleware, getUserStars); 
@@ -65,6 +67,6 @@ router.post("/generateViewTasks", generateViewTasks);
 router.post("/generateQuickTip", generateQuickTips);
 router.post("/generateQusetion", generateTaskCompletionQuestion);
 router.post("/checkAnswer", checkQuestionCompletion);
-router.post("/generateAdventure", generateDailyAdventure);
+router.post("/generateAdventure", generateDailyAdventureRoute);
 
 export default router;

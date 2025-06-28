@@ -21,7 +21,6 @@ import { OpenAI } from "openai";
 
 dotenv.config();
 
-
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
     api_key: process.env.CLOUDINARY_API_KEY,
@@ -32,7 +31,8 @@ const app: Express= express();
 
 // OpenAI API Configuration
 export const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
+    baseURL: process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com',
+    apiKey: process.env.DeepSeek_API_KEY,
 });
 
 // Use CORS middleware

@@ -79,7 +79,6 @@ export const createGoal = async (req: Request, res: Response): Promise<void> => 
         
         res.status(201).json({ message: 'Goal created successfully', goal: newGoal});
     } catch (err) {
-        console.error("Error creating goal:", err);
         return throwError({message: "An unknown error occurred while creating goal", res, status: 500});
     }
 }
@@ -127,7 +126,6 @@ export const getGoals = async (req: CustomRequest, res: Response): Promise<void>
 
         res.status(200).json({message: "Retrieving all users' goals successfully", goals: allGoals });
     } catch (error) {
-        console.error(error);
         return throwError({ message: "Error retrieving goals", res, status: 500 });
     }
 };
@@ -145,7 +143,7 @@ export const getGoalById = async (req: CustomRequest, res: Response): Promise<vo
         if(!checkId({id: goalId, res})) return;
         let user;
 
-        if(userId && ['parent', 'admin', 'owner'].includes(req.user.role)){
+        if(userId && ['parent', 'admin'].includes(req.user.role)){
             if(!checkId({id: userId, res})) return;
             user = await User.findById(userId);
             if (!user) {
@@ -182,7 +180,7 @@ export const getGoalById = async (req: CustomRequest, res: Response): Promise<vo
 export const updateUserGoal = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
 
-        if(!req.user || !['parent', 'admin', 'owner'].includes(req.user.role)){
+        if(!req.user || !['parent', 'admin'].includes(req.user.role)){
             return throwError({ message: "Unauthorized", res, status: 401 });
         }
 
@@ -224,7 +222,6 @@ export const updateUserGoal = async (req: CustomRequest, res: Response): Promise
 
         res.status(200).json({ message: "Goal updated", goal });
     } catch (error) {
-        console.error(error);
         return throwError({ message: "Error updating goal", res, status: 500 });
     }
 };
@@ -233,7 +230,7 @@ export const updateUserGoal = async (req: CustomRequest, res: Response): Promise
 export const deleteGoal = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
 
-        if(!req.user || !['parent', 'admin', 'owner'].includes(req.user.role)){
+        if(!req.user || !['parent', 'admin'].includes(req.user.role)){
             return throwError({ message: "Unauthorized", res, status: 401 });
         }
 
@@ -261,7 +258,6 @@ export const deleteGoal = async (req: CustomRequest, res: Response): Promise<voi
 
         res.status(200).json({ message: 'Goal deleted successfully', DeletedGoal: deletedGoal });
     } catch (error) {
-        console.error("Error deleting goal:", error);
         return throwError({message: "Error deleting goal", res, status: 500});
     }
 };
@@ -392,7 +388,7 @@ export const updateTask = async(req: Request, res: Response): Promise<void> => {
 export const deleteTask = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
 
-        if(!req.user || (req.user.role !== 'parent' && req.user.role !== 'admin' && req.user.role !== 'owner')){
+        if(!req.user || (req.user.role !== 'parent' && req.user.role !== 'admin')){
             return throwError({ message: "Unauthorized", res, status: 401 });
         }
 
@@ -426,7 +422,6 @@ export const deleteTask = async (req: CustomRequest, res: Response): Promise<voi
 
         res.status(200).json({ message: 'Task deleted successfully', DeletedTask: deletedTask });
     } catch (error) {
-        console.error(error);
         return throwError({message: "Error deleting task", res, status: 500});
     }
 };
@@ -493,6 +488,8 @@ export const completeTask = async (req: CustomRequest, res: Response): Promise<v
             }
         }
 
+        await user.save();
+
         // Update the family total stars
         if (user.familyId) {
             const totalStars = starsTaskReward + starsGoalReward;
@@ -502,11 +499,8 @@ export const completeTask = async (req: CustomRequest, res: Response): Promise<v
             await recalculateFamilyMemberRanks(user.familyId, user);
         }
 
-        await user.save();
-
         res.status(200).json({ message: "Task marked as done", task, goal });
     } catch (error) {
-        console.error(error);
         return throwError({ message: "Error marking task as done", res, status: 500 });
     }
 };
@@ -526,7 +520,7 @@ export const getMonthlyStats = async (req: CustomRequest, res: Response): Promis
 
         if (!checkId({ id: targetUserId, res })) return;
 
-        const isAuthorized = req.user._id.toString() === targetUserId.toString() || ['parent', 'admin', 'owner'].includes(req.user.role);
+        const isAuthorized = req.user._id.toString() === targetUserId.toString() || ['parent', 'admin'].includes(req.user.role);
         if (!isAuthorized) {
             return throwError({ message: "Forbidden", res, status: 403 });
         }
@@ -566,7 +560,6 @@ export const getMonthlyStats = async (req: CustomRequest, res: Response): Promis
             completedGoals: completedGoalsForCurrentMonth.length,
         });
     } catch (error) {
-        console.error(error);
         return throwError({ message: "Error retrieving monthly stats", res, status: 500 });
     }
 };

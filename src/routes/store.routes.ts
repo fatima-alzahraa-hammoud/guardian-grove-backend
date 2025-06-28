@@ -1,7 +1,7 @@
 import express from "express";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { buyItem, createItem, deleteItem, getStoreItems, updateItem } from "../controllers/store.controller";
-import { adminMiddleware } from "../middlewares/adminMiddleware";
+import { adminMiddleware } from "../middlewares/admin.middleware";
 
 const router =  express.Router();
 

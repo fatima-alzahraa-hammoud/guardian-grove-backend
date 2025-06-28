@@ -30,10 +30,13 @@ export const getFamily = async (req: Request, res: Response): Promise<void> => {
         const { familyId } = req.body;
         if(!checkId({id: familyId, res})) return;
 
-        let projection = '_id familyName email familyAvatar totalStars tasks members';
+        const family = await Family.findById(familyId)
+            .select('_id familyName email familyAvatar totalStars tasks gender')
+            .populate({
+                path: 'members',
+                select: 'name email role avatar stars coins gender'
+            });
 
-        const family = await Family.findById(familyId).select(projection).lean();;
-        
         if (!family) {
             return throwError({ message: "Family not found.", res, status: 404 });
         }
@@ -48,26 +51,23 @@ export const getFamily = async (req: Request, res: Response): Promise<void> => {
 export const getFamilyMembers = async (req: Request, res: Response): Promise<void> => {
     try {
         const { familyId } = req.body;
+
+        if (!checkId({ id: familyId, res })) return;
         
-        // Find family and populate members with full user details
-        const family = await Family.findById(familyId).populate({ path: "members._id", model: "User"}).lean();
+        const family = await Family.findById(familyId).populate({
+            path: 'members',
+            select: 'name email birthday role avatar gender stars coins interests nbOfTasksCompleted rankInFamily memberSince'
+        });
 
         if (!family) {
             return throwError({ message: "Family not found.", res, status: 404 });
         }
 
-        // Flatten the structure to avoid `_id` nesting
-        const familyWithMembers = {
-            ...family,
-            members: family.members.map(member => ({
-                ...member._id,
-                role: member.role,
-                gender: member.gender,
-                avatar: member.avatar
-            }))
-        };
+        if (!family.members || family.members.length === 0) {
+            return throwError({ message: "No family members found.", res, status: 404 });
+        }
 
-        res.status(200).json({ message:"Retrieving family members successfully", familyWithMembers});
+        res.status(200).json({ message:"Retrieving family members successfully", familyWithMembers: family});
 
     } catch (error) {
         return throwError({ message: "Failed to retrieve family members.", res, status: 500 });
@@ -78,7 +78,7 @@ export const getFamilyMembers = async (req: Request, res: Response): Promise<voi
 export const updateFamily = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
 
-        if(!req.user || !['parent', 'admin', 'owner'].includes(req.user.role)){
+        if(!req.user || !['parent', 'admin'].includes(req.user.role)){
             return throwError({ message: "Unauthorized", res, status: 401 });
         }
 
@@ -138,7 +138,7 @@ export const updateFamily = async (req: CustomRequest, res: Response): Promise<v
 export const deleteFamily = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
         // Check for authorized user roles
-        if (!req.user ||  !['parent', 'admin', 'owner'].includes(req.user.role)) {
+        if (!req.user ||  !['parent', 'admin'].includes(req.user.role)) {
             return throwError({ message: "Unauthorized", res, status: 401 });
         }
 
@@ -174,7 +174,7 @@ export const deleteFamily = async (req: CustomRequest, res: Response): Promise<v
 export const updateFamilyGoal = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
 
-        if(!req.user || !['parent', 'admin', 'owner'].includes(req.user.role)){
+        if(!req.user || !['parent', 'admin'].includes(req.user.role)){
             return throwError({ message: "Unauthorized", res, status: 401 });
         }
 
@@ -219,7 +219,6 @@ export const updateFamilyGoal = async (req: CustomRequest, res: Response): Promi
 
         res.status(200).json({ message: "Goal updated", goal });
     } catch (error) {
-        console.error(error);
         return throwError({ message: "Error updating goal", res, status: 500 });
     }
 };
@@ -351,7 +350,7 @@ export const updateFamilyTask = async(req: Request, res: Response): Promise<void
 export const deleteFamilyTask = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
 
-        if(!req.user || (req.user.role !== 'parent' && req.user.role !== 'admin' && req.user.role !== 'owner')){
+        if(!req.user || (req.user.role !== 'parent' && req.user.role !== 'admin')){
             return throwError({ message: "Unauthorized", res, status: 401 });
         }
 
@@ -385,7 +384,6 @@ export const deleteFamilyTask = async (req: CustomRequest, res: Response): Promi
 
         res.status(200).json({ message: 'Task deleted successfully', DeletedTask: deletedTask });
     } catch (error) {
-        console.error(error);
         return throwError({message: "Error deleting task", res, status: 500});
     }
 };
@@ -428,7 +426,10 @@ export const completeFamilyTask = async (req: CustomRequest, res: Response): Pro
             return;
         }
 
-        const family = await Family.findById(familyId);
+        const family = await Family.findById(familyId).populate({
+            path: 'members',
+            select: 'stars coins nbOfTasksCompleted'
+        }); 
         if (!family) {
             return throwError({ message: "Family not found", res, status: 404 });
         }
@@ -451,14 +452,11 @@ export const completeFamilyTask = async (req: CustomRequest, res: Response): Pro
         
         let totalStars = 0;
         for (const member of family.members) {
-            const user = await User.findById(member._id);
-            if (user) {
-                totalStars += task.rewards.stars;
-                user.coins += task.rewards.coins;
-                user.stars += task.rewards.stars;
-                user.nbOfTasksCompleted += 1;
-                await user.save();
-            }
+            totalStars += task.rewards.stars;
+            member.coins += task.rewards.coins;
+            member.stars += task.rewards.stars;
+            member.nbOfTasksCompleted += 1;
+            await member.save();
         }
 
         goal.progress = (goal.tasks.filter(task => task.isCompleted).length / goal.tasks.length) * 100;
@@ -470,13 +468,10 @@ export const completeFamilyTask = async (req: CustomRequest, res: Response): Pro
 
             // Reward user with coins and stars
             for (const member of family.members) {
-                const user = await User.findById(member._id);
-                if (user) {
-                    totalStars += goal.rewards.stars
-                    user.coins += goal.rewards.coins;
-                    user.stars += goal.rewards.stars;
-                    await user.save();
-                }
+                totalStars += goal.rewards.stars;
+                member.coins += goal.rewards.coins;
+                member.stars += goal.rewards.stars;
+                await member.save();
             }
 
             // Unlock Achievement if available
@@ -506,7 +501,6 @@ export const completeFamilyTask = async (req: CustomRequest, res: Response): Pro
 
         res.status(200).json({ message: "Task marked as done", task, goal });
     } catch (error) {
-        console.error(error);
         return throwError({ message: "Error marking task as done", res, status: 500 });
     }
 };
@@ -583,7 +577,6 @@ export const getLeaderboard = async (req: CustomRequest, res: Response): Promise
 
         res.status(200).json({ message: 'Leaderboard fetched successfully', ...results, });
     } catch (error) {
-        console.error('Error fetching leaderboard:', error);
         res.status(500).json({ message: 'Error fetching leaderboard', error });
     }
 };
@@ -595,20 +588,24 @@ export const getFamilyLeaderboard = async (req: Request, res: Response): Promise
 
         if (!checkId({ id: familyId, res })) return;
 
-        const family = await Family.findById(familyId);
+        const family = await Family.findById(familyId).populate({
+            path: 'members',
+            select: 'name avatar stars nbOfTasksCompleted',
+            options: { sort: { stars: -1, nbOfTasksCompleted: -1 } }
+        });        
+        
         if (!family) {
             return throwError({ message: "Family not found", res, status: 404 });
         }
 
-        const members = await User.find({ familyId }).select("stars nbOfTasksCompleted").sort({ totalStars: -1, tasks: -1 }).exec();
-        if (!members) {
+        if (!family.members || family.members.length === 0) {
             return throwError({ message: "Members not found", res, status: 404 });
         }
 
         let rank = 1;
         let previousStars = 0;
         let previousTasks = 0;
-        const leaderboard = members.map((member, index) => {
+        const leaderboard = family.members.map((member, index) => {
             if (previousStars !== member.stars || previousTasks !== member.nbOfTasksCompleted) {
                 rank = index + 1;
             }
@@ -622,7 +619,6 @@ export const getFamilyLeaderboard = async (req: Request, res: Response): Promise
             familyLeaderboard: leaderboard,
         });
     } catch (error) {
-        console.error('Error fetching leaderboard:', error);
         res.status(500).json({ message: 'Error fetching leaderboard' });
     }
 };
@@ -639,13 +635,18 @@ export const updateAllFamilyMembersStars = async (req: CustomRequest, res: Respo
             return throwError({ message: "Invalid stars value", res, status: 400 });
         }
 
-        const family = await Family.findById(req.user.familyId);
+        const family = await Family.findById(req.user.familyId).populate({
+            path: 'members',
+            select: '_id stars'
+        });        
+        
         if (!family) {
             return throwError({ message: "Family not found", res, status: 404 });
         }
 
         // Update stars for all family members
         const membersIds = family.members.map((member) => member._id);
+
         await User.updateMany(
             { _id: { $in: membersIds } },
             { $inc: { stars } }
@@ -678,11 +679,15 @@ export const getFamilyNameNbMembersStars = async (req: CustomRequest, res: Respo
             return throwError({ message: "Unauthorized", res, status: 401 });
         }
 
-        const family = await Family.findById(req.user.familyId);
+        const family = await Family.findById(req.user.familyId).populate({
+            path: 'members',
+            select: '_id' // Only select _id since we just need the count
+        });        
+        
         if (!family) {
             return throwError({ message: "Family not found", res, status: 404 });
         }
-
+        console.log(family.members.length);
         res.status(200).json({
             message: "Retrieving family name and number of members successfully",
             familyName: family.familyName,
@@ -748,7 +753,6 @@ export const getFamilyProgressStats = async (req: CustomRequest, res: Response):
         });
 
     } catch (error) {
-        console.error(error);
         return throwError({ message: "Error retrieving monthly stats", res, status: 500 });
     }
 };

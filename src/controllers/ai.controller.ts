@@ -84,7 +84,7 @@ export const generateGrowthPlans = async (req: Request, res: Response) => {
         `;
 
         const response = await openai.chat.completions.create({
-            model: "gpt-4",
+            model: "deepseek-chat",
             messages: [{ role: "system", content: aiPrompt }],
         });
 
@@ -110,7 +110,7 @@ export const generateDailyMessage = async(userId: string) => {
             Make it organized, beautiful and friendly and not more than two lines
         `
         const response = await openai.chat.completions.create({
-            model: "gpt-4",
+            model: "deepseek-chat",
             messages: [{ role: "system", content: aiPrompt }],
         });
 
@@ -123,44 +123,6 @@ export const generateDailyMessage = async(userId: string) => {
         console.log("Something went error", error);
     }
 }
-
-// Function to calculate the time until 10:30 AM tomorrow
-const getTimeUntilNextRun = () => {
-    const now = new Date();
-    const nextRun = new Date();
-
-    nextRun.setHours(0, 8, 0, 0); 
-    if (now > nextRun) {
-        nextRun.setDate(nextRun.getDate() + 1);
-    }
-
-    return nextRun.getTime() - now.getTime(); 
-};
-
-// Function to start the interval and timeout for daily messages for all users
-const startDailyMessageSchedule = async () => {
-    const users = await User.find();
-    if (users.length === 0) {
-        console.log("No users found."); 
-        return;
-    }
-
-    const timeUntilNextRun = getTimeUntilNextRun();
-
-    setTimeout(() => {
-        users.forEach(user => {
-            generateDailyMessage(user._id.toString());
-        });
-
-        setInterval(() => {
-            users.forEach(user => {
-                generateDailyMessage(user._id.toString());
-            });
-        }, 24 * 60 * 60 * 1000); 
-    }, timeUntilNextRun); 
-};
-
-startDailyMessageSchedule();
 
 export const generateLearningZone = async (req: Request, res: Response) => {
     try {
@@ -191,7 +153,7 @@ export const generateLearningZone = async (req: Request, res: Response) => {
         `;
 
         const response = await openai.chat.completions.create({
-            model: "gpt-4",
+            model: "deepseek-chat",
             messages: [{ role: "system", content: aiPrompt }],
         });
 
@@ -256,7 +218,7 @@ export const generateTrackDay = async (req: Request, res: Response) => {
         `;
 
         const response = await openai.chat.completions.create({
-            model: "gpt-4",
+            model: "deepseek-chat",
             messages: [{ role: "system", content: aiPrompt }],
         });
 
@@ -291,7 +253,7 @@ export const generateStory = async (req: Request, res: Response) => {
 
     // Call OpenAI to generate the story
     const response = await openai.chat.completions.create({
-        model: "gpt-4",
+        model: "deepseek-chat",
         messages: [{ role: "system", content: aiPrompt }],
     });
 
@@ -345,9 +307,10 @@ export const generateViewTasks = async (req: Request, res: Response) => {
         `;
 
         const response = await openai.chat.completions.create({
-            model: "gpt-4",
+            model: "deepseek-chat",
             messages: [{ role: "system", content: aiPrompt }],
-            temperature: 1
+            temperature: 0.7,
+            max_tokens: 300
         });
 
         let generatedViewTasks = response?.choices[0]?.message?.content;
@@ -366,7 +329,6 @@ export const generateQuickTips = async (req: Request, res: Response) => {
     try {
         const { userId } = req.body;
 
-        // Check if the user ID is valid
         if (!checkId({ id: userId, res })) return;
 
         const user = await User.findById(userId);
@@ -386,18 +348,19 @@ export const generateQuickTips = async (req: Request, res: Response) => {
             - title: A concise, small, and creative name for the tip. 
             - message: A small tip content, brief, be general and creative, I need it small.
 
-            Example of structure:
+            Example of structure: 
             Tip {
                 title: "Stay Active",
                 message: "Even a 10-minute walk can boost your energy and mood!"
             }
+            IMPORTANT: Return ONLY a valid JSON object.
         `;
 
         const response = await openai.chat.completions.create({
-            model: "gpt-4",
+            model: "deepseek-chat",
             messages: [{ role: "system", content: aiPrompt }],
             temperature: 1,
-            max_tokens: 50,
+            max_tokens: 100,
         });
 
         let generatedQuickTip = response?.choices[0]?.message?.content;
@@ -406,14 +369,74 @@ export const generateQuickTips = async (req: Request, res: Response) => {
             return throwError({ message: "Failed to generate quick tip", res, status: 500 });
         }
 
-        const tipMatch = generatedQuickTip.match(/Tip\s\{\s*title:\s*"([^"]+)",\s*message:\s*"([^"]+)"\s*\}/);
+        let title: string = "Default Title";
+        let message: string = "Default Message";
 
-        if (!tipMatch) {
-            return throwError({ message: "Failed to parse quick tip", res, status: 500 });
+        try {
+            // Strategy 1: Try to parse as JSON directly
+            let cleanedText = generatedQuickTip.trim();
+            
+            // Remove markdown code blocks if present
+            if (cleanedText.startsWith('```json')) {
+                cleanedText = cleanedText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+            } else if (cleanedText.startsWith('```')) {
+                cleanedText = cleanedText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+            }
+
+            const parsedTip = JSON.parse(cleanedText);
+            title = parsedTip.title;
+            message = parsedTip.message;
+
+        } catch (jsonError) {
+            console.log("JSON parsing failed, trying regex patterns...");
+            
+            // Strategy 2: Multiple regex patterns
+            const patterns = [
+                // Original pattern
+                /Tip\s*\{\s*title:\s*"([^"]+)",\s*message:\s*"([^"]+)"\s*\}/,
+                // Without "Tip" prefix
+                /\{\s*title:\s*"([^"]+)",\s*message:\s*"([^"]+)"\s*\}/,
+                // With single quotes
+                /\{\s*title:\s*'([^']+)',\s*message:\s*'([^']+)'\s*\}/,
+                // JSON-like with "title" and "message" keys
+                /"title":\s*"([^"]+)",\s*"message":\s*"([^"]+)"/,
+                // More flexible spacing
+                /title:\s*"([^"]+)"[\s\S]*?message:\s*"([^"]+)"/i,
+            ];
+
+            let matched = false;
+            for (const pattern of patterns) {
+                const match = generatedQuickTip.match(pattern);
+                if (match) {
+                    title = match[1];
+                    message = match[2];
+                    matched = true;
+                    console.log("Matched with pattern:", pattern);
+                    break;
+                }
+            }
+
+            if (!matched) {
+                console.error("All parsing strategies failed. Response:", generatedQuickTip);
+                
+                // Strategy 3: Fallback - extract any quoted strings
+                const quotes = generatedQuickTip.match(/"([^"]+)"/g);
+                if (quotes && quotes.length >= 2) {
+                    title = quotes[0].replace(/"/g, '');
+                    message = quotes[1].replace(/"/g, '');
+                } else {
+                    // Last resort - generate a default tip
+                    title = "Daily Motivation";
+                    message = "Every step forward is progress, no matter how small!";
+                }
+            }
         }
 
-        const title = tipMatch[1]; // Extract title
-        const message = tipMatch[2]; // Extract message
+        // Validate extracted data
+        if (!title || !message) {
+            title = "Stay Positive";
+            message = "Believe in yourself and keep moving forward!";
+        }
 
         // Create a notification for the tip
         const newNotification = ({
@@ -427,7 +450,6 @@ export const generateQuickTips = async (req: Request, res: Response) => {
         } as unknown as INotification);
 
         user.notifications.push(newNotification); 
-
         await user.save();
 
         res.status(200).json({
@@ -456,28 +478,59 @@ export const generateTaskCompletionQuestion = async (req: Request, res: Response
 
         // Construct the AI prompt to generate a question
         const aiPrompt = `
-            You are a helpful assistant. The user has given the following task: "${taskDescription}".
-            Generate a clear and concise question that can test if the task is completed.
-            The question should be directly related to the task.
-            Make sure the question is simple and understandable.
-
-            Generated question:
+            Generate a clear and concise question that can test if this task is completed: "${taskDescription}".
+            
+            Requirements:
+            - The question should be directly related to the task
+            - Make it simple and understandable
+            - Return ONLY the question text, nothing else
+            - Do not include explanations, examples, or additional text
+            - Do not use quotes around the question
+            
+            Task: ${taskDescription}
+            Question:
         `;
 
         // Call OpenAI API to generate the question
         const response = await openai.chat.completions.create({
-            model: "gpt-4",
+            model: "deepseek-chat",
             messages: [{ role: "system", content: aiPrompt }],
             temperature: 0.7,
-            max_tokens: 40,
+            max_tokens: 50, // Increased slightly for longer questions
         });
 
         // Extract the generated question from the AI response
-        const generatedQuestion = response?.choices[0]?.message?.content;
+        let generatedQuestion = response?.choices[0]?.message?.content?.trim();
 
         if (!generatedQuestion) {
             return throwError({ message: "Failed to generate a question.", res, status: 500 });
         }
+
+        // Clean up the response - remove any extra text after the question
+        // Split by common separators and take only the first part (the actual question)
+        const cleanupPatterns = [
+            /\?\s+This/i,  // "? This question is..."
+            /\?\s+It/i,    // "? It checks..."
+            /\?\s+The/i,   // "? The question..."
+            /\?\s*\n/,     // "?\n" (newline after question)
+        ];
+
+        for (const pattern of cleanupPatterns) {
+            if (pattern.test(generatedQuestion)) {
+                generatedQuestion = generatedQuestion.split(pattern)[0] + '?';
+                break;
+            }
+        }
+
+        // Remove any trailing quotes or extra characters
+        generatedQuestion = generatedQuestion.replace(/^["']|["']$/g, '').trim();
+
+        // Ensure the question ends with a question mark
+        if (!generatedQuestion.endsWith('?')) {
+            generatedQuestion += '?';
+        }
+
+        console.log("Generated question:", generatedQuestion); // Debug log
 
         // Send the generated question to the user
         res.status(200).json({
@@ -494,6 +547,7 @@ export const generateTaskCompletionQuestion = async (req: Request, res: Response
 export const checkQuestionCompletion = async (req: Request, res: Response) => {
     try {
         const { userId, question, userAnswer } = req.body;
+        console.log("Checking question completion for user:", userId, "Question:", question, "User Answer:", userAnswer);
 
         if (!checkId({id: userId, res})) return;
 
@@ -502,31 +556,62 @@ export const checkQuestionCompletion = async (req: Request, res: Response) => {
         }
 
         const aiPrompt = `
-            The user has been assigned the following question: "${question}".
-            The user has provided the following answer: "${userAnswer}".
-            Please analyze the answer and determine if it is true or not.
-            Return only "true" if the answer is correct, otherwise return "false".
-            The answer may be vague, so please make a decision based on context and clarity.
+            You are evaluating whether a user has completed a task based on their question and answer.
+            
+            Question: "${question}"
+            User's Answer: "${userAnswer}"
+            
+            Your job is to determine if the user's answer demonstrates they have completed or attempted the task described in the question.
+            
+            Guidelines:
+            - Be lenient and understanding - the user may not express themselves perfectly
+            - Look for evidence that they engaged with the task, not perfect answers
+            - Accept reasonable attempts, partial completions, or honest efforts
+            - Consider context and intent behind the answer
+            - If the answer shows any genuine effort or understanding, lean towards "true"
+            - Only return "false" if the answer is clearly unrelated, nonsensical, or shows no effort
+            
+            Examples:
+            - Question: "Did you read for 30 minutes?" Answer: "yes" → true
+            - Question: "Did you exercise today?" Answer: "I walked to the store" → true  
+            - Question: "Did you practice piano?" Answer: "I tried but only for 10 minutes" → true
+            - Question: "Did you clean your room?" Answer: "banana" → false
+            
+            Respond with ONLY "true" or "false" - nothing else.
         `;
 
         const response = await openai.chat.completions.create({
-            model: "gpt-4",
+            model: "deepseek-chat",
             messages: [{ role: "system", content: aiPrompt }],
-            temperature: 0.7,
-            max_tokens: 10,
+            temperature: 0.3, // Lower temperature for more consistent responses
+            max_tokens: 5, // Reduced to ensure only "true" or "false"
         });
 
         // Extract the result (true/false) from the AI response
         const aiResponse = response?.choices[0]?.message?.content?.trim().toLowerCase();
+        console.log("AI Response:", aiResponse); // Debug log
 
-        // Validate the response and send appropriate result
-        if (aiResponse === "true" || aiResponse === "false") {
+        // More robust response validation
+        const isTrue = aiResponse?.includes("true");
+        const isFalse = aiResponse?.includes("false");
+        
+        if (isTrue && !isFalse) {
             res.status(200).json({
                 message: "Completion status checked successfully.",
-                questionAnswered: aiResponse === "true",
+                questionAnswered: true,
+            });
+        } else if (isFalse && !isTrue) {
+            res.status(200).json({
+                message: "Completion status checked successfully.",
+                questionAnswered: false,
             });
         } else {
-            return throwError({ message: "Failed to determine completion.", res, status: 500 });
+            // If response is ambiguous or unexpected, log it and default to false
+            console.error("Unexpected AI response:", aiResponse);
+            res.status(200).json({
+                message: "Completion status checked successfully.",
+                questionAnswered: false,
+            });
         }
     } catch (error) {
         console.error("Error checking completion:", error);
@@ -535,8 +620,14 @@ export const checkQuestionCompletion = async (req: Request, res: Response) => {
 };
 
 // API to generate a daily adventure with challenges
-export const generateDailyAdventure = async (req: Request, res: Response) => {
+export const generateDailyAdventure = async () => {
     try {
+        // Check if openai is initialized
+        if (!openai) {
+            console.error("OpenAI client is not initialized");
+            return;
+        }
+
         // Get the current date
         const today = new Date();
         const startDate = today;
@@ -581,29 +672,51 @@ export const generateDailyAdventure = async (req: Request, res: Response) => {
             
             Story Requirements:
             - Create 7 challenges that progress in difficulty
+            - Generate a solvable, not hard challenges 
 
         `;
-
-        const response = await openai.chat.completions.create({
-            model: "gpt-4",
-            messages: [{ role: "system", content: aiPrompt }],
-            temperature: 0.8,
-            max_tokens: 1000,
-        });
-
+        
+        let response;
+        try {
+            response = await openai.chat.completions.create({
+                model: "deepseek-chat",
+                messages: [{ role: "system", content: aiPrompt }],
+                temperature: 0.8,
+                max_tokens: 1000,
+            });
+        } catch (apiError) {
+            console.error("OpenAI API Error:", apiError);
+            return;
+        }
+        
         // Extract the generated adventure from the AI response
-        const adventureText = response?.choices[0]?.message?.content;
+        const adventureText = response?.choices?.[0]?.message?.content;
 
         if (!adventureText) {
-            return throwError({ message: "Failed to generate adventure.", res, status: 500 });
+            console.error("Failed to generate adventure content - no text returned");
+            console.error("Response structure:", JSON.stringify(response, null, 2));
+            return;
         }
+
+        console.log("Adventure text generated successfully");
 
         let adventure;
         try {
-            // Attempt to parse the response directly
-            adventure = JSON.parse(adventureText);
+            // Clean the response by removing markdown code blocks
+            let cleanedText = adventureText.trim();
+            
+            // Remove ```json and ``` if present
+            if (cleanedText.startsWith('```json')) {
+                cleanedText = cleanedText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+            } else if (cleanedText.startsWith('```')) {
+                cleanedText = cleanedText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+            }
+                        
+            // Attempt to parse the cleaned response
+            adventure = JSON.parse(cleanedText);
         } catch (error) {
             console.error("AI Response Parsing Error:", error);
+            return;
         }
         const newAdventure = new Adventure({
             title: adventure.title,
@@ -623,14 +736,61 @@ export const generateDailyAdventure = async (req: Request, res: Response) => {
 
         // Save the adventure to the database
         await newAdventure.save();
-
-        res.status(200).json({
-            message: "Adventure generated successfully.",
-            adventure: newAdventure,
-        });
+        console.log("Daily adventure generated successfully:", adventure.title);
 
     } catch (error) {
-        console.error("Error generating adventure:", error);
+        console.error("Error generating scheduled adventure:", error);
+    }
+};
+
+// Route version for manual testing
+export const generateDailyAdventureRoute = async (req: Request, res: Response) => {
+    try {
+        await generateDailyAdventure();
+        res.status(200).json({ message: "Daily adventure generated successfully!" });
+    } catch (error) {
+        console.error("Error in generateDailyAdventureRoute:", error);
         res.status(500).json({ message: "Internal server error" });
     }
 };
+
+// Function to calculate the time until 10:30 AM tomorrow
+const getTimeUntilNextRun = () => {
+    const now = new Date();
+    const nextRun = new Date();
+
+    nextRun.setHours(0, 8, 0, 0); 
+    if (now > nextRun) {
+        nextRun.setDate(nextRun.getDate() + 1);
+    }
+
+    return nextRun.getTime() - now.getTime(); 
+};
+
+// Function to start the interval and timeout for daily messages for all users
+const startDailyGeneratesSchedule = async () => {
+    const users = await User.find();
+    if (users.length === 0) {
+        console.log("No users found."); 
+        return;
+    }
+
+    const timeUntilNextRun = getTimeUntilNextRun();
+
+    setTimeout(() => {
+        users.forEach(user => {
+            generateDailyMessage(user._id.toString());
+        });
+
+        generateDailyAdventure(); // Generate the daily adventure
+
+        setInterval(() => {
+            users.forEach(user => {
+                generateDailyMessage(user._id.toString());
+            });
+            generateDailyAdventure(); 
+        }, 24 * 60 * 60 * 1000); 
+    }, timeUntilNextRun); 
+};
+
+startDailyGeneratesSchedule();

@@ -9,6 +9,8 @@ import { IAdventureProgress } from '../interfaces/IAdventureProgress';
 import { Family } from '../models/family.model';
 import { recalculateFamilyMemberRanks } from '../utils/recalculateFamilyMemberRanks';
 import nodemailer from "nodemailer";
+import { sendMail } from '../services/email.service';
+import { generateSecurePassword } from '../utils/generateSecurePassword';
 
 // API to get all users
 export const getUsers = async(req: Request, res: Response): Promise<void> => {
@@ -16,7 +18,6 @@ export const getUsers = async(req: Request, res: Response): Promise<void> => {
         const users = await User.find();
         res.status(200).send(users);
     }catch(error){
-        console.error("Error retrieving users:", error);
         return throwError({ message: "Error retrieving users", res, status: 500});
     }
 };
@@ -34,7 +35,7 @@ export const getUserById = async (req: CustomRequest, res: Response): Promise<vo
 
         if (!checkId({ id: targetUserId, res })) return;
 
-        let projection = '_id name email birthday role avatar gender stars coins interests nbOfTasksCompleted rankInFamily memberSince familyId dailyMessage';  // Basic user info
+        let projection = '_id name email birthday role avatar gender stars coins interests nbOfTasksCompleted rankInFamily memberSince familyId dailyMessage isTempPassword';  // Basic user info
 
         // Fetch the user with specific fields
         const user = await User.findById(targetUserId).select(projection);
@@ -50,7 +51,6 @@ export const getUserById = async (req: CustomRequest, res: Response): Promise<vo
 
         res.status(200).json({ message: "Retrieving user successfully", user });
     } catch (error) {
-        console.error("Error retrieving user:", error);
         return throwError({ message: "Error retrieving user", res, status: 500 });
     }
 };
@@ -105,9 +105,9 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
             return throwError({ message: "Invalid birthday format.", res, status: 400 });
         }
 
-        const generatedPassword = Math.random().toString(36).slice(-10); // Generate a 10-character password
-        const hashedPassword = await bcrypt.hash(generatedPassword, 10);
-
+        const generatedPassword = generateSecurePassword();
+        const hashedPassword = await bcrypt.hash(generatedPassword, 12);
+        
         // Find the parent's family
         const family = await Family.findOne({ email: req.user.email });
         if (!family) {
@@ -119,37 +119,56 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
             ...data,
             email: email,
             password: hashedPassword,
+            isTempPassword: true,  // Mark as temporary password
             familyId: family._id  // Link to parent's family
         });
-
-        // Add the new user to the family's members list
-        if (!family.members.includes(user.id)) {
-            family.members.push({_id: user.id, role, name, gender, avatar});
-            await family.save();
-        }
 
         // Recalculate the ranks after adding the new user
         await recalculateFamilyMemberRanks(family._id, user);
 
-        const transporter = nodemailer.createTransport({
-            host: 'smtp.gmail.com',
-            port: 465,
-            secure: true,
-            service: "Gmail",
-            auth: {
-                user: process.env.EMAIL_USERNAME,
-                pass: process.env.EMAIL_PASSWORD,
-            },
-        });
-        await transporter.sendMail({
-            from: `"Your App Name" <${process.env.EMAIL_USERNAME}>`,
-            to: email,
-            subject: "Your Account Password",
-            text: `Hello ${req.user.name},\n\nYour ${role} ${name} account has been created successfully. Here are their login details:\n\nUsername: ${name}\nPassword: ${generatedPassword}\n\nPlease change your password after logging in.\n\nThank you,\nYour App Team`,
-        });
+        const from: string = `"Guardian Grove" <${process.env.EMAIL_USERNAME}>`;
+        const to: string = email;
+        const subject = `Welcome to Guardian Grove - ${name}'s Account Details`;
+        const html = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+                <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px;">
+                    <h2 style="color: #2c3e50;">Welcome to Guardian Grove!</h2>
+                    <p>Hello ${req.user.name},</p>
+                    
+                    <div style="background-color: white; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #3498db;">
+                        <p>You've successfully created a <strong>${role}</strong> account for <strong>${name}</strong>.</p>
+                        <p>Here are the login details:</p>
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <tr>
+                                <td style="padding: 8px; border-bottom: 1px solid #ddd; width: 120px;"><strong>Username:</strong></td>
+                                <td style="padding: 8px; border-bottom: 1px solid #ddd;">${name}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px;"><strong>Temporary Password:</strong></td>
+                                <td style="padding: 8px;">${generatedPassword}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    
+                    <p style="color: #e74c3c; font-weight: bold;">Please change this password after first login.</p>
+                    
+                    <p>If you didn't request this account creation, please contact our support immediately.</p>
+                    
+                    <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
+                        <p>Best regards,</p>
+                        <p><strong>The Guardian Grove Team</strong></p>
+                        <p style="font-size: 12px; color: #7f8c8d;">This is an automated message - please do not reply directly to this email.</p>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Send email with the temporary password
+        await sendMail(from, to, subject, html);
+
+
 
         await user.save();
-        console.log(user)
         res.status(200).send({ message: "User created successfully, password email sent.", user });
     }catch(error){
         if (error instanceof Error) {
@@ -161,11 +180,9 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
                     status: 409 
                 });
             } else {
-                console.error("Error creating user:", error);
                 return throwError({ message: error.message, res, status: 500 });
             }
         } else {
-            console.error("Unknown error creating user:", error);
             return throwError({ message: "An unknown error occurred.", res, status: 500 });
         }    
     } 
@@ -180,7 +197,7 @@ export const editUserProfile = async(req: CustomRequest, res: Response):Promise<
             return throwError({ message: "Unauthorized", res, status: 401 });
         }
 
-        if ((role) && !['parent', 'admin', 'owner'].includes(req.user.role)) {
+        if ((role) && !['parent', 'admin'].includes(req.user.role)) {
             return throwError({ message: "Forbidden: You cannot change role nor email", res, status: 403 });
         }
 
@@ -188,7 +205,7 @@ export const editUserProfile = async(req: CustomRequest, res: Response):Promise<
 
         if(userId){
             if(!checkId({id: userId, res})) return;
-            if (req.user._id.toString() !== userId && !['parent', 'admin', 'owner'].includes(req.user.role)) {
+            if (req.user._id.toString() !== userId && !['parent', 'admin'].includes(req.user.role)) {
                 return throwError({ message: "Forbidden", res, status: 403 });
             }
 
@@ -241,7 +258,7 @@ export const deleteUser = async(req: CustomRequest, res:Response):Promise<void> 
         let user;
         if(userId){
             if(!checkId({id: userId, res})) return;
-            if (req.user._id.toString() !== userId && !['parent', 'admin', 'owner'].includes(req.user.role)) {
+            if (req.user._id.toString() !== userId && !['parent', 'admin'].includes(req.user.role)) {
                 return throwError({ message: "Forbidden", res, status: 403 });
             }
 
@@ -267,10 +284,6 @@ export const deleteUser = async(req: CustomRequest, res:Response):Promise<void> 
             if (user.role === 'parent' && parentsCount <= 1) {
                 return throwError({ message: "Cannot delete the last parent in the family", res, status: 400 });
             }
-
-            // Remove user from the family members list
-            family.members = family.members.filter((member) => member._id.toString() !== user._id.toString());
-            await family.save();
         }
 
         // Delete the user
@@ -340,15 +353,15 @@ export const updatePassword = async (req: CustomRequest, res: Response): Promise
         }
 
         // Hash new password
-        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        const hashedPassword = await bcrypt.hash(newPassword, 12);
         user.password = hashedPassword;
+        user.isTempPassword = false;
         await user.save();
 
         // Return success response
         res.status(200).send({ message: "Password updated successfully.", password: newPassword });
 
     } catch (error) {
-        console.error("Error updating password: ", error);
         return throwError({ message: "Failed to update password.", res, status: 500 });
     }
 };
@@ -392,7 +405,6 @@ export const updateUserStars = async(req:CustomRequest, res: Response): Promise<
 
         res.status(200).send({ message: "User stars updated successfully", user: req.user });
     }catch(error){
-        console.error('Error updating user stars:', error);
         return throwError({ message: "Error updating user stars", res, status: 500});
     }
 } 
@@ -646,7 +658,6 @@ export const completeChallenge = async (req: CustomRequest, res: Response): Prom
         res.status(200).json({ message: "Challenge completed successfully", adventureProgress });
 
     } catch (error) {
-        console.error("Error completing challenge:", error);
         return throwError({ message: "An unknown error occurred while completing the challenge.", res, status: 500 });
     }
 };
@@ -693,7 +704,6 @@ export const getUserPurchasedItems = async (req: CustomRequest, res: Response): 
 
         res.status(200).json({ message: "Purchased items retrieved successfully", purchasedItems: purchasedItemIds });
     } catch (error) {
-        console.error("Error retrieving purchased items:", error);
         return throwError({ message: "Error retrieving purchased items", res, status: 500 });
     }
 };
@@ -711,5 +721,26 @@ export const getUserAvatar = async (req: CustomRequest, res: Response) => {
         res.status(200).json({message: "Avatar retrieved successfully", avatar: user.avatar });
     } catch (error) {
         return throwError({ message: "Error fetching avatar", res, status: 500});
+    }
+};
+
+export const saveFcmToken = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { userId, fcmToken } = req.body;
+
+        if (!userId || !fcmToken) {
+            return throwError({ message: "Missing userId or fcmToken", res, status: 400});
+        }
+
+        if(!checkId({id: userId, res})) return;
+
+        // Add token to user's fcmTokens array if it doesn't exist
+        await User.findByIdAndUpdate(userId, {
+            $addToSet: { fcmTokens: fcmToken },  // $addToSet avoids duplicates
+        });
+
+        res.status(200).json({message: "FCM token saved successfully"});
+    } catch (error) {
+        return throwError({ message: "Internal server error", res, status: 500});
     }
 };

@@ -15,6 +15,8 @@ export interface IUser extends Document{
     name: string;
     email: string;
     password: string;
+    isTempPassword: boolean;
+    passwordChangedAt: Date | null;
     birthday: Date;
     dailyMessage: string;
     gender: string;
@@ -22,6 +24,7 @@ export interface IUser extends Document{
     avatar: string; 
     interests: string[];
     memberSince: Date;
+    fcmTokens: string[]; // Firebase Cloud Messaging tokens for push notifications
     currentLocation?: string;
     stars: number;
     coins: number;

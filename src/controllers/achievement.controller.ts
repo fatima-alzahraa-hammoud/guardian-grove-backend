@@ -314,7 +314,7 @@ export const getLastUnlockedAchievement = async (req: CustomRequest, res: Respon
 
         if (!checkId({ id: targetUserId, res })) return;
 
-        const isAuthorized = req.user._id.toString() === targetUserId.toString() || ['parent', 'admin', 'owner'].includes(req.user.role);
+        const isAuthorized = req.user._id.toString() === targetUserId.toString() || ['parent', 'admin'].includes(req.user.role);
         if (!isAuthorized) {
             return throwError({ message: "Forbidden", res, status: 403 });
         }
@@ -344,8 +344,7 @@ export const getLastUnlockedAchievement = async (req: CustomRequest, res: Respon
         
         res.status(200).send({message: 'Retrieve unlocked achievement successfully', lastUnlockedAchievement: achievementDetails});
     } catch (error) {
-        console.error("Error fetching last unlocked achievement:", error);
-        res.status(500).json({ message: "Server error" });
+        return throwError({ message: "An error occurred while getting last unlocked achievement.", res, status: 500 });
     }
 };
 
@@ -387,7 +386,6 @@ export const getLastFamilyUnlockedAchievement = async (req: CustomRequest, res: 
         
         res.status(200).send({message: 'Retrieve last unlocked family achievement successfully', lastUnlockedAchievement: achievementDetails});
     } catch (error) {
-        console.error("Error fetching last unlocked achievement:", error);
-        res.status(500).json({ message: "Server error" });
+        return throwError({ message: "An error occurred while getting last unlocked family achievement.", res, status: 500 });
     }
 };

@@ -36,7 +36,7 @@ export const createItem = async (req: Request, res: Response): Promise<void> => 
         const data = req.body;
 
         const { name, description, type, price, image } = data;
-        if (!name || !type || !price || !image) {
+        if (!name || !type || !image) {
             return throwError({ message: "All required fields must be filled.", res, status: 400});
         }
 
@@ -71,8 +71,6 @@ export const deleteItem = async(req:Request, res: Response): Promise<void> => {
             { 'purchasedItems.itemId': itemId },
             { $pull: { purchasedItems: { itemId } } }
         );
-
-        console.log("hello")
 
         res.status(200).json({ message: "Item deleted successfully" });
     } catch (error) {
