@@ -1,3 +1,4 @@
 node_modules/
 .env
 src/utils/firebase/firebaseAdminSDK.json
+dist/
