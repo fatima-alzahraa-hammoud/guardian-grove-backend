@@ -61,8 +61,12 @@ app.use("/drawings", drawingRoutes);
 app.use("/colorings", coloringRoutes);
 app.use("/stories", storyRoutes);
 
+app.get("/", (req, res) => {
+    res.send("Guardian Grove Backend is running ✅");
+});
+
 app.listen(port, () =>{
-    console.log("server is running on port 8000");
+    console.log(`server is running on port ${port}`);
 
     connectToDatabase();
 });
