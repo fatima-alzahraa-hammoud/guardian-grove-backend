@@ -76,7 +76,6 @@ export const uploadUserAvatar = async (
 ): Promise<CloudinaryUploadResult> => {
     return uploadToCloudinary(fileBuffer, fileName, {
         folder: 'guardian grove project/avatars',
-        publicIdPrefix: 'avatars',
         transformation: {
             width: 300,
             height: 300,
@@ -92,7 +91,6 @@ export const uploadFamilyAvatar = async (
 ): Promise<CloudinaryUploadResult> => {
     return uploadToCloudinary(fileBuffer, fileName, {
         folder: 'guardian grove project/family-avatars',
-        publicIdPrefix: 'family-avatars',
         transformation: {
             width: 400,
             height: 400,
@@ -116,9 +114,18 @@ export const deleteFromCloudinary = async (publicId: string): Promise<any> => {
 
 export const extractPublicIdFromUrl = (cloudinaryUrl: string): string => {
     try {
-        const urlParts = cloudinaryUrl.split('/');
+        console.log('Original URL:', cloudinaryUrl);
+        
+        // Decode URL first to handle encoded characters like %20
+        const decodedUrl = decodeURIComponent(cloudinaryUrl);
+        console.log('Decoded URL:', decodedUrl);
+        
+        const urlParts = decodedUrl.split('/');
         const uploadIndex = urlParts.findIndex(part => part === 'upload');
-        if (uploadIndex === -1) return '';
+        if (uploadIndex === -1) {
+            console.log('Upload index not found');
+            return '';
+        }
         
         // Get everything after version (vX_XXXXXX) or after upload if no version
         const afterUpload = urlParts.slice(uploadIndex + 1);
@@ -136,8 +143,11 @@ export const extractPublicIdFromUrl = (cloudinaryUrl: string): string => {
         const lastPartWithoutExt = lastPart.split('.')[0];
         publicIdParts[publicIdParts.length - 1] = lastPartWithoutExt;
         
-        return publicIdParts.join('/');
+        const result = publicIdParts.join('/');
+        console.log('Extracted public ID:', result);
+        return result;
     } catch (error) {
+        console.error('Error extracting public ID:', error);
         return '';
     }
 };

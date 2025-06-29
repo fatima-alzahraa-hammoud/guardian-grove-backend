@@ -64,7 +64,7 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
     try{
         const data = req.body;
 
-        const { name, birthday, gender, role, interests } = data;
+        const { name, birthday, gender, role, interests, avatarPath } = data; // Add avatarPath
 
         if (!req.user) {
             return  throwError({ message: "Unauthorized", res, status: 401 });
@@ -83,6 +83,7 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
         const avatarImage = files.avatar?.[0];
 
         console.log("Avatar image:", avatarImage);
+        console.log("Avatar path:", avatarPath);
 
         // Parse interests FIRST, before validation
         let parsedInterests = interests;
@@ -99,8 +100,9 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
         if (!name || !birthday || !gender || !role || !interests) {
             return throwError({ message: "All required fields must be filled.", res, status: 400});
         }
-        // Check if avatar is provided
-        if (!avatarImage) {
+        
+        // Check if avatar is provided (either file upload or predefined path)
+        if (!avatarImage && !avatarPath) {
             return throwError({ message: "Avatar image is required.", res, status: 400});
         }
 
@@ -145,19 +147,32 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
             return throwError({ message: "Family not found.", res, status: 404 });
         }
 
-        // Upload avatar to Cloudinary using utility function
-        let avatarResult;
-        try {
-            avatarResult = await uploadUserAvatar(avatarImage.buffer, avatarImage.originalname);
-        } catch (uploadError) {
-            console.error('Avatar upload error:', uploadError);
-            return throwError({ message: "Failed to upload avatar image.", res, status: 500 });
+        // Handle avatar upload/selection
+        let avatarUrl;
+        
+        if (avatarImage) {
+            // Upload new avatar to Cloudinary using utility function
+            try {
+                const avatarResult = await uploadUserAvatar(avatarImage.buffer, avatarImage.originalname);
+                avatarUrl = avatarResult.secure_url;
+            } catch (uploadError) {
+                console.error('Avatar upload error:', uploadError);
+                return throwError({ message: "Failed to upload avatar image.", res, status: 500 });
+            }
+        } else if (avatarPath) {
+            // Use predefined avatar path
+            if (avatarPath.startsWith('/assets/images/avatars/')) {
+                avatarUrl = avatarPath;
+                console.log("Using predefined user avatar:", avatarPath);
+            } else {
+                return throwError({ message: "Invalid avatar path. Only predefined avatars are allowed.", res, status: 400 });
+            }
         }
 
         // Create the user with the parent's familyId
         const user = await User.create({
             ...data,
-            avatar: avatarResult.secure_url,
+            avatar: avatarUrl,
             interests: parsedInterests,
             email: email,
             password: hashedPassword,
