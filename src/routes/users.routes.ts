@@ -22,7 +22,7 @@ const router = express.Router();
 router.get("/", authMiddleware, adminMiddleware, getUsers); 
 router.get("/user", authMiddleware, getUserById); 
 router.post("/", authMiddleware, imageUploadMiddleware, createUser); 
-router.put("/", authMiddleware, editUserProfile);
+router.put("/", authMiddleware, imageUploadMiddleware, editUserProfile);
 router.delete("/", authMiddleware, deleteUser);
 router.put("/updatePassword", authMiddleware, updatePassword);
 router.post("/save-fcm-token", authMiddleware, saveFcmToken);
