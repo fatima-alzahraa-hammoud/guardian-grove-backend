@@ -217,7 +217,7 @@ export const updateFamily = async (req: CustomRequest, res: Response): Promise<v
 export const deleteFamily = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
         // Check for authorized user roles
-        if (!req.user ||  !['parent', 'admin'].includes(req.user.role)) {
+        if (!req.user || !['parent', 'admin'].includes(req.user.role)) {
             return throwError({ message: "Unauthorized", res, status: 401 });
         }
 
@@ -233,8 +233,41 @@ export const deleteFamily = async (req: CustomRequest, res: Response): Promise<v
             return throwError({ message: "Family not found.", res, status: 404 });
         }
 
-        if(req.user.email !== family.email && req.user.role !== "admin"){
+        if (req.user.email !== family.email && req.user.role !== "admin") {
             return throwError({ message: "Forbidden", res, status: 401 });
+        }
+
+        // Delete family avatar from Cloudinary if it's not a predefined avatar
+        if (family.familyAvatar && !family.familyAvatar.startsWith('/assets/')) {
+            const publicId = extractPublicIdFromUrl(family.familyAvatar);
+            if (publicId) {
+                try {
+                    await deleteFromCloudinary(publicId);
+                    console.log('Family avatar deleted from Cloudinary:', publicId);
+                } catch (deleteError) {
+                    console.warn('Failed to delete family avatar from Cloudinary:', deleteError);
+                    // Continue with family deletion even if avatar deletion fails
+                }
+            }
+        }
+
+        // Get all users to delete their avatars from Cloudinary
+        const familyMembers = await User.find({ familyId }).select('avatar');
+        
+        // Delete user avatars from Cloudinary
+        for (const member of familyMembers) {
+            if (member.avatar && !member.avatar.startsWith('/assets/')) {
+                const publicId = extractPublicIdFromUrl(member.avatar);
+                if (publicId) {
+                    try {
+                        await deleteFromCloudinary(publicId);
+                        console.log(`User avatar deleted from Cloudinary for user ${member._id}:`, publicId);
+                    } catch (deleteError) {
+                        console.warn(`Failed to delete user avatar from Cloudinary for user ${member._id}:`, deleteError);
+                        // Continue with deletion even if individual avatar deletion fails
+                    }
+                }
+            }
         }
 
         // Delete all users associated with the family
@@ -245,6 +278,7 @@ export const deleteFamily = async (req: CustomRequest, res: Response): Promise<v
 
         res.status(200).send({ message: "Family and all associated members deleted successfully." });
     } catch (error) {
+        console.error('Delete family error:', error);
         return throwError({ message: "Failed to delete family.", res, status: 500 });
     }
 };

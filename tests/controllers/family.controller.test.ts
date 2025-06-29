@@ -507,7 +507,20 @@ describe('Family Controller Tests', () => {
     describe('deleteFamily', () => {
         it('should delete family successfully', async () => {
             const mockFamilyData = testUtils.createMockFamily({ email: 'parent@test.com' });
+            
+            // Mock family members for avatar deletion
+            const mockFamilyMembers = [
+                { _id: 'member1', avatar: '/assets/images/avatars/user-avatar-1.png' },
+                { _id: 'member2', avatar: 'https://res.cloudinary.com/test/image/upload/v123/user-avatar.jpg' }
+            ];
+            
+            // Mock User.find with method chaining for select
+            const mockUserFind = {
+                select: jest.fn().mockResolvedValue(mockFamilyMembers)
+            };
+            
             mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+            mockUser.find.mockReturnValue(mockUserFind as any); // Add this mock
             mockUser.deleteMany.mockResolvedValue({} as any);
             mockFamily.findByIdAndDelete.mockResolvedValue(mockFamilyData as any);
 
@@ -519,10 +532,43 @@ describe('Family Controller Tests', () => {
 
             await deleteFamily(mockReq as any, mockRes as any);
 
+            // Verify the User.find was called to get family members
+            expect(mockUser.find).toHaveBeenCalledWith({ familyId: '507f1f77bcf86cd799439011' });
+            expect(mockUserFind.select).toHaveBeenCalledWith('avatar');
+            
+            // Verify deleteMany is called after getting family members
             expect(mockUser.deleteMany).toHaveBeenCalledWith({ familyId: '507f1f77bcf86cd799439011' });
             expect(mockFamily.findByIdAndDelete).toHaveBeenCalledWith('507f1f77bcf86cd799439011');
             expect(mockRes.status).toHaveBeenCalledWith(200);
         });
+
+        it('should delete family successfully with no members', async () => {
+            const mockFamilyData = testUtils.createMockFamily({ email: 'parent@test.com' });
+            
+            // Mock empty family members array
+            const mockUserFind = {
+                select: jest.fn().mockResolvedValue([])
+            };
+            
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+            mockUser.find.mockReturnValue(mockUserFind as any);
+            mockUser.deleteMany.mockResolvedValue({} as any);
+            mockFamily.findByIdAndDelete.mockResolvedValue(mockFamilyData as any);
+
+            const mockReq = testUtils.createMockRequest({
+                user: testUtils.createMockUser({ role: 'parent', email: 'parent@test.com' }),
+                body: { familyId: '507f1f77bcf86cd799439011' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await deleteFamily(mockReq as any, mockRes as any);
+
+            expect(mockUser.find).toHaveBeenCalledWith({ familyId: '507f1f77bcf86cd799439011' });
+            expect(mockUser.deleteMany).toHaveBeenCalledWith({ familyId: '507f1f77bcf86cd799439011' });
+            expect(mockFamily.findByIdAndDelete).toHaveBeenCalledWith('507f1f77bcf86cd799439011');
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+        });
+
 
         it('should return 401 if user not authenticated', async () => {
             const mockReq = testUtils.createMockRequest({ user: null });
