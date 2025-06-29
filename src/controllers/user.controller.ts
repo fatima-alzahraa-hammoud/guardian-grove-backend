@@ -14,6 +14,7 @@ import { sendMail } from '../services/email.service';
 import { generateSecurePassword } from '../utils/generateSecurePassword';
 import { sanitizePublicId } from '../utils/sanitizePublicId';
 import path from 'path';
+import { uploadUserAvatar } from '../utils/cloudinary';
 
 // API to get all users
 export const getUsers = async(req: Request, res: Response): Promise<void> => {
@@ -144,25 +145,19 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
             return throwError({ message: "Family not found.", res, status: 404 });
         }
 
-        // Upload avatar to Cloudinary
-        const sanitizedAvatarPublicId = `avatars/${Date.now()}-${sanitizePublicId(path.basename(avatarImage.originalname, path.extname(avatarImage.originalname)))}`;
-
-        const avatarResult = await new Promise((resolve, reject) => {
-            const stream = cloudinary.uploader.upload_stream({ 
-                resource_type: 'image',
-                public_id: sanitizedAvatarPublicId,
-                folder: 'guardian grove project/avatars'
-            }, (error, result) => {
-                if (error) reject(error);
-                else resolve(result);
-            });
-            stream.end(avatarImage.buffer);
-        });
+        // Upload avatar to Cloudinary using utility function
+        let avatarResult;
+        try {
+            avatarResult = await uploadUserAvatar(avatarImage.buffer, avatarImage.originalname);
+        } catch (uploadError) {
+            console.error('Avatar upload error:', uploadError);
+            return throwError({ message: "Failed to upload avatar image.", res, status: 500 });
+        }
 
         // Create the user with the parent's familyId
         const user = await User.create({
             ...data,
-            avatar: (avatarResult as any).secure_url,
+            avatar: avatarResult.secure_url,
             interests: parsedInterests,
             email: email,
             password: hashedPassword,
@@ -212,8 +207,6 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
 
         // Send email with the temporary password
         await sendMail(from, to, subject, html);
-
-
 
         await user.save();
         res.status(200).send({ message: "User created successfully, password email sent.", user });
