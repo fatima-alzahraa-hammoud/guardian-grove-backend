@@ -210,86 +210,134 @@ describe('Auth Controller Tests', () => {
             password: 'TestPass123!',
             confirmPassword: 'TestPass123!',
             birthday: '1985-01-01',
-            gender: 'male',
+            gender: 'male' as 'male' | 'female',
             role: 'parent',
-            avatar: '/avatar.png',
+            avatarPath: '/assets/images/avatars/avatar1.png' as string | undefined,
             interests: ['reading', 'sports'],
             familyName: 'Test Family',
-            familyAvatar: '/family-avatar.png'
+            familyAvatarPath: '/assets/images/avatars/family1.png' as string | undefined
         };
 
-        it('should register successfully with valid data', async () => {
-            const mockFamilyData = testUtils.createMockFamily({
-                email: validRegisterData.email,
-                familyName: validRegisterData.familyName,
-                members: []
+        beforeEach(() => {
+            // Reset all mocks before each test
+            jest.clearAllMocks();
+            
+            // Mock Family constructor
+            (mockFamily as any).mockImplementation(function(this: any, data: any) {
+                Object.assign(this, data);
+                this._id = 'mock-family-id';
+                this.save = jest.fn().mockResolvedValue(this);
+                return this;
             });
+        });
+
+        it('should register successfully with valid data', async () => {
+            const mockFamilyData = {
+                _id: 'mock-family-id',
+                familyName: validRegisterData.familyName,
+                email: validRegisterData.email,
+                familyAvatar: validRegisterData.familyAvatarPath,
+                createdAt: new Date(),
+                save: jest.fn().mockResolvedValue(undefined)
+            };
+
             const mockCreatedUser = {
                 ...testUtils.createMockUser({
                     ...validRegisterData,
-                    familyId: mockFamilyData._id
+                    familyId: mockFamilyData._id,
+                    avatar: validRegisterData.avatarPath
                 }),
-                id: '507f1f77bcf86cd799439011' // Add id property for JWT
+                id: '507f1f77bcf86cd799439011'
             };
 
-            mockFamily.findOne.mockResolvedValue(null); // New family
-            mockFamily.prototype.save = jest.fn().mockResolvedValue(mockFamilyData);
-            mockUser.findOne.mockResolvedValue(null); // No existing user with same name
+            // Mock Family.findOne to return null (new family)
+            mockFamily.findOne.mockResolvedValue(null);
+            
+            // Mock User.findOne to return null (no existing user with same name)
+            mockUser.findOne.mockResolvedValue(null);
+            
+            // Mock User.create
             mockUser.create.mockResolvedValue(mockCreatedUser as any);
 
-            // Mock the Family constructor
-            (mockFamily as any).mockImplementation(() => ({
-                ...mockFamilyData,
-                save: jest.fn().mockResolvedValue(mockFamilyData)
-            }));
-
-            const mockReq = testUtils.createMockRequest({ body: validRegisterData });
+            const mockReq = testUtils.createMockRequest({ 
+                body: validRegisterData,
+                files: {} // No files uploaded, using avatarPath and familyAvatarPath
+            });
             const mockRes = testUtils.createMockResponse();
 
             await register(mockReq as any, mockRes as any);
 
+            expect(mockFamily.findOne).toHaveBeenCalledWith({ email: validRegisterData.email });
             expect(mockBcrypt.hash).toHaveBeenCalledWith(validRegisterData.password, 12);
-            expect(mockUser.create).toHaveBeenCalled();
+            expect(mockUser.create).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    ...validRegisterData,
+                    password: 'hashedPassword',
+                    familyId: 'mock-family-id',
+                    avatar: validRegisterData.avatarPath,
+                    interests: validRegisterData.interests
+                })
+            );
             expect(mockJwt.sign).toHaveBeenCalledWith(
                 { userId: mockCreatedUser.id, role: mockCreatedUser.role },
                 'test_jwt_secret_key_for_guardian_grove_123'
             );
             expect(mockRes.status).toHaveBeenCalledWith(200);
+            expect(mockRes.send).toHaveBeenCalledWith({
+                user: mockCreatedUser,
+                token: 'mock-jwt-token',
+                family: expect.any(Object)
+            });
         });
 
         it('should register with existing family', async () => {
-            const mockFamilyData = testUtils.createMockFamily({
-                email: validRegisterData.email,
+            const mockFamilyData = {
+                _id: 'existing-family-id',
                 familyName: validRegisterData.familyName,
-                members: []
-            });
-            mockFamilyData.save = jest.fn().mockResolvedValue(mockFamilyData);
+                email: validRegisterData.email,
+                familyAvatar: '/existing/avatar.png',
+                save: jest.fn().mockResolvedValue(undefined)
+            };
 
             const mockCreatedUser = {
                 ...testUtils.createMockUser({
                     ...validRegisterData,
                     familyId: mockFamilyData._id
                 }),
-                id: '507f1f77bcf86cd799439011' // Add id property for JWT
+                id: '507f1f77bcf86cd799439011'
             };
 
+            // Mock Family.findOne to return existing family
             mockFamily.findOne.mockResolvedValue(mockFamilyData as any);
+            
+            // Mock User.findOne to return null (no existing user with same name)
             mockUser.findOne.mockResolvedValue(null);
+            
+            // Mock User.create
             mockUser.create.mockResolvedValue(mockCreatedUser as any);
 
-            const mockReq = testUtils.createMockRequest({ body: validRegisterData });
+            const mockReq = testUtils.createMockRequest({ 
+                body: validRegisterData,
+                files: {}
+            });
             const mockRes = testUtils.createMockResponse();
 
             await register(mockReq as any, mockRes as any);
 
+            expect(mockFamily.findOne).toHaveBeenCalledWith({ email: validRegisterData.email });
+            // Should not create new family
+            expect(mockFamily).not.toHaveBeenCalled();
             expect(mockRes.status).toHaveBeenCalledWith(200);
         });
 
         it('should return 400 if required fields are missing', async () => {
-            const incompleteData: Partial<typeof validRegisterData> = { ...validRegisterData };
-            delete incompleteData.name;
+            const incompleteData = { ...validRegisterData };
+            delete (incompleteData as any).name;
 
-            const mockReq = testUtils.createMockRequest({ body: incompleteData });
+            const mockReq = testUtils.createMockRequest({ 
+                body: incompleteData,
+                files: {}
+            });
             const mockRes = testUtils.createMockResponse();
 
             await register(mockReq as any, mockRes as any);
@@ -300,13 +348,52 @@ describe('Auth Controller Tests', () => {
             });
         });
 
+        it('should return 400 if avatar is missing', async () => {
+            const dataWithoutAvatar = { ...validRegisterData };
+            delete (dataWithoutAvatar as any).avatarPath;
+
+            const mockReq = testUtils.createMockRequest({ 
+                body: dataWithoutAvatar,
+                files: {} // No files and no avatarPath
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await register(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                error: 'Avatar is required.'
+            });
+        });
+
+        it('should return 400 if family avatar is missing', async () => {
+            const dataWithoutFamilyAvatar = { ...validRegisterData };
+            delete (dataWithoutFamilyAvatar as any).familyAvatarPath;
+
+            const mockReq = testUtils.createMockRequest({ 
+                body: dataWithoutFamilyAvatar,
+                files: {} // No files and no familyAvatarPath
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await register(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                error: 'Family avatar is required.'
+            });
+        });
+
         it('should return 400 if passwords do not match', async () => {
             const invalidData = {
                 ...validRegisterData,
                 confirmPassword: 'DifferentPass123!'
             };
 
-            const mockReq = testUtils.createMockRequest({ body: invalidData });
+            const mockReq = testUtils.createMockRequest({ 
+                body: invalidData,
+                files: {}
+            });
             const mockRes = testUtils.createMockResponse();
 
             await register(mockReq as any, mockRes as any);
@@ -323,7 +410,10 @@ describe('Auth Controller Tests', () => {
                 email: 'invalid-email'
             };
 
-            const mockReq = testUtils.createMockRequest({ body: invalidData });
+            const mockReq = testUtils.createMockRequest({ 
+                body: invalidData,
+                files: {}
+            });
             const mockRes = testUtils.createMockResponse();
 
             await register(mockReq as any, mockRes as any);
@@ -340,7 +430,10 @@ describe('Auth Controller Tests', () => {
                 role: 'child'
             };
 
-            const mockReq = testUtils.createMockRequest({ body: invalidData });
+            const mockReq = testUtils.createMockRequest({ 
+                body: invalidData,
+                files: {}
+            });
             const mockRes = testUtils.createMockResponse();
 
             await register(mockReq as any, mockRes as any);
@@ -357,7 +450,10 @@ describe('Auth Controller Tests', () => {
                 role: 'invalid-role'
             };
 
-            const mockReq = testUtils.createMockRequest({ body: invalidData });
+            const mockReq = testUtils.createMockRequest({ 
+                body: invalidData,
+                files: {}
+            });
             const mockRes = testUtils.createMockResponse();
 
             await register(mockReq as any, mockRes as any);
@@ -374,14 +470,78 @@ describe('Auth Controller Tests', () => {
                 interests: 'not-an-array'
             };
 
-            const mockReq = testUtils.createMockRequest({ body: invalidData });
+            const mockReq = testUtils.createMockRequest({ 
+                body: invalidData,
+                files: {}
+            });
             const mockRes = testUtils.createMockResponse();
 
             await register(mockReq as any, mockRes as any);
 
             expect(mockRes.status).toHaveBeenCalledWith(400);
             expect(mockRes.json).toHaveBeenCalledWith({
-                error: 'Interests must be an array.'
+                error: 'Invalid interests format.'
+            });
+        });
+
+        it('should parse interests from JSON string', async () => {
+            const dataWithStringInterests = {
+                ...validRegisterData,
+                interests: '["reading", "sports"]' // JSON string instead of array
+            };
+
+            const mockFamilyData = {
+                _id: 'mock-family-id',
+                familyName: validRegisterData.familyName,
+                email: validRegisterData.email,
+                save: jest.fn().mockResolvedValue(undefined)
+            };
+
+            const mockCreatedUser = {
+                ...testUtils.createMockUser({
+                    ...validRegisterData,
+                    familyId: mockFamilyData._id
+                }),
+                id: '507f1f77bcf86cd799439011'
+            };
+
+            mockFamily.findOne.mockResolvedValue(null);
+            mockUser.findOne.mockResolvedValue(null);
+            mockUser.create.mockResolvedValue(mockCreatedUser as any);
+
+            const mockReq = testUtils.createMockRequest({ 
+                body: dataWithStringInterests,
+                files: {}
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await register(mockReq as any, mockRes as any);
+
+            expect(mockUser.create).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    interests: ['reading', 'sports'] // Should be parsed to array
+                })
+            );
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+        });
+
+        it('should return 400 if interests JSON parsing fails', async () => {
+            const invalidData = {
+                ...validRegisterData,
+                interests: 'invalid-json-string'
+            };
+
+            const mockReq = testUtils.createMockRequest({ 
+                body: invalidData,
+                files: {}
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await register(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                error: 'Invalid interests format.'
             });
         });
 
@@ -391,7 +551,10 @@ describe('Auth Controller Tests', () => {
                 gender: 'invalid-gender'
             };
 
-            const mockReq = testUtils.createMockRequest({ body: invalidData });
+            const mockReq = testUtils.createMockRequest({ 
+                body: invalidData,
+                files: {}
+            });
             const mockRes = testUtils.createMockResponse();
 
             await register(mockReq as any, mockRes as any);
@@ -408,7 +571,10 @@ describe('Auth Controller Tests', () => {
                 birthday: 'invalid-date'
             };
 
-            const mockReq = testUtils.createMockRequest({ body: invalidData });
+            const mockReq = testUtils.createMockRequest({ 
+                body: invalidData,
+                files: {}
+            });
             const mockRes = testUtils.createMockResponse();
 
             await register(mockReq as any, mockRes as any);
@@ -426,7 +592,10 @@ describe('Auth Controller Tests', () => {
                 confirmPassword: 'weak'
             };
 
-            const mockReq = testUtils.createMockRequest({ body: invalidData });
+            const mockReq = testUtils.createMockRequest({ 
+                body: invalidData,
+                files: {}
+            });
             const mockRes = testUtils.createMockResponse();
 
             await register(mockReq as any, mockRes as any);
@@ -438,13 +607,18 @@ describe('Auth Controller Tests', () => {
         });
 
         it('should return 400 if family name is wrong for existing family', async () => {
-            const mockFamilyData = testUtils.createMockFamily({
-                email: validRegisterData.email,
-                familyName: 'Different Family Name'
-            });
+            const mockFamilyData = {
+                _id: 'existing-family-id',
+                familyName: 'Different Family Name', // Different from validRegisterData.familyName
+                email: validRegisterData.email
+            };
+            
             mockFamily.findOne.mockResolvedValue(mockFamilyData as any);
 
-            const mockReq = testUtils.createMockRequest({ body: validRegisterData });
+            const mockReq = testUtils.createMockRequest({ 
+                body: validRegisterData,
+                files: {}
+            });
             const mockRes = testUtils.createMockResponse();
 
             await register(mockReq as any, mockRes as any);
@@ -456,10 +630,12 @@ describe('Auth Controller Tests', () => {
         });
 
         it('should return 400 if member with same name exists in family', async () => {
-            const mockFamilyData = testUtils.createMockFamily({
-                email: validRegisterData.email,
-                familyName: validRegisterData.familyName
-            });
+            const mockFamilyData = {
+                _id: 'existing-family-id',
+                familyName: validRegisterData.familyName,
+                email: validRegisterData.email
+            };
+            
             const existingUser = testUtils.createMockUser({
                 name: validRegisterData.name,
                 familyId: mockFamilyData._id
@@ -468,21 +644,132 @@ describe('Auth Controller Tests', () => {
             mockFamily.findOne.mockResolvedValue(mockFamilyData as any);
             mockUser.findOne.mockResolvedValue(existingUser as any);
 
-            const mockReq = testUtils.createMockRequest({ body: validRegisterData });
+            const mockReq = testUtils.createMockRequest({ 
+                body: validRegisterData,
+                files: {}
+            });
             const mockRes = testUtils.createMockResponse();
 
             await register(mockReq as any, mockRes as any);
 
+            expect(mockUser.findOne).toHaveBeenCalledWith({ 
+                name: validRegisterData.name, 
+                familyId: mockFamilyData._id 
+            });
             expect(mockRes.status).toHaveBeenCalledWith(400);
             expect(mockRes.json).toHaveBeenCalledWith({
                 error: 'A member with this name already exists in the family.'
             });
         });
 
+        it('should return 400 if invalid avatar path is provided', async () => {
+            const invalidData = {
+                ...validRegisterData,
+                avatarPath: '/invalid/path/avatar.png' // Invalid path
+            };
+
+            const mockReq = testUtils.createMockRequest({ 
+                body: invalidData,
+                files: {}
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await register(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                error: 'Invalid avatar path. Only predefined avatars are allowed.'
+            });
+        });
+
+        it('should return 400 if invalid family avatar path is provided', async () => {
+            const invalidData = {
+                ...validRegisterData,
+                familyAvatarPath: '/invalid/path/family.png' // Invalid path
+            };
+
+            const mockReq = testUtils.createMockRequest({ 
+                body: invalidData,
+                files: {}
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await register(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                error: 'Invalid family avatar path. Only predefined avatars are allowed.'
+            });
+        });
+
         it('should handle database errors gracefully', async () => {
             mockFamily.findOne.mockRejectedValue(new Error('Database connection failed'));
 
-            const mockReq = testUtils.createMockRequest({ body: validRegisterData });
+            const mockReq = testUtils.createMockRequest({ 
+                body: validRegisterData,
+                files: {}
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await register(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(500);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                error: 'Something went wrong while registering.'
+            });
+        });
+
+        it('should handle User.create errors gracefully', async () => {
+            const mockFamilyData = {
+                _id: 'mock-family-id',
+                familyName: validRegisterData.familyName,
+                email: validRegisterData.email,
+                save: jest.fn().mockResolvedValue(undefined)
+            };
+
+            mockFamily.findOne.mockResolvedValue(null);
+            mockUser.findOne.mockResolvedValue(null);
+            mockUser.create.mockRejectedValue(new Error('User creation failed'));
+
+            const mockReq = testUtils.createMockRequest({ 
+                body: validRegisterData,
+                files: {}
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await register(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(500);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                error: 'Something went wrong while registering.'
+            });
+        });
+
+        it('should handle JWT signing errors gracefully', async () => {
+            const mockFamilyData = {
+                _id: 'mock-family-id',
+                familyName: validRegisterData.familyName,
+                email: validRegisterData.email,
+                save: jest.fn().mockResolvedValue(undefined)
+            };
+
+            const mockCreatedUser = {
+                ...testUtils.createMockUser({
+                    ...validRegisterData,
+                    familyId: mockFamilyData._id
+                }),
+                id: '507f1f77bcf86cd799439011'
+            };
+
+            mockFamily.findOne.mockResolvedValue(null);
+            mockUser.findOne.mockResolvedValue(null);
+            mockUser.create.mockResolvedValue(mockCreatedUser as any);
+            (mockJwt.sign as jest.Mock).mockRejectedValue(new Error('JWT signing failed'));
+
+            const mockReq = testUtils.createMockRequest({ 
+                body: validRegisterData,
+                files: {}
+            });
             const mockRes = testUtils.createMockResponse();
 
             await register(mockReq as any, mockRes as any);
@@ -493,7 +780,6 @@ describe('Auth Controller Tests', () => {
             });
         });
     });
-
     
     // 3. test forgetPassword API
     describe('forgetPassword', () => {
