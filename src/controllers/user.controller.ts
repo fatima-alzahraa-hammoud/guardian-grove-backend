@@ -14,7 +14,7 @@ import { sendMail } from '../services/email.service';
 import { generateSecurePassword } from '../utils/generateSecurePassword';
 import { sanitizePublicId } from '../utils/sanitizePublicId';
 import path from 'path';
-import { uploadUserAvatar } from '../utils/cloudinary';
+import { deleteFromCloudinary, extractPublicIdFromUrl, uploadUserAvatar } from '../utils/cloudinary';
 
 // API to get all users
 export const getUsers = async(req: Request, res: Response): Promise<void> => {
@@ -231,7 +231,7 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
 // API to edit user profile
 export const editUserProfile = async(req: CustomRequest, res: Response):Promise<void> => {
     try{
-        const {userId, name, birthday, gender, role, avatarPath} = req.body; // Add avatarPath
+        const {userId, name, birthday, gender, role, avatarPath} = req.body;
 
         if (!req.user) {
             return throwError({ message: "Unauthorized", res, status: 401 });
@@ -273,6 +273,7 @@ export const editUserProfile = async(req: CustomRequest, res: Response):Promise<
 
         // Handle user avatar update
         let avatarUrl = user.avatar;
+        const oldAvatarUrl = user.avatar;
 
         const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
         const avatarImage = files?.avatar?.[0];
@@ -282,28 +283,46 @@ export const editUserProfile = async(req: CustomRequest, res: Response):Promise<
 
         // Check if there's a new file upload
         if (avatarImage) {
-            // Upload new avatar to Cloudinary
-            const sanitizedAvatarPublicId = `avatars/${Date.now()}-${sanitizePublicId(path.basename(avatarImage.originalname, path.extname(avatarImage.originalname)))}`;
+            try {
+                // Upload new avatar to Cloudinary using utility function
+                const avatarResult = await uploadUserAvatar(avatarImage.buffer, avatarImage.originalname);
+                avatarUrl = avatarResult.secure_url;
 
-            const avatarResult = await new Promise((resolve, reject) => {
-                const stream = cloudinary.uploader.upload_stream({ 
-                    resource_type: 'image',
-                    public_id: sanitizedAvatarPublicId,
-                    folder: 'guardian grove project/avatars'
-                }, (error, result) => {
-                    if (error) reject(error);
-                    else resolve(result);
-                });
-                stream.end(avatarImage.buffer);
-            });
-
-            avatarUrl = (avatarResult as any).secure_url;
+                // Delete old avatar from Cloudinary if it exists and is not a predefined avatar
+                if (oldAvatarUrl && !oldAvatarUrl.startsWith('/assets/')) {
+                    const oldPublicId = extractPublicIdFromUrl(oldAvatarUrl);
+                    if (oldPublicId) {
+                        try {
+                            await deleteFromCloudinary(oldPublicId);
+                        } catch (deleteError) {
+                            console.warn('Failed to delete old avatar:', deleteError);
+                            // Continue execution even if deletion fails
+                        }
+                    }
+                }
+            } catch (uploadError) {
+                console.error('Avatar upload error:', uploadError);
+                return throwError({ message: "Failed to upload avatar image.", res, status: 500 });
+            }
         } 
         // Check if there's a predefined avatar path in the request body
         else if (avatarPath && avatarPath !== user.avatar) {
             // This handles predefined avatars like '/assets/images/avatars/...'
             avatarUrl = avatarPath;
             console.log("Using predefined user avatar:", avatarPath);
+
+            // Delete old Cloudinary avatar if switching to predefined avatar
+            if (oldAvatarUrl && !oldAvatarUrl.startsWith('/assets/')) {
+                const oldPublicId = extractPublicIdFromUrl(oldAvatarUrl);
+                if (oldPublicId) {
+                    try {
+                        await deleteFromCloudinary(oldPublicId);
+                    } catch (deleteError) {
+                        console.warn('Failed to delete old avatar:', deleteError);
+                        // Continue execution even if deletion fails
+                    }
+                }
+            }
         }
 
         // Update user fields
@@ -323,6 +342,7 @@ export const editUserProfile = async(req: CustomRequest, res: Response):Promise<
         return throwError({ message: "Failed to update. An unknown error occurred.", res, status: 500 });
     }
 }
+
 
 // API to delete user
 export const deleteUser = async(req: CustomRequest, res:Response):Promise<void> => {
