@@ -85,3 +85,19 @@ export const uploadUserAvatar = async (
         }
     });
 };
+
+export const uploadFamilyAvatar = async (
+    fileBuffer: Buffer,
+    fileName: string
+): Promise<CloudinaryUploadResult> => {
+    return uploadToCloudinary(fileBuffer, fileName, {
+        folder: 'guardian grove project/family-avatars',
+        publicIdPrefix: 'family-avatars',
+        transformation: {
+            width: 400,
+            height: 400,
+            crop: 'fill',
+            quality: 'auto:good'
+        }
+    });
+};
