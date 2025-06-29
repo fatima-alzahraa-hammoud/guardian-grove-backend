@@ -374,13 +374,25 @@ export const deleteUser = async(req: CustomRequest, res:Response):Promise<void> 
             user = req.user;
         }
 
-
         // Prevent deleting the last parent in a family
         const family = await Family.findById(user.familyId);
         if (family) {
             const parentsCount = await User.countDocuments({ familyId: family._id, role: 'parent' });
             if (user.role === 'parent' && parentsCount <= 1) {
                 return throwError({ message: "Cannot delete the last parent in the family", res, status: 400 });
+            }
+        }
+
+        // Delete avatar from Cloudinary if it's not a predefined avatar
+        if (user.avatar && !user.avatar.startsWith('/assets/')) {
+            const publicId = extractPublicIdFromUrl(user.avatar);
+            if (publicId) {
+                try {
+                    await deleteFromCloudinary(publicId);
+                } catch (deleteError) {
+                    console.warn('Failed to delete user avatar from Cloudinary:', deleteError);
+                    // Continue with user deletion even if avatar deletion fails
+                }
             }
         }
 
@@ -391,7 +403,7 @@ export const deleteUser = async(req: CustomRequest, res:Response):Promise<void> 
     }catch(error){
         return throwError({ message: "Failed to delete. An unknown error occurred.", res, status: 500 });
     }
-} 
+}
 
 // API to update password
 export const updatePassword = async (req: CustomRequest, res: Response): Promise<void> => {
