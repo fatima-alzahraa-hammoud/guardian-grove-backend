@@ -69,3 +69,19 @@ export const uploadToCloudinary = async (
         stream.end(fileBuffer);
     });
 };
+
+export const uploadUserAvatar = async (
+    fileBuffer: Buffer,
+    fileName: string
+): Promise<CloudinaryUploadResult> => {
+    return uploadToCloudinary(fileBuffer, fileName, {
+        folder: 'guardian grove project/avatars',
+        publicIdPrefix: 'avatars',
+        transformation: {
+            width: 300,
+            height: 300,
+            crop: 'fill',
+            quality: 'auto:good'
+        }
+    });
+};
