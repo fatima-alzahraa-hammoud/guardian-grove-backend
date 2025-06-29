@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import bcrypt from "bcrypt";
+import { v2 as cloudinary } from 'cloudinary';
 import { User } from "../models/user.model";
 import { throwError } from '../utils/error';
 import { CustomRequest } from '../interfaces/customRequest';
@@ -11,6 +12,8 @@ import { recalculateFamilyMemberRanks } from '../utils/recalculateFamilyMemberRa
 import nodemailer from "nodemailer";
 import { sendMail } from '../services/email.service';
 import { generateSecurePassword } from '../utils/generateSecurePassword';
+import { sanitizePublicId } from '../utils/sanitizePublicId';
+import path from 'path';
 
 // API to get all users
 export const getUsers = async(req: Request, res: Response): Promise<void> => {
@@ -60,7 +63,7 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
     try{
         const data = req.body;
 
-        const { name, birthday, gender, role, avatar, interests } = data;
+        const { name, birthday, gender, role, interests } = data;
 
         if (!req.user) {
             return  throwError({ message: "Unauthorized", res, status: 401 });
@@ -69,9 +72,35 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
             return throwError({ message: "Forbidden", res, status: 403 });
         }
 
+        // Debug logs
+        console.log("req.files:", req.files);
+        console.log("req.body:", req.body);
+        
+
+        // Get uploaded avatar file
+        const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+        const avatarImage = files.avatar?.[0];
+
+        console.log("Avatar image:", avatarImage);
+
+        // Parse interests FIRST, before validation
+        let parsedInterests = interests;
+        if (typeof interests === 'string') {
+            try {
+                parsedInterests = JSON.parse(interests);
+            } catch (parseError) {
+                console.error('Error parsing interests:', parseError);
+                return throwError({ message: "Invalid interests format.", res, status: 400 });
+            }
+        }
+
         // verify all fields are filled
-        if (!name || !birthday || !gender || !role || !avatar || !interests) {
+        if (!name || !birthday || !gender || !role || !interests) {
             return throwError({ message: "All required fields must be filled.", res, status: 400});
+        }
+        // Check if avatar is provided
+        if (!avatarImage) {
+            return throwError({ message: "Avatar image is required.", res, status: 400});
         }
 
         const email = req.user.email;
@@ -84,7 +113,8 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
             return throwError({ message: "This username is already taken for this email.", res, status: 409});
         }
 
-        if (!Array.isArray(interests)) {
+        // Validate parsed interests is an array
+        if (!Array.isArray(parsedInterests)) {
             return throwError({ message: "Interests must be an array.", res, status: 400 });
         }
 
@@ -114,9 +144,26 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
             return throwError({ message: "Family not found.", res, status: 404 });
         }
 
+        // Upload avatar to Cloudinary
+        const sanitizedAvatarPublicId = `avatars/${Date.now()}-${sanitizePublicId(path.basename(avatarImage.originalname, path.extname(avatarImage.originalname)))}`;
+
+        const avatarResult = await new Promise((resolve, reject) => {
+            const stream = cloudinary.uploader.upload_stream({ 
+                resource_type: 'image',
+                public_id: sanitizedAvatarPublicId,
+                folder: 'guardian-grove/avatars'
+            }, (error, result) => {
+                if (error) reject(error);
+                else resolve(result);
+            });
+            stream.end(avatarImage.buffer);
+        });
+
         // Create the user with the parent's familyId
         const user = await User.create({
             ...data,
+            avatar: (avatarResult as any).secure_url,
+            interests: parsedInterests,
             email: email,
             password: hashedPassword,
             isTempPassword: true,  // Mark as temporary password
