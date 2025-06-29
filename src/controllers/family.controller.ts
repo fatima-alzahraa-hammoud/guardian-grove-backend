@@ -687,7 +687,6 @@ export const getFamilyNameNbMembersStars = async (req: CustomRequest, res: Respo
         if (!family) {
             return throwError({ message: "Family not found", res, status: 404 });
         }
-        console.log(family.members.length);
         res.status(200).json({
             message: "Retrieving family name and number of members successfully",
             familyName: family.familyName,

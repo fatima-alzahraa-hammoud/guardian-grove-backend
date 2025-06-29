@@ -13,6 +13,8 @@ import { Family } from '../../src/models/family.model';
 import * as emailService from '../../src/services/email.service';
 import * as recalculateFamilyMemberRanks from '../../src/utils/recalculateFamilyMemberRanks';
 import * as bcrypt from 'bcrypt';
+import { v2 as cloudinary } from 'cloudinary';
+
 
 // Mock all dependencies
 jest.mock('../../src/models/user.model');
@@ -24,6 +26,14 @@ jest.mock('../../src/utils/recalculateFamilyMemberRanks');
 jest.mock('../../src/utils/checkId');
 jest.mock('bcrypt');
 
+jest.mock('cloudinary', () => ({
+    v2: {
+        uploader: {
+            upload_stream: jest.fn()
+        }
+    }
+}));
+
 const mockUser = User as jest.Mocked<typeof User>;
 const mockAdventure = Adventure as jest.Mocked<typeof Adventure>;
 const mockFamily = Family as jest.Mocked<typeof Family>;
@@ -32,6 +42,8 @@ const mockCheckId = checkId as jest.Mocked<typeof checkId>;
 const mockEmailService = emailService as jest.Mocked<typeof emailService>;
 const mockRecalculateFamilyMemberRanks = recalculateFamilyMemberRanks as jest.Mocked<typeof recalculateFamilyMemberRanks>;
 const mockBcrypt = bcrypt as jest.Mocked<typeof bcrypt>;
+
+const mockCloudinary = cloudinary as jest.Mocked<typeof cloudinary>;
 
 describe('User Controller Tests', () => {
     beforeEach(() => {
@@ -62,6 +74,17 @@ describe('User Controller Tests', () => {
         
         (jest.spyOn(bcrypt, 'hash') as jest.Mock).mockResolvedValue('hashedPassword');
         (jest.spyOn(bcrypt, 'compare') as jest.Mock).mockResolvedValue(true);
+
+        mockCloudinary.uploader.upload_stream = jest.fn().mockImplementation((options, callback) => {
+            const mockResult = {
+                secure_url: 'https://res.cloudinary.com/test/image/upload/v1234567890/guardian%20grove%20project/avatars/test-avatar.png',
+                public_id: 'guardian grove project/avatars/test-avatar'
+            };
+            callback(null, mockResult);
+            return {
+                end: jest.fn()
+            };
+        });
     });
 
     // 1. test getUsers API
@@ -176,14 +199,26 @@ describe('User Controller Tests', () => {
             birthday: '2010-01-01',
             gender: 'male',
             role: 'child',
-            avatar: '/avatar.png',
             interests: ['reading', 'sports']
+        };
+
+        const mockFiles = {
+            avatar: [{
+                fieldname: 'avatar',
+                originalname: 'test-avatar.png',
+                mimetype: 'image/png',
+                size: 1024,
+                buffer: Buffer.from('fake-image-data')
+            }]
         };
 
         it('should create user successfully', async () => {
             const mockParent = testUtils.createMockUser({ role: 'parent', email: 'parent@test.com' });
             const mockFamilyData = testUtils.createMockFamily({ email: 'parent@test.com', members: [] });
-            const mockCreatedUser = testUtils.createMockUser(validUserData);
+            const mockCreatedUser = testUtils.createMockUser({
+                ...validUserData,
+                avatar: 'https://res.cloudinary.com/test/image/upload/v1234567890/guardian%20grove%20project/avatars/test-avatar.png'
+            });
 
             mockUser.findOne.mockResolvedValue(null); // No existing user
             mockFamily.findOne.mockResolvedValue(mockFamilyData as any);
@@ -191,7 +226,8 @@ describe('User Controller Tests', () => {
 
             const mockReq = testUtils.createMockRequest({ 
                 user: mockParent,
-                body: validUserData
+                body: validUserData,
+                files: mockFiles
             });
             const mockRes = testUtils.createMockResponse();
 
@@ -199,11 +235,16 @@ describe('User Controller Tests', () => {
 
             expect(mockUser.create).toHaveBeenCalled();
             expect(mockEmailService.sendMail).toHaveBeenCalled();
+            expect(mockCloudinary.uploader.upload_stream).toHaveBeenCalled();
             expect(mockRes.status).toHaveBeenCalledWith(200);
         });
 
         it('should return 401 if user not authenticated', async () => {
-            const mockReq = testUtils.createMockRequest({ user: null, body: validUserData });
+            const mockReq = testUtils.createMockRequest({ 
+                user: null, 
+                body: validUserData,
+                files: mockFiles
+            });
             const mockRes = testUtils.createMockResponse();
 
             await createUser(mockReq as any, mockRes as any);
@@ -214,7 +255,11 @@ describe('User Controller Tests', () => {
 
         it('should return 403 if user is child', async () => {
             const mockChild = testUtils.createMockUser({ role: 'child' });
-            const mockReq = testUtils.createMockRequest({ user: mockChild, body: validUserData });
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockChild, 
+                body: validUserData,
+                files: mockFiles
+            });
             const mockRes = testUtils.createMockResponse();
 
             await createUser(mockReq as any, mockRes as any);
@@ -227,7 +272,11 @@ describe('User Controller Tests', () => {
             const mockParent = testUtils.createMockUser({ role: 'parent' });
             const incompleteData = { name: 'Test' }; // Missing required fields
 
-            const mockReq = testUtils.createMockRequest({ user: mockParent, body: incompleteData });
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockParent, 
+                body: incompleteData,
+                files: mockFiles
+            });
             const mockRes = testUtils.createMockResponse();
 
             await createUser(mockReq as any, mockRes as any);
@@ -236,13 +285,33 @@ describe('User Controller Tests', () => {
             expect(mockRes.json).toHaveBeenCalledWith({ error: 'All required fields must be filled.' });
         });
 
+        it('should return 400 if avatar file is missing', async () => {
+            const mockParent = testUtils.createMockUser({ role: 'parent' });
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockParent, 
+                body: validUserData,
+                files: {} // No avatar file
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await createUser(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Avatar image is required.' });
+        });
+
         it('should return 409 if username already taken', async () => {
             const mockParent = testUtils.createMockUser({ role: 'parent', email: 'parent@test.com' });
             const existingUser = testUtils.createMockUser({ name: 'Test Child', email: 'parent@test.com' });
 
             mockUser.findOne.mockResolvedValue(existingUser as any);
 
-            const mockReq = testUtils.createMockRequest({ user: mockParent, body: validUserData });
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockParent, 
+                body: validUserData,
+                files: mockFiles
+            });
             const mockRes = testUtils.createMockResponse();
 
             await createUser(mockReq as any, mockRes as any);
@@ -255,20 +324,79 @@ describe('User Controller Tests', () => {
             const mockParent = testUtils.createMockUser({ role: 'parent' });
             const invalidData = { ...validUserData, interests: 'not-an-array' };
 
-            const mockReq = testUtils.createMockRequest({ user: mockParent, body: invalidData });
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockParent, 
+                body: invalidData,
+                files: mockFiles
+            });
             const mockRes = testUtils.createMockResponse();
 
             await createUser(mockReq as any, mockRes as any);
 
             expect(mockRes.status).toHaveBeenCalledWith(400);
-            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Interests must be an array.' });
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Invalid interests format.' });
+        });
+
+        it('should handle JSON string interests correctly', async () => {
+            const mockParent = testUtils.createMockUser({ role: 'parent', email: 'parent@test.com' });
+            const mockFamilyData = testUtils.createMockFamily({ email: 'parent@test.com', members: [] });
+            const mockCreatedUser = testUtils.createMockUser(validUserData);
+
+            mockUser.findOne.mockResolvedValue(null);
+            mockFamily.findOne.mockResolvedValue(mockFamilyData as any);
+            mockUser.create.mockResolvedValue(mockCreatedUser as any);
+
+            const dataWithJsonInterests = { 
+                ...validUserData, 
+                interests: '["reading", "sports"]' // JSON string
+            };
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockParent, 
+                body: dataWithJsonInterests,
+                files: mockFiles
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await createUser(mockReq as any, mockRes as any);
+
+            expect(mockUser.create).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    interests: ['reading', 'sports'] // Should be parsed to array
+                })
+            );
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+        });
+
+        it('should return 400 if invalid JSON interests string', async () => {
+            const mockParent = testUtils.createMockUser({ role: 'parent' });
+            const invalidData = { 
+                ...validUserData, 
+                interests: 'invalid-json-string' 
+            };
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockParent, 
+                body: invalidData,
+                files: mockFiles
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await createUser(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({ error: 'Invalid interests format.' });
         });
 
         it('should return 400 if invalid gender', async () => {
             const mockParent = testUtils.createMockUser({ role: 'parent' });
             const invalidData = { ...validUserData, gender: 'invalid' };
 
-            const mockReq = testUtils.createMockRequest({ user: mockParent, body: invalidData });
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockParent, 
+                body: invalidData,
+                files: mockFiles
+            });
             const mockRes = testUtils.createMockResponse();
 
             await createUser(mockReq as any, mockRes as any);
@@ -281,7 +409,11 @@ describe('User Controller Tests', () => {
             const mockParent = testUtils.createMockUser({ role: 'parent' });
             const invalidData = { ...validUserData, role: 'invalid' };
 
-            const mockReq = testUtils.createMockRequest({ user: mockParent, body: invalidData });
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockParent, 
+                body: invalidData,
+                files: mockFiles
+            });
             const mockRes = testUtils.createMockResponse();
 
             await createUser(mockReq as any, mockRes as any);
@@ -294,7 +426,11 @@ describe('User Controller Tests', () => {
             const mockParent = testUtils.createMockUser({ role: 'parent' });
             const invalidData = { ...validUserData, birthday: 'invalid-date' };
 
-            const mockReq = testUtils.createMockRequest({ user: mockParent, body: invalidData });
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockParent, 
+                body: invalidData,
+                files: mockFiles
+            });
             const mockRes = testUtils.createMockResponse();
 
             await createUser(mockReq as any, mockRes as any);
@@ -309,13 +445,42 @@ describe('User Controller Tests', () => {
             mockUser.findOne.mockResolvedValue(null); // No existing user
             mockFamily.findOne.mockResolvedValue(null); // No family found
 
-            const mockReq = testUtils.createMockRequest({ user: mockParent, body: validUserData });
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockParent, 
+                body: validUserData,
+                files: mockFiles
+            });
             const mockRes = testUtils.createMockResponse();
 
             await createUser(mockReq as any, mockRes as any);
 
             expect(mockRes.status).toHaveBeenCalledWith(404);
             expect(mockRes.json).toHaveBeenCalledWith({ error: 'Family not found.' });
+        });
+
+        it('should handle cloudinary upload error', async () => {
+            const mockParent = testUtils.createMockUser({ role: 'parent', email: 'parent@test.com' });
+            const mockFamilyData = testUtils.createMockFamily({ email: 'parent@test.com', members: [] });
+
+            mockUser.findOne.mockResolvedValue(null);
+            mockFamily.findOne.mockResolvedValue(mockFamilyData as any);
+
+            // Mock cloudinary to throw error
+            mockCloudinary.uploader.upload_stream = jest.fn().mockImplementation((options, callback) => {
+                callback(new Error('Cloudinary upload failed'), null);
+                return { end: jest.fn() };
+            });
+
+            const mockReq = testUtils.createMockRequest({ 
+                user: mockParent, 
+                body: validUserData,
+                files: mockFiles
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await createUser(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(500);
         });
     });
 

@@ -37,7 +37,7 @@ export const openai = new OpenAI({
 
 // Use CORS middleware
 app.use(cors({
-    origin: ["https://guardian-grove.netlify.app", "http://localhost:5173", 'http://localhost:3000'],
+    origin: ["https://guardian-grove.netlify.app", "http://localhost:5173", 'http://localhost:3000', 'https://guardian-grove-mobile.netlify.app'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization']
