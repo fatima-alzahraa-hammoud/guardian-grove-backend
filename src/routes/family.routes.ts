@@ -2,6 +2,7 @@ import express from "express";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { adminMiddleware } from "../middlewares/admin.middleware";
 import { completeFamilyTask, createFamilyTasks, deleteFamily, deleteFamilyGoal, deleteFamilyTask, getAllFamilies, getFamily, getFamilyGoals, getFamilyLeaderboard, getFamilyMembers, getFamilyNameNbMembersStars, getFamilyProgressStats, getFamilyTaskById, getLeaderboard, updateAllFamilyMembersStars, updateFamily, updateFamilyGoal, updateFamilyTask } from "../controllers/family.controller";
+import { imageUploadMiddleware } from "../middlewares/imageUploadMiddleware";
 
 const router =  express.Router();
 
@@ -9,7 +10,7 @@ router.get("/", authMiddleware, adminMiddleware, getAllFamilies);
 router.post("/getFamily", authMiddleware, getFamily);
 router.get("/FamilyMembers", authMiddleware, getFamilyMembers);
 router.get("/someFamilydetails", authMiddleware, getFamilyNameNbMembersStars);
-router.put("/", authMiddleware, updateFamily);
+router.put("/", authMiddleware, imageUploadMiddleware, updateFamily);
 router.delete("/", authMiddleware, deleteFamily);
 
 //routes for family goals
