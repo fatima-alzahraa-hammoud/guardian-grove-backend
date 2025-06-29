@@ -15,12 +15,13 @@ import {
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { adminMiddleware } from "../middlewares/admin.middleware";
 import { checkQuestionCompletion, generateDailyAdventureRoute, generateGrowthPlans, generateLearningZone, generateQuickTips, generateStory, generateTaskCompletionQuestion, generateTrackDay, generateViewTasks, regenerateGoalsAndTasksRoute } from "../controllers/ai.controller";
+import { imageUploadMiddleware } from "../middlewares/imageUploadMiddleware";
 
 const router = express.Router();
 
 router.get("/", authMiddleware, adminMiddleware, getUsers); 
 router.get("/user", authMiddleware, getUserById); 
-router.post("/", authMiddleware, createUser); 
+router.post("/", authMiddleware, imageUploadMiddleware, createUser); 
 router.put("/", authMiddleware, editUserProfile);
 router.delete("/", authMiddleware, deleteUser);
 router.put("/updatePassword", authMiddleware, updatePassword);
