@@ -114,3 +114,30 @@ export const deleteFromCloudinary = async (publicId: string): Promise<any> => {
     });
 };
 
+export const extractPublicIdFromUrl = (cloudinaryUrl: string): string => {
+    try {
+        const urlParts = cloudinaryUrl.split('/');
+        const uploadIndex = urlParts.findIndex(part => part === 'upload');
+        if (uploadIndex === -1) return '';
+        
+        // Get everything after version (vX_XXXXXX) or after upload if no version
+        const afterUpload = urlParts.slice(uploadIndex + 1);
+        let publicIdParts: string[];
+        
+        // Check if there's a version parameter
+        if (afterUpload[0] && afterUpload[0].startsWith('v')) {
+            publicIdParts = afterUpload.slice(1);
+        } else {
+            publicIdParts = afterUpload;
+        }
+        
+        // Remove file extension from the last part
+        const lastPart = publicIdParts[publicIdParts.length - 1];
+        const lastPartWithoutExt = lastPart.split('.')[0];
+        publicIdParts[publicIdParts.length - 1] = lastPartWithoutExt;
+        
+        return publicIdParts.join('/');
+    } catch (error) {
+        return '';
+    }
+};
