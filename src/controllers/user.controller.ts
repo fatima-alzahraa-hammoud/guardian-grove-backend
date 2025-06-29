@@ -238,7 +238,7 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
 // API to edit user profile
 export const editUserProfile = async(req: CustomRequest, res: Response):Promise<void> => {
     try{
-        const {userId, name, birthday, gender, avatar, role} = req.body;
+        const {userId, name, birthday, gender, role} = req.body;
 
         if (!req.user) {
             return throwError({ message: "Unauthorized", res, status: 401 });
@@ -279,10 +279,35 @@ export const editUserProfile = async(req: CustomRequest, res: Response):Promise<
             user.name = name;
         }
 
+        let avatarUrl = user.avatar;
+
+        const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+        const avatarImage = files?.avatar?.[0];
+        console.log("Avatar image:", avatarImage);
+
+        if (avatarImage) {
+            // Upload new avatar to Cloudinary
+            const sanitizedAvatarPublicId = `avatars/${Date.now()}-${sanitizePublicId(path.basename(avatarImage.originalname, path.extname(avatarImage.originalname)))}`;
+
+            const avatarResult = await new Promise((resolve, reject) => {
+                const stream = cloudinary.uploader.upload_stream({ 
+                    resource_type: 'image',
+                    public_id: sanitizedAvatarPublicId,
+                    folder: 'guardian grove project/avatars'
+                }, (error, result) => {
+                    if (error) reject(error);
+                    else resolve(result);
+                });
+                stream.end(avatarImage.buffer);
+            });
+
+            avatarUrl = (avatarResult as any).secure_url;
+        }
+
         if (name) user.name = name;
         if (birthday) user.birthday = birthday;
         if (gender) user.gender = gender;
-        if (avatar) user.avatar = avatar;
+        if (avatarImage) user.avatar = avatarUrl;
         if (role) user.role = role; 
 
         await user.save();
