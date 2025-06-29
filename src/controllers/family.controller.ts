@@ -6,8 +6,10 @@ import { checkId } from "../utils/checkId";
 import { CustomRequest } from "../interfaces/customRequest";
 import { Achievement } from "../models/achievements.model";
 import { ITask } from "../interfaces/ITask";
-import { recalculateFamilyMemberRanks } from "../utils/recalculateFamilyMemberRanks";
 import { getTimePeriod } from "../utils/getTimePeriod";
+import { sanitizePublicId } from "../utils/sanitizePublicId";
+import path from "path";
+import { v2 as cloudinary } from 'cloudinary';
 
 //API get all families
 export const getAllFamilies = async (req: Request, res: Response): Promise<void> => {
@@ -77,18 +79,20 @@ export const getFamilyMembers = async (req: Request, res: Response): Promise<voi
 // Update Family Details
 export const updateFamily = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
-
         if(!req.user || !['parent', 'admin'].includes(req.user.role)){
             return throwError({ message: "Unauthorized", res, status: 401 });
         }
 
-        const { familyId, familyName, email, familyAvatar } = req.body;
+        const { familyId, familyName, email, familyAvatarPath } = req.body;
 
         const targetFamilyId = familyId || req.user.familyId;
 
+        if (!targetFamilyId) {
+            return throwError({ message: "Family ID not found", res, status: 400 });
+        }
+
         if(!checkId({id: targetFamilyId, res})) return;
 
-        
         const family = await Family.findById(targetFamilyId);
 
         if (!family) {
@@ -96,35 +100,77 @@ export const updateFamily = async (req: CustomRequest, res: Response): Promise<v
         }
 
         if(req.user.email !== family.email && req.user.role !== "admin"){
-            return throwError({ message: "Forbidden", res, status: 401 });
+            return throwError({ message: "Forbidden", res, status: 403 });
         }
 
-        // Check if a family with the same email or familyName exists
-        if (email) {
+        const originalEmail = family.email;
+
+        // Check if a family with the same email exists (excluding current family)
+        if (email && email !== family.email) {
             const existingFamilyWithEmail = await Family.findOne({ email, _id: { $ne: family._id } });
             if (existingFamilyWithEmail) {
                 return throwError({ message: "A family with the same email already exists.", res, status: 400 });
             }
         }
 
-        if (familyName) {
+        // Check if a family with the same name exists (excluding current family)
+        if (familyName && familyName !== family.familyName) {
             const existingFamilyWithName = await Family.findOne({ familyName, _id: { $ne: family._id } });
             if (existingFamilyWithName) {
                 return throwError({ message: "A family with the same name already exists.", res, status: 400 });
             }
         }
 
+        // Handle family avatar update
+        let familyAvatarUrl = family.familyAvatar;
+        
+        const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+        const familyAvatarImage = files?.familyAvatar?.[0];
 
-        family.familyName = familyName || family.familyName;
-        family.email = email || family.email;
-        family.familyAvatar = familyAvatar || family.familyAvatar;
 
-        if (email) {
-            await User.updateMany(
+        // Check if there's a new file upload
+        if (familyAvatarImage) {
+            // Upload new family avatar to Cloudinary
+            const sanitizedFamilyAvatarPublicId = `family-avatars/${Date.now()}-${sanitizePublicId(path.basename(familyAvatarImage.originalname, path.extname(familyAvatarImage.originalname)))}`;
+
+            const familyAvatarResult = await new Promise((resolve, reject) => {
+                const stream = cloudinary.uploader.upload_stream({ 
+                    resource_type: 'image',
+                    public_id: sanitizedFamilyAvatarPublicId,
+                    folder: 'guardian grove project/family-avatars'
+                }, (error, result) => {
+                    if (error) reject(error);
+                    else resolve(result);
+                });
+                stream.end(familyAvatarImage.buffer);
+            });
+
+            familyAvatarUrl = (familyAvatarResult as any).secure_url;
+        } 
+        // Check if there's a predefined avatar path in the request body
+        else if (familyAvatarPath && familyAvatarPath !== family.familyAvatar) {
+            // Only accept predefined avatars with /assets/images/avatars/ path
+            if (familyAvatarPath.startsWith('/assets/images/avatars/')) {
+                familyAvatarUrl = familyAvatarPath; // Store the full path
+            } else {
+                return throwError({ message: "Invalid avatar path. Only predefined avatars are allowed.", res, status: 400 });
+            }
+        }
+
+        // Update family fields
+        if (familyName) family.familyName = familyName;
+        if (email) family.email = email;
+        if (familyAvatarImage || (familyAvatarPath && familyAvatarPath !== family.familyAvatar && familyAvatarPath.startsWith('/assets/images/avatars/'))) {
+            family.familyAvatar = familyAvatarUrl;
+        }
+
+        if (email && email !== originalEmail) {
+            const updateResult = await User.updateMany(
                 { familyId: targetFamilyId }, 
                 { $set: { email: email } }
             );
         }
+
 
         await family.save();
 
