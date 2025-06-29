@@ -101,3 +101,16 @@ export const uploadFamilyAvatar = async (
         }
     });
 };
+
+export const deleteFromCloudinary = async (publicId: string): Promise<any> => {
+    return new Promise((resolve, reject) => {
+        cloudinary.uploader.destroy(publicId, (error, result) => {
+            if (error) {
+                reject(new Error(`Cloudinary delete failed: ${error.message}`));
+            } else {
+                resolve(result);
+            }
+        });
+    });
+};
+
