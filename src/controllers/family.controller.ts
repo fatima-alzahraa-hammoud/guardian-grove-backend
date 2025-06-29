@@ -10,6 +10,7 @@ import { getTimePeriod } from "../utils/getTimePeriod";
 import { sanitizePublicId } from "../utils/sanitizePublicId";
 import path from "path";
 import { v2 as cloudinary } from 'cloudinary';
+import { deleteFromCloudinary, extractPublicIdFromUrl, uploadFamilyAvatar } from "../utils/cloudinary";
 
 //API get all families
 export const getAllFamilies = async (req: Request, res: Response): Promise<void> => {
@@ -77,6 +78,7 @@ export const getFamilyMembers = async (req: Request, res: Response): Promise<voi
 };
 
 // Update Family Details
+// Update Family Details
 export const updateFamily = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
         if(!req.user || !['parent', 'admin'].includes(req.user.role)){
@@ -123,35 +125,56 @@ export const updateFamily = async (req: CustomRequest, res: Response): Promise<v
 
         // Handle family avatar update
         let familyAvatarUrl = family.familyAvatar;
+        const oldFamilyAvatarUrl = family.familyAvatar;
         
         const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
         const familyAvatarImage = files?.familyAvatar?.[0];
 
+        console.log("Family avatar image:", familyAvatarImage);
+        console.log("Family avatar path:", familyAvatarPath);
 
         // Check if there's a new file upload
         if (familyAvatarImage) {
-            // Upload new family avatar to Cloudinary
-            const sanitizedFamilyAvatarPublicId = `family-avatars/${Date.now()}-${sanitizePublicId(path.basename(familyAvatarImage.originalname, path.extname(familyAvatarImage.originalname)))}`;
+            try {
+                // Upload new family avatar to Cloudinary using utility function
+                const familyAvatarResult = await uploadFamilyAvatar(familyAvatarImage.buffer, familyAvatarImage.originalname);
+                familyAvatarUrl = familyAvatarResult.secure_url;
 
-            const familyAvatarResult = await new Promise((resolve, reject) => {
-                const stream = cloudinary.uploader.upload_stream({ 
-                    resource_type: 'image',
-                    public_id: sanitizedFamilyAvatarPublicId,
-                    folder: 'guardian grove project/family-avatars'
-                }, (error, result) => {
-                    if (error) reject(error);
-                    else resolve(result);
-                });
-                stream.end(familyAvatarImage.buffer);
-            });
-
-            familyAvatarUrl = (familyAvatarResult as any).secure_url;
+                // Delete old family avatar from Cloudinary if it exists and is not a predefined avatar
+                if (oldFamilyAvatarUrl && !oldFamilyAvatarUrl.startsWith('/assets/')) {
+                    const oldPublicId = extractPublicIdFromUrl(oldFamilyAvatarUrl);
+                    if (oldPublicId) {
+                        try {
+                            await deleteFromCloudinary(oldPublicId);
+                        } catch (deleteError) {
+                            console.warn('Failed to delete old family avatar:', deleteError);
+                            // Continue execution even if deletion fails
+                        }
+                    }
+                }
+            } catch (uploadError) {
+                console.error('Family avatar upload error:', uploadError);
+                return throwError({ message: "Failed to upload family avatar image.", res, status: 500 });
+            }
         } 
         // Check if there's a predefined avatar path in the request body
         else if (familyAvatarPath && familyAvatarPath !== family.familyAvatar) {
             // Only accept predefined avatars with /assets/images/avatars/ path
             if (familyAvatarPath.startsWith('/assets/images/avatars/')) {
                 familyAvatarUrl = familyAvatarPath; // Store the full path
+                
+                // Delete old Cloudinary family avatar if switching to predefined avatar
+                if (oldFamilyAvatarUrl && !oldFamilyAvatarUrl.startsWith('/assets/')) {
+                    const oldPublicId = extractPublicIdFromUrl(oldFamilyAvatarUrl);
+                    if (oldPublicId) {
+                        try {
+                            await deleteFromCloudinary(oldPublicId);
+                        } catch (deleteError) {
+                            console.warn('Failed to delete old family avatar:', deleteError);
+                            // Continue execution even if deletion fails
+                        }
+                    }
+                }
             } else {
                 return throwError({ message: "Invalid avatar path. Only predefined avatars are allowed.", res, status: 400 });
             }
@@ -160,25 +183,35 @@ export const updateFamily = async (req: CustomRequest, res: Response): Promise<v
         // Update family fields
         if (familyName) family.familyName = familyName;
         if (email) family.email = email;
+        
+        // Update avatar if there was a change (either file upload or path change)
         if (familyAvatarImage || (familyAvatarPath && familyAvatarPath !== family.familyAvatar && familyAvatarPath.startsWith('/assets/images/avatars/'))) {
             family.familyAvatar = familyAvatarUrl;
         }
 
+        // Update all family members' email if family email changed
         if (email && email !== originalEmail) {
-            const updateResult = await User.updateMany(
-                { familyId: targetFamilyId }, 
-                { $set: { email: email } }
-            );
+            try {
+                const updateResult = await User.updateMany(
+                    { familyId: targetFamilyId }, 
+                    { $set: { email: email } }
+                );
+                console.log(`Updated ${updateResult.modifiedCount} family members' emails`);
+            } catch (updateError) {
+                console.error('Failed to update family members emails:', updateError);
+                // Don't fail the whole operation, just log the error
+            }
         }
-
 
         await family.save();
 
         res.status(200).send({ message: "Family updated successfully.", family: family });
     } catch (error) {
+        console.error('Update family error:', error);
         return throwError({ message: "Failed to update family.", res, status: 500 });
     }
 };
+
 
 //API to delete family
 export const deleteFamily = async (req: CustomRequest, res: Response): Promise<void> => {
