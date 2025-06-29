@@ -7,6 +7,7 @@ import jwt from "jsonwebtoken";
 import { Family } from "../models/family.model";
 import { generateSecurePassword } from "../utils/generateSecurePassword";
 import { sendMail } from "../services/email.service";
+import { uploadFamilyAvatar, uploadUserAvatar } from "../utils/cloudinary";
 
 dotenv.config();
 
@@ -61,11 +62,37 @@ export const login = async ( req: Request, res: Response) : Promise<void> => {
 export const register = async (req: Request, res: Response) : Promise<void> => {
     try{
         const data = req.body;
-        const { name, email, password, confirmPassword, birthday, gender, role, avatar, interests, familyName, familyAvatar } = data;
+        const { name, email, password, confirmPassword, birthday, gender, role, avatarPath, interests, familyName, familyAvatarPath } = data;
+        
+        // Get uploaded files
+        const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+        const avatarImage = files?.avatar?.[0];
+        const familyAvatarImage = files?.familyAvatar?.[0];
+
+        // Parse interests if it's a string
+        let parsedInterests = interests;
+        if (typeof interests === 'string') {
+            try {
+                parsedInterests = JSON.parse(interests);
+            } catch (parseError) {
+                console.error('Error parsing interests:', parseError);
+                return throwError({ message: "Invalid interests format.", res, status: 400 });
+            }
+        }
         
         // verify all fields are filled
-        if (!name || !email || !password || !confirmPassword || !birthday || !gender || !role || !avatar || !interests || !familyName || !familyAvatar) {
+        if (!name || !email || !password || !confirmPassword || !birthday || !gender || !role || !parsedInterests || !familyName) {
             return throwError({ message: "All required fields must be filled.", res, status: 400});
+        }
+
+        // Check is avatar is provided (either file or path)
+        if (!avatarImage && !avatarPath) {
+            return throwError({ message: "Avatar is required.", res, status: 400});
+        }
+
+        // Check if family avatar is provided (either file or path)
+        if (!familyAvatarImage && !familyAvatarPath) {
+            return throwError({ message: "Family avatar is required.", res, status: 400});
         }
 
         if (password !== confirmPassword){
@@ -87,7 +114,7 @@ export const register = async (req: Request, res: Response) : Promise<void> => {
             return throwError({ message: "Invalid role.", res, status: 400});
         }
         
-        if (!Array.isArray(interests)) {
+        if (!Array.isArray(parsedInterests)) {
             return throwError({ message: "Interests must be an array.", res, status: 400 });
         }
 
@@ -113,15 +140,52 @@ export const register = async (req: Request, res: Response) : Promise<void> => {
 
         const hashedPassword = await bcrypt.hash(password, 12);
 
+        // Upload user avatar to Cloudinary
+        let userAvatarUrl;
+        if (avatarImage) {
+            try {
+                const avatarResult = await uploadUserAvatar(avatarImage.buffer, avatarImage.originalname);
+                userAvatarUrl = avatarResult.secure_url;
+            } catch (uploadError) {
+                console.error('User avatar upload error:', uploadError);
+                return throwError({ message: "Failed to upload user avatar image.", res, status: 500 });
+            }
+        }else if (avatarPath) {
+            // Use predefined family avatar path
+            if (avatarPath.startsWith('/assets/images/avatars/')) {
+                userAvatarUrl = avatarPath;
+            } else {
+                return throwError({ message: "Invalid avatar path. Only predefined avatars are allowed.", res, status: 400 });
+            }
+        }
 
-         // Family Assignment
-         let family = await Family.findOne({ email });
+        // Handle family avatar upload
+        let familyAvatarUrl;
+        if (familyAvatarImage) {
+            try {
+                const familyAvatarResult = await uploadFamilyAvatar(familyAvatarImage.buffer, familyAvatarImage.originalname);
+                familyAvatarUrl = familyAvatarResult.secure_url;
+            } catch (uploadError) {
+                console.error('Family avatar upload error:', uploadError);
+                return throwError({ message: "Failed to upload family avatar image.", res, status: 500 });
+            }
+        } else if (familyAvatarPath) {
+            // Use predefined family avatar path
+            if (familyAvatarPath.startsWith('/assets/images/avatars/')) {
+                familyAvatarUrl = familyAvatarPath;
+            } else {
+                return throwError({ message: "Invalid family avatar path. Only predefined avatars are allowed.", res, status: 400 });
+            }
+        }
 
-         if (!family) {
+        // Family Assignment
+        let family = await Family.findOne({ email });
+
+        if (!family) {
             family = new Family({
                 familyName: familyName,
                 email,
-                familyAvatar: familyAvatar,
+                familyAvatar: familyAvatarUrl,
                 createdAt: new Date()
             });
             await family.save();
@@ -139,7 +203,13 @@ export const register = async (req: Request, res: Response) : Promise<void> => {
         }
 
         // Create the user and link to family
-        const newUser = await User.create({...data, password: hashedPassword, familyId: family._id}); 
+        const newUser = await User.create({
+            ...data, 
+            password: hashedPassword, 
+            familyId: family._id,
+            avatar: userAvatarUrl,
+            interests: parsedInterests
+        }); 
 
         if (!JWT_SECRET_KEY) {
             return throwError({ message: "JWT_SECRET_KEY is not defined", res, status: 500 });
@@ -152,7 +222,7 @@ export const register = async (req: Request, res: Response) : Promise<void> => {
     }catch(error){
         return throwError({ message: "Something went wrong while registering.", res, status: 500});
     }
-}  
+}
 
 // forget password API
 export const forgetPassword = async (req: Request, res: Response) : Promise<void> => {
