@@ -318,3 +318,37 @@ export const getJournalEntriesByType = async (req: CustomRequest, res: Response)
         return throwError({ message: "Error retrieving journal entries", res, status: 500 });
     }
 };
+
+// API to get journal entries by user
+export const getJournalEntriesByUser = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+        const { userId } = req.params;
+
+        if (!req.user) {
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+
+        if (!checkId({ id: userId, res })) return;
+
+        const family = await Family.findById(req.user.familyId)
+            .populate('journalEntries.userId', 'name avatar')
+            .select('journalEntries');
+
+        if (!family) {
+            return throwError({ message: "Family not found.", res, status: 404 });
+        }
+
+        // Filter entries by user
+        const userEntries = family.journalEntries
+            .filter(entry => entry.userId._id.toString() === userId)
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+        res.status(200).json({ 
+            message: "User journal entries retrieved successfully", 
+            journalEntries: userEntries 
+        });
+
+    } catch (error) {
+        return throwError({ message: "Error retrieving user journal entries", res, status: 500 });
+    }
+};
