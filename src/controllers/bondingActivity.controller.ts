@@ -45,3 +45,32 @@ export const createBondingActivity = async (req: CustomRequest, res: Response) =
         return throwError({ message: "Failed to create bonding activity", res, status: 500 });
     }
 };
+
+
+export const getBondingActivities = async (req: CustomRequest, res: Response) => {
+    try {
+        if (!req.user) {
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+
+        const { category } = req.query;
+        let query: any = { familyId: req.user.familyId };
+
+        if (category && category !== 'All Activities') {
+            query.category = category;
+        }
+
+        const activities = await BondingActivityModel.find(query)
+            .sort({ createdAt: -1 })
+            .populate('createdBy', 'name avatar');
+
+        res.status(200).json({
+            message: "Bonding activities retrieved successfully",
+            activities
+        });
+
+    } catch (error) {
+        console.error('Error fetching bonding activities:', error);
+        return throwError({ message: "Failed to fetch bonding activities", res, status: 500 });
+    }
+};
