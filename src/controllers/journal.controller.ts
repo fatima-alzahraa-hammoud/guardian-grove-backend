@@ -281,3 +281,40 @@ export const deleteJournalEntry = async (req: CustomRequest, res: Response): Pro
         return throwError({ message: "Failed to delete journal entry.", res, status: 500 });
     }
 };
+
+// API to get journal entries by type
+export const getJournalEntriesByType = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+        const { type } = req.params;
+
+        if (!req.user) {
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+
+        const validTypes = ['text', 'image', 'video', 'audio'];
+        if (!validTypes.includes(type)) {
+            return throwError({ message: "Invalid entry type.", res, status: 400 });
+        }
+
+        const family = await Family.findById(req.user.familyId)
+            .populate('journalEntries.userId', 'name avatar')
+            .select('journalEntries');
+
+        if (!family) {
+            return throwError({ message: "Family not found.", res, status: 404 });
+        }
+
+        // Filter and sort entries by type
+        const filteredEntries = family.journalEntries
+            .filter(entry => entry.type === type)
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+        res.status(200).json({ 
+            message: `${type} journal entries retrieved successfully`, 
+            journalEntries: filteredEntries 
+        });
+
+    } catch (error) {
+        return throwError({ message: "Error retrieving journal entries", res, status: 500 });
+    }
+};
