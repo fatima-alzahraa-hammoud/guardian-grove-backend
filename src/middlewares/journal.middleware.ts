@@ -22,7 +22,7 @@ const journalFileFilter = (req: Request, file: Express.Multer.File, cb: FileFilt
         'audio/aac': true
     };
     
-    if (file.fieldname === 'media' && !allowedTypes[file.mimetype as keyof typeof allowedTypes]) {
+    if (file.fieldname === 'thumbnail' && !allowedTypes[file.mimetype as keyof typeof allowedTypes]) {
         (req as any).fileValidationError = 'Only image (JPEG, PNG, GIF), video (MP4, MOV, AVI, QuickTime), and audio (MP3, WAV, MPEG, M4A, AAC) files are allowed for journal entries';
         return cb(null, false);
     }
