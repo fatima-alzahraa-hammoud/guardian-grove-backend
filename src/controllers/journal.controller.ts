@@ -37,8 +37,7 @@ export const createJournalEntry = async (req: CustomRequest, res: Response): Pro
 
         // Handle file upload for media entries
         if (type !== 'text') {
-            const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-            const mediaFile = files.media?.[0];
+            const mediaFile = req.file;
 
             if (!mediaFile) {
                 return throwError({ message: "Media file is required for this entry type.", res, status: 400 });
@@ -49,7 +48,7 @@ export const createJournalEntry = async (req: CustomRequest, res: Response): Pro
                 const uploadResult = await new Promise((resolve, reject) => {
                     const uploadStream = cloudinary.uploader.upload_stream(
                         {
-                            folder: `guardian_grove/journal/${family._id}`,
+                            folder: `guardian grove project/journal/${family._id}`,
                             resource_type: type === 'video' ? 'video' : 'auto',
                             transformation: type === 'image' ? [
                                 { width: 800, height: 600, crop: 'limit' },
@@ -180,8 +179,7 @@ export const getJournalEntryById = async (req: CustomRequest, res: Response): Pr
 // API to update a journal entry
 export const updateJournalEntry = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
-        const { entryId } = req.params;
-        const { title, content } = req.body;
+        const { entryId, title, content } = req.body;
 
         if (!req.user) {
             return throwError({ message: "Unauthorized", res, status: 401 });
@@ -227,7 +225,7 @@ export const updateJournalEntry = async (req: CustomRequest, res: Response): Pro
 // API to delete a journal entry
 export const deleteJournalEntry = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
-        const { entryId } = req.params;
+        const { entryId } = req.body;
 
         if (!req.user) {
             return throwError({ message: "Unauthorized", res, status: 401 });
