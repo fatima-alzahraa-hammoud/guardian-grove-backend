@@ -223,3 +223,61 @@ export const updateJournalEntry = async (req: CustomRequest, res: Response): Pro
         return throwError({ message: "Failed to update journal entry.", res, status: 500 });
     }
 };
+
+// API to delete a journal entry
+export const deleteJournalEntry = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+        const { entryId } = req.params;
+
+        if (!req.user) {
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+
+        if (!checkId({ id: entryId, res })) return;
+
+        const family = await Family.findById(req.user.familyId);
+        if (!family) {
+            return throwError({ message: "Family not found.", res, status: 404 });
+        }
+
+        const journalEntryIndex = family.journalEntries.findIndex(entry => 
+            entry._id.toString() === entryId
+        );
+
+        if (journalEntryIndex === -1) {
+            return throwError({ message: "Journal entry not found.", res, status: 404 });
+        }
+
+        const journalEntry = family.journalEntries[journalEntryIndex];
+
+        // Check if user owns this entry or has permission to delete
+        if (journalEntry.userId.toString() !== req.user._id.toString() && 
+            !['parent', 'admin'].includes(req.user.role)) {
+            return throwError({ message: "Forbidden: You can only delete your own entries.", res, status: 403 });
+        }
+
+        // Delete media file from Cloudinary if it's not a text entry
+        if (journalEntry.type !== 'text' && journalEntry.content) {
+            const publicId = extractPublicIdFromUrl(journalEntry.content);
+            if (publicId) {
+                try {
+                    await deleteFromCloudinary(publicId);
+                } catch (deleteError) {
+                    console.warn('Failed to delete media from Cloudinary:', deleteError);
+                    // Continue with entry deletion even if media deletion fails
+                }
+            }
+        }
+
+        // Remove entry from array
+        family.journalEntries.splice(journalEntryIndex, 1);
+        await family.save();
+
+        res.status(200).json({ 
+            message: "Journal entry deleted successfully" 
+        });
+
+    } catch (error) {
+        return throwError({ message: "Failed to delete journal entry.", res, status: 500 });
+    }
+};
