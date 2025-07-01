@@ -11,5 +11,6 @@ router.use(authMiddleware);
 router.post("/", journalUploadMiddleware, createJournalEntry);
 router.get("/", getJournalEntries);
 router.get("/entry", getJournalEntryById);
+router.put("/", journalUploadMiddleware, createJournalEntry);
 
 export default router;
