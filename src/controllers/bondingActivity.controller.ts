@@ -114,3 +114,37 @@ export const updateBondingActivity = async (req: CustomRequest, res: Response) =
         return throwError({ message: "Failed to update bonding activity", res, status: 500 });
     }
 };
+
+
+export const deleteBondingActivity = async (req: CustomRequest, res: Response) => {
+    try {
+        const { activityId } = req.params;
+
+        if (!req.user) {
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+
+        if (!checkId({ id: activityId, res })) return;
+
+        const activity = await BondingActivityModel.findById(activityId);
+        if (!activity) {
+            return throwError({ message: "Activity not found", res, status: 404 });
+        }
+
+        // Check if user has permission to delete
+        if ((!activity.createdBy || activity.createdBy.toString() !== req.user._id.toString()) && 
+            !['parent', 'admin'].includes(req.user.role)) {
+            return throwError({ message: "Forbidden: You can only delete your own activities", res, status: 403 });
+        }
+
+        await BondingActivityModel.findByIdAndDelete(activityId);
+
+        res.status(200).json({
+            message: "Bonding activity deleted successfully"
+        });
+
+    } catch (error) {
+        console.error('Error deleting bonding activity:', error);
+        return throwError({ message: "Failed to delete bonding activity", res, status: 500 });
+    }
+};
