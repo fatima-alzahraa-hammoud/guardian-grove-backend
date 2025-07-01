@@ -9,4 +9,5 @@ router.use(authMiddleware);
 
 router.post("/", createBondingActivity);
 
+
 export default router;

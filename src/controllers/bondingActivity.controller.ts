@@ -74,3 +74,43 @@ export const getBondingActivities = async (req: CustomRequest, res: Response) =>
         return throwError({ message: "Failed to fetch bonding activities", res, status: 500 });
     }
 };
+
+
+export const updateBondingActivity = async (req: CustomRequest, res: Response) => {
+    try {
+        const { activityId } = req.params;
+        const updateData = req.body;
+
+        if (!req.user) {
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+
+        if (!checkId({ id: activityId, res })) return;
+
+        const activity = await BondingActivityModel.findById(activityId);
+        if (!activity) {
+            return throwError({ message: "Activity not found", res, status: 404 });
+        }
+
+        // Check if user has permission to update
+        if (!activity.createdBy || activity.createdBy.toString() !== req.user._id.toString() && 
+            !['parent', 'admin'].includes(req.user.role)) {
+            return throwError({ message: "Forbidden: You can only edit your own activities", res, status: 403 });
+        }
+
+        const updatedActivity = await BondingActivityModel.findByIdAndUpdate(
+            activityId,
+            updateData,
+            { new: true }
+        );
+
+        res.status(200).json({
+            message: "Bonding activity updated successfully",
+            activity: updatedActivity
+        });
+
+    } catch (error) {
+        console.error('Error updating bonding activity:', error);
+        return throwError({ message: "Failed to update bonding activity", res, status: 500 });
+    }
+};
