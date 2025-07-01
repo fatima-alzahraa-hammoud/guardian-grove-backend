@@ -9,6 +9,4 @@ export const journalEntrySchema = new Schema<JournalEntry>({
     content: { type: String, required: true }, // Can be text or file URL
     thumbnail: { type: String }, // For media entries
     date: { type: Date, default: Date.now },
-    backgroundColor: { type: String, default: "#FFF2E5" },
-    rotation: { type: Number, default: 0 }
 }, { timestamps: true });
