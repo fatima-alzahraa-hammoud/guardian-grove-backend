@@ -176,3 +176,50 @@ export const getJournalEntryById = async (req: CustomRequest, res: Response): Pr
         return throwError({ message: "Error retrieving journal entry", res, status: 500 });
     }
 };
+
+// API to update a journal entry
+export const updateJournalEntry = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+        const { entryId } = req.params;
+        const { title, content } = req.body;
+
+        if (!req.user) {
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+
+        if (!checkId({ id: entryId, res })) return;
+
+        const family = await Family.findById(req.user.familyId);
+        if (!family) {
+            return throwError({ message: "Family not found.", res, status: 404 });
+        }
+
+        const journalEntry = family.journalEntries.find(entry => 
+            entry._id.toString() === entryId
+        );
+
+        if (!journalEntry) {
+            return throwError({ message: "Journal entry not found.", res, status: 404 });
+        }
+
+        // Check if user owns this entry or has permission to edit
+        if (journalEntry.userId.toString() !== req.user._id.toString() && 
+            !['parent', 'admin'].includes(req.user.role)) {
+            return throwError({ message: "Forbidden: You can only edit your own entries.", res, status: 403 });
+        }
+
+        // Update fields if provided
+        if (title) journalEntry.title = title;
+        if (content && journalEntry.type === 'text') journalEntry.content = content;
+
+        await family.save();
+
+        res.status(200).json({ 
+            message: "Journal entry updated successfully", 
+            journalEntry 
+        });
+
+    } catch (error) {
+        return throwError({ message: "Failed to update journal entry.", res, status: 500 });
+    }
+};
