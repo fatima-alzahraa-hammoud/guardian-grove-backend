@@ -1,29 +1,33 @@
-import multer from "multer";
-import path from "path";
+import multer, { FileFilterCallback } from 'multer';
+import { Request } from 'express';
 
-const journalStorage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, "uploads/journal/");  // Store journal files in "uploads/journal/" folder
-    },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-        cb(null, file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname));
-    }
-});
+// Use memory storage for Cloudinary uploads (consistent with your existing pattern)
+const journalStorage = multer.memoryStorage();
 
-// Filter to allow only specific file types
-const journalFileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-    const allowedTypes = [
-        "image/jpeg", "image/jpg", "image/png", // Images
-        "video/mp4", "video/quicktime",         // Videos
-        "audio/mpeg", "audio/wav", "audio/mp3" // Audio
-    ];
+// Filter to allow only specific file types for journal entries
+const journalFileFilter = (req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {
+    const allowedTypes = {
+        'image/jpeg': true,
+        'image/jpg': true, 
+        'image/png': true,
+        'image/gif': true,
+        'video/mp4': true,
+        'video/quicktime': true,
+        'video/avi': true,
+        'video/mov': true,
+        'audio/mpeg': true,
+        'audio/wav': true,
+        'audio/mp3': true,
+        'audio/m4a': true,
+        'audio/aac': true
+    };
     
-    if (allowedTypes.includes(file.mimetype)) {
-        cb(null, true);
-    } else {
-        cb(new Error("Only image, video, and audio files are allowed!"));
+    if (file.fieldname === 'media' && !allowedTypes[file.mimetype as keyof typeof allowedTypes]) {
+        (req as any).fileValidationError = 'Only image (JPEG, PNG, GIF), video (MP4, MOV, AVI, QuickTime), and audio (MP3, WAV, MPEG, M4A, AAC) files are allowed for journal entries';
+        return cb(null, false);
     }
+    
+    cb(null, true);
 };
 
 // Initialize Multer for journal files
@@ -34,5 +38,8 @@ const uploadJournalFile = multer({
         fileSize: 50 * 1024 * 1024 // 50MB limit
     }
 });
+
+// Export the middleware for single file upload
+export const journalUploadMiddleware = uploadJournalFile.single('media');
 
 export default uploadJournalFile;
