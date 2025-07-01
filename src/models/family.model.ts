@@ -5,6 +5,7 @@ import { goalSchema } from "./schemas/goal.schema";
 import { notificationSchema } from "./schemas/notification.schema";
 import { unlockedAchievementSchema } from "./schemas/unlockedAchievementSchema.schema";
 import { storySchema } from "./schemas/story.schema";
+import { journalEntrySchema } from "./schemas/journalEntry.schema";
 
 const familySchema = new Schema<IFamily>({
     _id: { type: Schema.Types.ObjectId, auto: true },
@@ -30,6 +31,7 @@ const familySchema = new Schema<IFamily>({
     },
     familyAvatar: { type: String, required: true },
     sharedStories: { type: [storySchema], default: [] },
+    journalEntries: { type: [journalEntrySchema], default: [] },
 });
 
 // virtual field to get members dynamically
