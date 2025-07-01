@@ -140,3 +140,39 @@ export const getJournalEntries = async (req: CustomRequest, res: Response): Prom
         return throwError({ message: "Error retrieving journal entries", res, status: 500 });
     }
 };
+
+// API to get a specific journal entry
+export const getJournalEntryById = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+        const { entryId } = req.params;
+
+        if (!req.user) {
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+
+        if (!checkId({ id: entryId, res })) return;
+
+        const family = await Family.findById(req.user.familyId)
+            .populate('journalEntries.userId', 'name avatar');
+
+        if (!family) {
+            return throwError({ message: "Family not found.", res, status: 404 });
+        }
+
+        const journalEntry = family.journalEntries.find(entry => 
+            entry._id.toString() === entryId
+        );
+
+        if (!journalEntry) {
+            return throwError({ message: "Journal entry not found.", res, status: 404 });
+        }
+
+        res.status(200).json({ 
+            message: "Journal entry retrieved successfully", 
+            journalEntry 
+        });
+
+    } catch (error) {
+        return throwError({ message: "Error retrieving journal entry", res, status: 500 });
+    }
+};
