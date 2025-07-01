@@ -148,3 +148,35 @@ export const deleteBondingActivity = async (req: CustomRequest, res: Response) =
         return throwError({ message: "Failed to delete bonding activity", res, status: 500 });
     }
 };
+
+
+export const incrementDownloads = async (req: CustomRequest, res: Response) => {
+    try {
+        const { activityId } = req.params;
+
+        if (!req.user) {
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+
+        if (!checkId({ id: activityId, res })) return;
+
+        const updatedActivity = await BondingActivityModel.findByIdAndUpdate(
+            activityId,
+            { $inc: { downloads: 1 } },
+            { new: true }
+        );
+
+        if (!updatedActivity) {
+            return throwError({ message: "Activity not found", res, status: 404 });
+        }
+
+        res.status(200).json({
+            message: "Download count incremented",
+            activity: updatedActivity
+        });
+
+    } catch (error) {
+        console.error('Error incrementing downloads:', error);
+        return throwError({ message: "Failed to increment downloads", res, status: 500 });
+    }
+};
