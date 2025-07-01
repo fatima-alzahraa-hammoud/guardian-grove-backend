@@ -110,3 +110,33 @@ export const createJournalEntry = async (req: CustomRequest, res: Response): Pro
         return throwError({ message: "Failed to create journal entry.", res, status: 500 });
     }
 };
+
+// API to get all journal entries for a family
+export const getJournalEntries = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+        if (!req.user) {
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+
+        const family = await Family.findById(req.user.familyId)
+            .populate('journalEntries.userId', 'name avatar')
+            .select('journalEntries');
+
+        if (!family) {
+            return throwError({ message: "Family not found.", res, status: 404 });
+        }
+
+        // Sort journal entries by date (newest first)
+        const sortedEntries = family.journalEntries.sort((a, b) => 
+            new Date(b.date).getTime() - new Date(a.date).getTime()
+        );
+
+        res.status(200).json({ 
+            message: "Journal entries retrieved successfully", 
+            journalEntries: sortedEntries 
+        });
+
+    } catch (error) {
+        return throwError({ message: "Error retrieving journal entries", res, status: 500 });
+    }
+};
