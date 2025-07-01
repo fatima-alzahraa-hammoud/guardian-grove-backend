@@ -9,8 +9,6 @@ export interface JournalEntry {
     content: string;
     thumbnail?: string;
     date: Date;
-    backgroundColor: string;
-    rotation: number;
     createdAt: Date;
     updatedAt: Date;
 }
