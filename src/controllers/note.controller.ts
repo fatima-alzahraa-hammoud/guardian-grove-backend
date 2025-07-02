@@ -1,3 +1,4 @@
+// Update src/controllers/note.controller.ts
 import { Request, Response } from "express";
 import { CustomRequest } from "../interfaces/customRequest";
 import { throwError } from "../utils/error";
@@ -5,39 +6,44 @@ import { INote } from "../interfaces/INote";
 import { User } from "../models/user.model";
 import { checkId } from "../utils/checkId";
 
-
-//API to create note
+// Create Note
 export const createNote = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
-
         if (!req.user) {
             return throwError({ message: "Unauthorized", res, status: 401 });
         }
         
-        const { title, content, type } = req.body;
+        const { 
+            title, 
+            content, 
+            type, 
+            backgroundColor, 
+            textColor, 
+            fontSize, 
+            isPinned, 
+            isChecklist, 
+            checklistItems 
+        } = req.body;
 
-        if (!type || !content || !type) {
-            return throwError({message: "All required fields must be filled", res, status: 400});
+        if (!content) {
+            return throwError({message: "Content is required", res, status: 400});
         }
 
-        if(type !== "personal" && type !=="family"){
-            return throwError({message: "Invalid type", res, status: 400});
-        }
-        
         const user = req.user;
 
-        if (!user) {
-            return throwError({ message: "User not found", res, status: 404 });
-        }
-
-        const newNote = ({
-            title,
+        const newNote: Partial<INote> = {
+            title: title || "",
             content,
-            type,
+            type: type || "personal",
+            backgroundColor: backgroundColor || "#FFF9C4",
+            textColor: textColor || "#000000",
+            fontSize: fontSize || 14,
+            isPinned: isPinned || false,
+            isChecklist: isChecklist || false,
+            checklistItems: checklistItems || [],
             createdAt: new Date(),
-            updatedAt: new Date(),
-            isPinned: false,
-        });
+            updatedAt: new Date()
+        };
 
         const updatedUser = await User.findOneAndUpdate(
             { _id: user._id },
@@ -49,109 +55,118 @@ export const createNote = async (req: CustomRequest, res: Response): Promise<voi
             return throwError({ message: "Failed to update user notes.", res, status: 500 });
         }
 
-        res.status(201).json({ message: "Note created", note: newNote });
+        const createdNote = updatedUser.notes[updatedUser.notes.length - 1];
+        res.status(201).json({ message: "Note created", note: createdNote });
     } catch (error) {
+        console.error(error);
         return throwError({ message: "Error creating note", res, status: 500 });
     }
 };
 
-//API to get notes of the user/users
+// Get Notes
 export const getNotes = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
-        const {userId} = req.body;
-        
-        if (userId) {
-            if(!checkId({id: userId, res})) return;
-            const user = await User.findById(userId);
-
-            if (!user) {
-                return throwError({ message: "User not found", res, status: 404 });
-            }
-
-            res.status(200).json({message: "Retrieving user notes successfully", notes: user.notes });
-            return;
-        }
-
-        if(!req.user || req.user.role !== 'admin'){
+        if (!req.user) {
             return throwError({ message: "Unauthorized", res, status: 401 });
         }
 
-        const users = await User.find();
-        if (!users || users.length === 0) {
-            return throwError({ message: "No users in the database", res, status: 404 });
+        const user = await User.findById(req.user._id).select('notes');
+        if (!user) {
+            return throwError({ message: "User not found", res, status: 404 });
         }
 
-        const allNotes = users.map(user => ({
-            userId: user._id,
-            notes: user.notes
-        }));
+        // Sort notes - pinned first, then by updatedAt
+        const sortedNotes = user.notes.sort((a, b) => {
+            if (a.isPinned && !b.isPinned) return -1;
+            if (!a.isPinned && b.isPinned) return 1;
+            return b.updatedAt.getTime() - a.updatedAt.getTime();
+        });
 
-
-        res.status(200).json({message: "Retrieving all users' notes successfully", notes: allNotes });
+        res.status(200).json({ notes: sortedNotes });
     } catch (error) {
         console.error(error);
         return throwError({ message: "Error retrieving notes", res, status: 500 });
     }
 };
 
-//API to update note
-export const updateNote = async (req: Request, res: Response): Promise<void> => {
+// Update Note
+export const updateNote = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
+        if (!req.user) {
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
 
-        const { userId, noteId, title, content, isPinned } = req.body;
+        const { 
+            noteId, 
+            title, 
+            content, 
+            backgroundColor, 
+            textColor, 
+            fontSize, 
+            isPinned, 
+            isChecklist, 
+            checklistItems 
+        } = req.body;
 
-        if(!checkId({id: userId, res})) return;
-        if(!checkId({id: noteId, res})) return;
+        if (!noteId || !checkId({id: noteId, res})) return;
 
-        const user = await User.findById(userId);
+        const user = await User.findById(req.user._id);
         if (!user) {
             return throwError({ message: "User not found", res, status: 404 });
         }
 
-        const note = user.notes.find(note => note._id.toString() === noteId);
-        if (!note) {
+        const noteIndex = user.notes.findIndex(n => n._id.toString() === noteId);
+        if (noteIndex === -1) {
             return throwError({ message: "Note not found", res, status: 404 });
         }
 
-        note.title = title || note.title;
-        note.content = content || note.content;
-        note.isPinned = isPinned || note.isPinned;
-        note.updatedAt = new Date();
+        const updatedNote = {
+            ...user.notes[noteIndex],
+            title: title !== undefined ? title : user.notes[noteIndex].title,
+            content: content !== undefined ? content : user.notes[noteIndex].content,
+            backgroundColor: backgroundColor !== undefined ? backgroundColor : user.notes[noteIndex].backgroundColor,
+            textColor: textColor !== undefined ? textColor : user.notes[noteIndex].textColor,
+            fontSize: fontSize !== undefined ? fontSize : user.notes[noteIndex].fontSize,
+            isPinned: isPinned !== undefined ? isPinned : user.notes[noteIndex].isPinned,
+            isChecklist: isChecklist !== undefined ? isChecklist : user.notes[noteIndex].isChecklist,
+            checklistItems: checklistItems !== undefined ? checklistItems : user.notes[noteIndex].checklistItems,
+            updatedAt: new Date()
+        };
 
+        user.notes[noteIndex] = updatedNote as any;
         await user.save();
-        res.status(200).json({ message: "Note updated", note });
+
+        res.status(200).json({ message: "Note updated", note: updatedNote });
     } catch (error) {
         console.error(error);
         return throwError({ message: "Error updating note", res, status: 500 });
     }
 };
 
-//API to delete note
-export const deleteNote = async (req: Request, res: Response): Promise<void> => {
+// Delete Note
+export const deleteNote = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
-        const { userId, noteId } = req.body;
+        if (!req.user) {
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
 
-        if(!checkId({id: noteId, res})) return;
-        if(!checkId({id: userId, res})) return;
+        const { noteId } = req.body;
+        if (!noteId || !checkId({id: noteId, res})) return;
 
-
-        const user = await User.findById(userId);
+        const user = await User.findById(req.user._id);
         if (!user) {
             return throwError({ message: "User not found", res, status: 404 });
         }
 
-        const noteIndex = user.notes.findIndex(
-            (note) => note._id.toString() === noteId
-        );        
+        const noteIndex = user.notes.findIndex(n => n._id.toString() === noteId);
         if (noteIndex === -1) {
             return throwError({ message: "Note not found", res, status: 404 });
         }
 
         const [deletedNote] = user.notes.splice(noteIndex, 1);
-
         await user.save();
 
-        res.status(200).json({ message: 'Note deleted successfully', DeletedNote: deletedNote });
+        res.status(200).json({ message: 'Note deleted successfully', note: deletedNote });
     } catch (error) {
         console.error(error);
         return throwError({message: "Error deleting note", res, status: 500});

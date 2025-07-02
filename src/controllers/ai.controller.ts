@@ -9,6 +9,7 @@ import { throwError } from "../utils/error";
 import { isToday } from "date-fns";
 import { INotification } from "../interfaces/INotification";
 import { Adventure } from "../models/adventure.model";
+import { CustomRequest } from "../interfaces/customRequest";
 
 export const regenerateGoalsAndTasks = async (userId: string) => {
     try {
@@ -463,6 +464,49 @@ export const generateQuickTips = async (req: Request, res: Response) => {
         res.status(500).json({ message: "Internal server error" });
     }
 };
+
+
+export const generateNoteAIResponse = async (req: CustomRequest, res: Response) => {
+    try {
+        if (!req.user) {
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+
+        const { message, noteContent } = req.body;
+        if (!message) {
+            return throwError({ message: "Message is required", res, status: 400 });
+        }
+
+        const prompt = `
+            You are a helpful AI assistant that helps users with their notes. 
+            The user has written: "${noteContent || 'No content yet'}"
+            
+            They are asking: "${message}"
+            
+            Please provide a helpful, concise response that assists them with their note.
+            Focus on:
+            - Improving the note's structure
+            - Suggesting better wording
+            - Adding relevant information
+            - Organizing content
+            - Providing creative ideas
+            
+            Keep your response under 200 words.
+        `;
+
+        const response = await openai.chat.completions.create({
+            model: "deepseek-chat",
+            messages: [{ role: "system", content: prompt }],
+            max_tokens: 200
+        });
+
+        res.status(200).json({ response: response.choices[0].message.content });
+    } catch (error) {
+        console.error("Error generating AI response:", error);
+        return throwError({ message: "Error generating AI response", res, status: 500 });
+    }
+};
+
 
 // API to generate a question to test task completion
 export const generateTaskCompletionQuestion = async (req: Request, res: Response) => {

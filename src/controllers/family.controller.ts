@@ -6,8 +6,11 @@ import { checkId } from "../utils/checkId";
 import { CustomRequest } from "../interfaces/customRequest";
 import { Achievement } from "../models/achievements.model";
 import { ITask } from "../interfaces/ITask";
-import { recalculateFamilyMemberRanks } from "../utils/recalculateFamilyMemberRanks";
 import { getTimePeriod } from "../utils/getTimePeriod";
+import { sanitizePublicId } from "../utils/sanitizePublicId";
+import path from "path";
+import { v2 as cloudinary } from 'cloudinary';
+import { deleteFromCloudinary, extractPublicIdFromUrl, uploadFamilyAvatar } from "../utils/cloudinary";
 
 //API get all families
 export const getAllFamilies = async (req: Request, res: Response): Promise<void> => {
@@ -75,20 +78,23 @@ export const getFamilyMembers = async (req: Request, res: Response): Promise<voi
 };
 
 // Update Family Details
+// Update Family Details
 export const updateFamily = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
-
         if(!req.user || !['parent', 'admin'].includes(req.user.role)){
             return throwError({ message: "Unauthorized", res, status: 401 });
         }
 
-        const { familyId, familyName, email, familyAvatar } = req.body;
+        const { familyId, familyName, email, familyAvatarPath } = req.body;
 
         const targetFamilyId = familyId || req.user.familyId;
 
+        if (!targetFamilyId) {
+            return throwError({ message: "Family ID not found", res, status: 400 });
+        }
+
         if(!checkId({id: targetFamilyId, res})) return;
 
-        
         const family = await Family.findById(targetFamilyId);
 
         if (!family) {
@@ -96,49 +102,122 @@ export const updateFamily = async (req: CustomRequest, res: Response): Promise<v
         }
 
         if(req.user.email !== family.email && req.user.role !== "admin"){
-            return throwError({ message: "Forbidden", res, status: 401 });
+            return throwError({ message: "Forbidden", res, status: 403 });
         }
 
-        // Check if a family with the same email or familyName exists
-        if (email) {
+        const originalEmail = family.email;
+
+        // Check if a family with the same email exists (excluding current family)
+        if (email && email !== family.email) {
             const existingFamilyWithEmail = await Family.findOne({ email, _id: { $ne: family._id } });
             if (existingFamilyWithEmail) {
                 return throwError({ message: "A family with the same email already exists.", res, status: 400 });
             }
         }
 
-        if (familyName) {
+        // Check if a family with the same name exists (excluding current family)
+        if (familyName && familyName !== family.familyName) {
             const existingFamilyWithName = await Family.findOne({ familyName, _id: { $ne: family._id } });
             if (existingFamilyWithName) {
                 return throwError({ message: "A family with the same name already exists.", res, status: 400 });
             }
         }
 
+        // Handle family avatar update
+        let familyAvatarUrl = family.familyAvatar;
+        const oldFamilyAvatarUrl = family.familyAvatar;
+        
+        const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+        const familyAvatarImage = files?.familyAvatar?.[0];
 
-        family.familyName = familyName || family.familyName;
-        family.email = email || family.email;
-        family.familyAvatar = familyAvatar || family.familyAvatar;
+        console.log("Family avatar image:", familyAvatarImage);
+        console.log("Family avatar path:", familyAvatarPath);
 
-        if (email) {
-            await User.updateMany(
-                { familyId: targetFamilyId }, 
-                { $set: { email: email } }
-            );
+        // Check if there's a new file upload
+        if (familyAvatarImage) {
+            try {
+                // Upload new family avatar to Cloudinary using utility function
+                const familyAvatarResult = await uploadFamilyAvatar(familyAvatarImage.buffer, familyAvatarImage.originalname);
+                familyAvatarUrl = familyAvatarResult.secure_url;
+
+                // Delete old family avatar from Cloudinary if it exists and is not a predefined avatar
+                if (oldFamilyAvatarUrl && !oldFamilyAvatarUrl.startsWith('/assets/')) {
+                    const oldPublicId = extractPublicIdFromUrl(oldFamilyAvatarUrl);
+                    if (oldPublicId) {
+                        try {
+                            await deleteFromCloudinary(oldPublicId);
+                        } catch (deleteError) {
+                            console.warn('Failed to delete old family avatar:', deleteError);
+                            // Continue execution even if deletion fails
+                        }
+                    }
+                }
+            } catch (uploadError) {
+                console.error('Family avatar upload error:', uploadError);
+                return throwError({ message: "Failed to upload family avatar image.", res, status: 500 });
+            }
+        } 
+        // Check if there's a predefined avatar path in the request body
+        else if (familyAvatarPath && familyAvatarPath !== family.familyAvatar) {
+            // Only accept predefined avatars with /assets/images/avatars/ path
+            if (familyAvatarPath.startsWith('/assets/images/avatars/')) {
+                familyAvatarUrl = familyAvatarPath; // Store the full path
+                
+                // Delete old Cloudinary family avatar if switching to predefined avatar
+                if (oldFamilyAvatarUrl && !oldFamilyAvatarUrl.startsWith('/assets/')) {
+                    const oldPublicId = extractPublicIdFromUrl(oldFamilyAvatarUrl);
+                    if (oldPublicId) {
+                        try {
+                            await deleteFromCloudinary(oldPublicId);
+                        } catch (deleteError) {
+                            console.warn('Failed to delete old family avatar:', deleteError);
+                            // Continue execution even if deletion fails
+                        }
+                    }
+                }
+            } else {
+                return throwError({ message: "Invalid avatar path. Only predefined avatars are allowed.", res, status: 400 });
+            }
+        }
+
+        // Update family fields
+        if (familyName) family.familyName = familyName;
+        if (email) family.email = email;
+        
+        // Update avatar if there was a change (either file upload or path change)
+        if (familyAvatarImage || (familyAvatarPath && familyAvatarPath !== family.familyAvatar && familyAvatarPath.startsWith('/assets/images/avatars/'))) {
+            family.familyAvatar = familyAvatarUrl;
+        }
+
+        // Update all family members' email if family email changed
+        if (email && email !== originalEmail) {
+            try {
+                const updateResult = await User.updateMany(
+                    { familyId: targetFamilyId }, 
+                    { $set: { email: email } }
+                );
+                console.log(`Updated ${updateResult.modifiedCount} family members' emails`);
+            } catch (updateError) {
+                console.error('Failed to update family members emails:', updateError);
+                // Don't fail the whole operation, just log the error
+            }
         }
 
         await family.save();
 
         res.status(200).send({ message: "Family updated successfully.", family: family });
     } catch (error) {
+        console.error('Update family error:', error);
         return throwError({ message: "Failed to update family.", res, status: 500 });
     }
 };
+
 
 //API to delete family
 export const deleteFamily = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
         // Check for authorized user roles
-        if (!req.user ||  !['parent', 'admin'].includes(req.user.role)) {
+        if (!req.user || !['parent', 'admin'].includes(req.user.role)) {
             return throwError({ message: "Unauthorized", res, status: 401 });
         }
 
@@ -154,8 +233,41 @@ export const deleteFamily = async (req: CustomRequest, res: Response): Promise<v
             return throwError({ message: "Family not found.", res, status: 404 });
         }
 
-        if(req.user.email !== family.email && req.user.role !== "admin"){
+        if (req.user.email !== family.email && req.user.role !== "admin") {
             return throwError({ message: "Forbidden", res, status: 401 });
+        }
+
+        // Delete family avatar from Cloudinary if it's not a predefined avatar
+        if (family.familyAvatar && !family.familyAvatar.startsWith('/assets/')) {
+            const publicId = extractPublicIdFromUrl(family.familyAvatar);
+            if (publicId) {
+                try {
+                    await deleteFromCloudinary(publicId);
+                    console.log('Family avatar deleted from Cloudinary:', publicId);
+                } catch (deleteError) {
+                    console.warn('Failed to delete family avatar from Cloudinary:', deleteError);
+                    // Continue with family deletion even if avatar deletion fails
+                }
+            }
+        }
+
+        // Get all users to delete their avatars from Cloudinary
+        const familyMembers = await User.find({ familyId }).select('avatar');
+        
+        // Delete user avatars from Cloudinary
+        for (const member of familyMembers) {
+            if (member.avatar && !member.avatar.startsWith('/assets/')) {
+                const publicId = extractPublicIdFromUrl(member.avatar);
+                if (publicId) {
+                    try {
+                        await deleteFromCloudinary(publicId);
+                        console.log(`User avatar deleted from Cloudinary for user ${member._id}:`, publicId);
+                    } catch (deleteError) {
+                        console.warn(`Failed to delete user avatar from Cloudinary for user ${member._id}:`, deleteError);
+                        // Continue with deletion even if individual avatar deletion fails
+                    }
+                }
+            }
         }
 
         // Delete all users associated with the family
@@ -166,6 +278,7 @@ export const deleteFamily = async (req: CustomRequest, res: Response): Promise<v
 
         res.status(200).send({ message: "Family and all associated members deleted successfully." });
     } catch (error) {
+        console.error('Delete family error:', error);
         return throwError({ message: "Failed to delete family.", res, status: 500 });
     }
 };
@@ -687,7 +800,6 @@ export const getFamilyNameNbMembersStars = async (req: CustomRequest, res: Respo
         if (!family) {
             return throwError({ message: "Family not found", res, status: 404 });
         }
-        console.log(family.members.length);
         res.status(200).json({
             message: "Retrieving family name and number of members successfully",
             familyName: family.familyName,

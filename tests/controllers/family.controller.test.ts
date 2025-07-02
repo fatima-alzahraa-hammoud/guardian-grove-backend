@@ -14,6 +14,7 @@ import { Achievement } from '../../src/models/achievements.model';
 import * as checkId from '../../src/utils/checkId';
 import * as recalculateFamilyMemberRanks from '../../src/utils/recalculateFamilyMemberRanks';
 import * as getTimePeriod from '../../src/utils/getTimePeriod';
+import { v2 as cloudinary } from 'cloudinary';
 
 // Mock all dependencies
 jest.mock('../../src/models/family.model');
@@ -23,12 +24,21 @@ jest.mock('../../src/utils/checkId');
 jest.mock('../../src/utils/recalculateFamilyMemberRanks');
 jest.mock('../../src/utils/getTimePeriod');
 
+jest.mock('cloudinary', () => ({
+    v2: {
+        uploader: {
+            upload_stream: jest.fn()
+        }
+    }
+}));
+
 const mockFamily = Family as jest.Mocked<typeof Family>;
 const mockUser = User as jest.Mocked<typeof User>;
 const mockAchievement = Achievement as jest.Mocked<typeof Achievement>;
 const mockCheckId = checkId as jest.Mocked<typeof checkId>;
 const mockRecalculateFamilyMemberRanks = recalculateFamilyMemberRanks as jest.Mocked<typeof recalculateFamilyMemberRanks>;
 const mockGetTimePeriod = getTimePeriod as jest.Mocked<typeof getTimePeriod>;
+const mockCloudinary = cloudinary as jest.Mocked<typeof cloudinary>;
 
 describe('Family Controller Tests', () => {
     beforeEach(() => {
@@ -59,6 +69,18 @@ describe('Family Controller Tests', () => {
         mockGetTimePeriod.getTimePeriod.mockReturnValue({
             start: new Date('2024-01-01'),
             end: new Date('2024-01-31')
+        });
+
+        // Setup Cloudinary mock
+        mockCloudinary.uploader.upload_stream = jest.fn().mockImplementation((options, callback) => {
+            const mockResult = {
+                secure_url: 'https://res.cloudinary.com/test/image/upload/v1234567890/guardian%20grove%20project/family-avatars/test-family-avatar.png',
+                public_id: 'guardian grove project/family-avatars/test-family-avatar'
+            };
+            callback(null, mockResult);
+            return {
+                end: jest.fn()
+            };
         });
     });
 
@@ -235,9 +257,47 @@ describe('Family Controller Tests', () => {
         });
     });
 
-     // 4. test updateFamily API
+    // 4. test updateFamily API - Updated with Cloudinary tests
     describe('updateFamily', () => {
-        it('should update family successfully', async () => {
+        const mockFiles = {
+            familyAvatar: [{
+                fieldname: 'familyAvatar',
+                originalname: 'test-family-avatar.png',
+                mimetype: 'image/png',
+                size: 1024,
+                buffer: Buffer.from('fake-image-data')
+            }]
+        };
+
+        it('should update family successfully with file upload', async () => {
+            const mockFamilyData = testUtils.createMockFamily({ 
+                email: 'parent@test.com',
+                save: jest.fn().mockResolvedValue(true)
+            });
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+            mockFamily.findOne.mockResolvedValue(null); // No duplicate
+
+            const mockReq = testUtils.createMockRequest({
+                user: testUtils.createMockUser({ role: 'parent', email: 'parent@test.com' }),
+                body: {
+                    familyId: '507f1f77bcf86cd799439011',
+                    familyName: 'Updated Family',
+                    email: 'updated@test.com'
+                },
+                files: mockFiles
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateFamily(mockReq as any, mockRes as any);
+
+            expect(mockCloudinary.uploader.upload_stream).toHaveBeenCalled();
+            expect(mockFamilyData.familyName).toBe('Updated Family');
+            expect(mockFamilyData.email).toBe('updated@test.com');
+            expect(mockFamilyData.familyAvatar).toBe('https://res.cloudinary.com/test/image/upload/v1234567890/guardian%20grove%20project/family-avatars/test-family-avatar.png');
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+        });
+
+        it('should update family successfully with predefined avatar path', async () => {
             const mockFamilyData = testUtils.createMockFamily({ 
                 email: 'parent@test.com',
                 save: jest.fn().mockResolvedValue(true)
@@ -251,16 +311,97 @@ describe('Family Controller Tests', () => {
                     familyId: '507f1f77bcf86cd799439011',
                     familyName: 'Updated Family',
                     email: 'updated@test.com',
-                    familyAvatar: '/new-avatar.png'
+                    familyAvatarPath: '/assets/images/avatars/family-avatar-1.png'
                 }
             });
             const mockRes = testUtils.createMockResponse();
 
             await updateFamily(mockReq as any, mockRes as any);
 
+            expect(mockCloudinary.uploader.upload_stream).not.toHaveBeenCalled();
             expect(mockFamilyData.familyName).toBe('Updated Family');
             expect(mockFamilyData.email).toBe('updated@test.com');
-            expect(mockFamilyData.familyAvatar).toBe('/new-avatar.png');
+            expect(mockFamilyData.familyAvatar).toBe('/assets/images/avatars/family-avatar-1.png');
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+        });
+
+        it('should return 400 for invalid avatar path', async () => {
+            const mockFamilyData = testUtils.createMockFamily({ 
+                email: 'parent@test.com',
+                save: jest.fn().mockResolvedValue(true)
+            });
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+            mockFamily.findOne.mockResolvedValue(null);
+
+            const mockReq = testUtils.createMockRequest({
+                user: testUtils.createMockUser({ role: 'parent', email: 'parent@test.com' }),
+                body: {
+                    familyId: '507f1f77bcf86cd799439011',
+                    familyAvatarPath: '/invalid/path/avatar.png' // Invalid path
+                }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateFamily(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(400);
+            expect(mockRes.json).toHaveBeenCalledWith({
+                error: 'Invalid avatar path. Only predefined avatars are allowed.'
+            });
+        });
+
+        it('should handle cloudinary upload error', async () => {
+            const mockFamilyData = testUtils.createMockFamily({ 
+                email: 'parent@test.com',
+                save: jest.fn().mockResolvedValue(true)
+            });
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+            mockFamily.findOne.mockResolvedValue(null);
+
+            // Mock cloudinary to throw error
+            mockCloudinary.uploader.upload_stream = jest.fn().mockImplementation((options, callback) => {
+                callback(new Error('Cloudinary upload failed'), null);
+                return { end: jest.fn() };
+            });
+
+            const mockReq = testUtils.createMockRequest({
+                user: testUtils.createMockUser({ role: 'parent', email: 'parent@test.com' }),
+                body: {
+                    familyId: '507f1f77bcf86cd799439011',
+                    familyName: 'Updated Family'
+                },
+                files: mockFiles
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateFamily(mockReq as any, mockRes as any);
+
+            expect(mockRes.status).toHaveBeenCalledWith(500);
+        });
+
+        it('should update family successfully without file or avatar path changes', async () => {
+            const mockFamilyData = testUtils.createMockFamily({ 
+                email: 'parent@test.com',
+                familyAvatar: '/existing-avatar.png',
+                save: jest.fn().mockResolvedValue(true)
+            });
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+            mockFamily.findOne.mockResolvedValue(null); // No duplicate
+
+            const mockReq = testUtils.createMockRequest({
+                user: testUtils.createMockUser({ role: 'parent', email: 'parent@test.com' }),
+                body: {
+                    familyId: '507f1f77bcf86cd799439011',
+                    familyName: 'Updated Family Name Only'
+                }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await updateFamily(mockReq as any, mockRes as any);
+
+            expect(mockCloudinary.uploader.upload_stream).not.toHaveBeenCalled();
+            expect(mockFamilyData.familyName).toBe('Updated Family Name Only');
+            expect(mockFamilyData.familyAvatar).toBe('/existing-avatar.png'); // Unchanged
             expect(mockRes.status).toHaveBeenCalledWith(200);
         });
 
@@ -316,15 +457,13 @@ describe('Family Controller Tests', () => {
             });
             
             mockFamily.findById.mockResolvedValue(mockFamilyData as any);
-            // The function only checks for name duplicates if familyName is provided
-            // and only checks email if email is provided
             mockFamily.findOne.mockResolvedValue(existingFamily as any);
 
             const mockReq = testUtils.createMockRequest({
                 user: testUtils.createMockUser({ role: 'parent', email: 'parent@test.com' }),
                 body: {
                     familyId: testUtils.ids.family,
-                    familyName: 'Duplicate Family' // Only providing familyName, not email
+                    familyName: 'Duplicate Family'
                 }
             });
             const mockRes = testUtils.createMockResponse();
@@ -368,7 +507,20 @@ describe('Family Controller Tests', () => {
     describe('deleteFamily', () => {
         it('should delete family successfully', async () => {
             const mockFamilyData = testUtils.createMockFamily({ email: 'parent@test.com' });
+            
+            // Mock family members for avatar deletion
+            const mockFamilyMembers = [
+                { _id: 'member1', avatar: '/assets/images/avatars/user-avatar-1.png' },
+                { _id: 'member2', avatar: 'https://res.cloudinary.com/test/image/upload/v123/user-avatar.jpg' }
+            ];
+            
+            // Mock User.find with method chaining for select
+            const mockUserFind = {
+                select: jest.fn().mockResolvedValue(mockFamilyMembers)
+            };
+            
             mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+            mockUser.find.mockReturnValue(mockUserFind as any); // Add this mock
             mockUser.deleteMany.mockResolvedValue({} as any);
             mockFamily.findByIdAndDelete.mockResolvedValue(mockFamilyData as any);
 
@@ -380,10 +532,43 @@ describe('Family Controller Tests', () => {
 
             await deleteFamily(mockReq as any, mockRes as any);
 
+            // Verify the User.find was called to get family members
+            expect(mockUser.find).toHaveBeenCalledWith({ familyId: '507f1f77bcf86cd799439011' });
+            expect(mockUserFind.select).toHaveBeenCalledWith('avatar');
+            
+            // Verify deleteMany is called after getting family members
             expect(mockUser.deleteMany).toHaveBeenCalledWith({ familyId: '507f1f77bcf86cd799439011' });
             expect(mockFamily.findByIdAndDelete).toHaveBeenCalledWith('507f1f77bcf86cd799439011');
             expect(mockRes.status).toHaveBeenCalledWith(200);
         });
+
+        it('should delete family successfully with no members', async () => {
+            const mockFamilyData = testUtils.createMockFamily({ email: 'parent@test.com' });
+            
+            // Mock empty family members array
+            const mockUserFind = {
+                select: jest.fn().mockResolvedValue([])
+            };
+            
+            mockFamily.findById.mockResolvedValue(mockFamilyData as any);
+            mockUser.find.mockReturnValue(mockUserFind as any);
+            mockUser.deleteMany.mockResolvedValue({} as any);
+            mockFamily.findByIdAndDelete.mockResolvedValue(mockFamilyData as any);
+
+            const mockReq = testUtils.createMockRequest({
+                user: testUtils.createMockUser({ role: 'parent', email: 'parent@test.com' }),
+                body: { familyId: '507f1f77bcf86cd799439011' }
+            });
+            const mockRes = testUtils.createMockResponse();
+
+            await deleteFamily(mockReq as any, mockRes as any);
+
+            expect(mockUser.find).toHaveBeenCalledWith({ familyId: '507f1f77bcf86cd799439011' });
+            expect(mockUser.deleteMany).toHaveBeenCalledWith({ familyId: '507f1f77bcf86cd799439011' });
+            expect(mockFamily.findByIdAndDelete).toHaveBeenCalledWith('507f1f77bcf86cd799439011');
+            expect(mockRes.status).toHaveBeenCalledWith(200);
+        });
+
 
         it('should return 401 if user not authenticated', async () => {
             const mockReq = testUtils.createMockRequest({ user: null });

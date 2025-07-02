@@ -14,11 +14,19 @@ import { coloringSchema } from "./schemas/coloring.schema";
 import { storySchema } from "./schemas/story.schema";
 
 const noteSchema: Schema = new Schema<INote>({
-    _id: { type: Schema.Types.ObjectId, auto: true },
     title: { type: String, required: true },
     content: { type: String, required: true },
+    backgroundColor: { type: String, default: "#FFF9C4" },
+    textColor: { type: String, default: "#000000" },
+    fontSize: { type: Number, default: 14 },
+    isPinned: { type: Boolean, default: false },
+    isChecklist: { type: Boolean, default: false },
+    checklistItems: [{
+        id: { type: String, required: true },
+        text: { type: String, required: true },
+        completed: { type: Boolean, default: false }
+    }],
     type: { type: String, required: true, enum: ['personal', 'family'], default: 'personal' },
-    isPinned: {type: Boolean, default:false},
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
 });

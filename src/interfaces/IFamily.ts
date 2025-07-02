@@ -5,6 +5,8 @@ import { IGoal } from "./IGoal";
 import { IAchievement } from "./IAchievements";
 import { IUnlockedAchievement } from "./IUnlockedAchievement";
 import { IStory } from "./IStory";
+import { JournalEntry } from "./IJournalEntry";
+import { IBondingEvent } from "./IBondingFamilyEvents";
 
 type TimePeriod = 'daily' | 'weekly' | 'monthly' | 'yearly';
 export interface IFamily extends Document {
@@ -22,4 +24,6 @@ export interface IFamily extends Document {
     familyAvatar: string;
     sharedStories: IStory[];
     members: IUser[];
+    journalEntries: JournalEntry[];
+    bondingEvents: IBondingEvent[];
 }

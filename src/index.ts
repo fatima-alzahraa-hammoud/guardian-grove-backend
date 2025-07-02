@@ -16,6 +16,10 @@ import bookRoutes from "./routes/book.routes";
 import drawingRoutes from "./routes/drawing.routes";
 import coloringRoutes from "./routes/coloring.routes";
 import storyRoutes from "./routes/story.routes";
+import journalRoutes from "./routes/journal.routes";
+import bondingActivitiesRoutes from "./routes/bondingActivity.routes";
+import familyChatsRoutes from "./routes/familyMessage.routes";
+import eventsRoutes from "./routes/bondingEvents.routes";
 import cors from "cors";
 import { OpenAI } from "openai";
 
@@ -37,7 +41,7 @@ export const openai = new OpenAI({
 
 // Use CORS middleware
 app.use(cors({
-    origin: ["https://guardian-grove.netlify.app", "http://localhost:5173", 'http://localhost:3000'],
+    origin: ["https://guardian-grove.netlify.app", "http://localhost:5173", 'http://localhost:3000', 'https://guardian-grove-mobile.netlify.app'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization']
@@ -61,6 +65,10 @@ app.use("/books", bookRoutes);
 app.use("/drawings", drawingRoutes);
 app.use("/colorings", coloringRoutes);
 app.use("/stories", storyRoutes);
+app.use("/journal", journalRoutes);
+app.use("/bondingActivities", bondingActivitiesRoutes);
+app.use("/familyChats", familyChatsRoutes);
+app.use("/events", eventsRoutes);
 
 app.get("/", (req, res) => {
     res.send("Guardian Grove Backend is running ✅");

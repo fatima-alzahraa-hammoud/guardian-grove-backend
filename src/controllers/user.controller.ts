@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import bcrypt from "bcrypt";
+import { v2 as cloudinary } from 'cloudinary';
 import { User } from "../models/user.model";
 import { throwError } from '../utils/error';
 import { CustomRequest } from '../interfaces/customRequest';
@@ -11,6 +12,9 @@ import { recalculateFamilyMemberRanks } from '../utils/recalculateFamilyMemberRa
 import nodemailer from "nodemailer";
 import { sendMail } from '../services/email.service';
 import { generateSecurePassword } from '../utils/generateSecurePassword';
+import { sanitizePublicId } from '../utils/sanitizePublicId';
+import path from 'path';
+import { deleteFromCloudinary, extractPublicIdFromUrl, uploadUserAvatar } from '../utils/cloudinary';
 
 // API to get all users
 export const getUsers = async(req: Request, res: Response): Promise<void> => {
@@ -60,7 +64,7 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
     try{
         const data = req.body;
 
-        const { name, birthday, gender, role, avatar, interests } = data;
+        const { name, birthday, gender, role, interests, avatarPath } = data; // Add avatarPath
 
         if (!req.user) {
             return  throwError({ message: "Unauthorized", res, status: 401 });
@@ -69,9 +73,37 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
             return throwError({ message: "Forbidden", res, status: 403 });
         }
 
+        // Debug logs
+        console.log("req.files:", req.files);
+        console.log("req.body:", req.body);
+        
+
+        // Get uploaded avatar file
+        const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+        const avatarImage = files.avatar?.[0];
+
+        console.log("Avatar image:", avatarImage);
+        console.log("Avatar path:", avatarPath);
+
+        // Parse interests FIRST, before validation
+        let parsedInterests = interests;
+        if (typeof interests === 'string') {
+            try {
+                parsedInterests = JSON.parse(interests);
+            } catch (parseError) {
+                console.error('Error parsing interests:', parseError);
+                return throwError({ message: "Invalid interests format.", res, status: 400 });
+            }
+        }
+
         // verify all fields are filled
-        if (!name || !birthday || !gender || !role || !avatar || !interests) {
+        if (!name || !birthday || !gender || !role || !interests) {
             return throwError({ message: "All required fields must be filled.", res, status: 400});
+        }
+        
+        // Check if avatar is provided (either file upload or predefined path)
+        if (!avatarImage && !avatarPath) {
+            return throwError({ message: "Avatar image is required.", res, status: 400});
         }
 
         const email = req.user.email;
@@ -84,7 +116,8 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
             return throwError({ message: "This username is already taken for this email.", res, status: 409});
         }
 
-        if (!Array.isArray(interests)) {
+        // Validate parsed interests is an array
+        if (!Array.isArray(parsedInterests)) {
             return throwError({ message: "Interests must be an array.", res, status: 400 });
         }
 
@@ -114,9 +147,33 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
             return throwError({ message: "Family not found.", res, status: 404 });
         }
 
+        // Handle avatar upload/selection
+        let avatarUrl;
+        
+        if (avatarImage) {
+            // Upload new avatar to Cloudinary using utility function
+            try {
+                const avatarResult = await uploadUserAvatar(avatarImage.buffer, avatarImage.originalname);
+                avatarUrl = avatarResult.secure_url;
+            } catch (uploadError) {
+                console.error('Avatar upload error:', uploadError);
+                return throwError({ message: "Failed to upload avatar image.", res, status: 500 });
+            }
+        } else if (avatarPath) {
+            // Use predefined avatar path
+            if (avatarPath.startsWith('/assets/images/avatars/')) {
+                avatarUrl = avatarPath;
+                console.log("Using predefined user avatar:", avatarPath);
+            } else {
+                return throwError({ message: "Invalid avatar path. Only predefined avatars are allowed.", res, status: 400 });
+            }
+        }
+
         // Create the user with the parent's familyId
         const user = await User.create({
             ...data,
+            avatar: avatarUrl,
+            interests: parsedInterests,
             email: email,
             password: hashedPassword,
             isTempPassword: true,  // Mark as temporary password
@@ -166,8 +223,6 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
         // Send email with the temporary password
         await sendMail(from, to, subject, html);
 
-
-
         await user.save();
         res.status(200).send({ message: "User created successfully, password email sent.", user });
     }catch(error){
@@ -191,7 +246,7 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
 // API to edit user profile
 export const editUserProfile = async(req: CustomRequest, res: Response):Promise<void> => {
     try{
-        const {userId, name, birthday, gender, avatar, role} = req.body;
+        const {userId, name, birthday, gender, role, avatarPath} = req.body;
 
         if (!req.user) {
             return throwError({ message: "Unauthorized", res, status: 401 });
@@ -229,13 +284,70 @@ export const editUserProfile = async(req: CustomRequest, res: Response):Promise<
             if (existingUser) {
                 return throwError({ message: "A user with the same email and name already exists.", res, status: 400 });
             }
-            user.name = name;
         }
 
+        // Handle user avatar update
+        let avatarUrl = user.avatar;
+        const oldAvatarUrl = user.avatar;
+
+        const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+        const avatarImage = files?.avatar?.[0];
+        
+        console.log("Avatar image:", avatarImage);
+        console.log("Avatar path:", avatarPath);
+
+        // Check if there's a new file upload
+        if (avatarImage) {
+            try {
+                // Upload new avatar to Cloudinary using utility function
+                const avatarResult = await uploadUserAvatar(avatarImage.buffer, avatarImage.originalname);
+                avatarUrl = avatarResult.secure_url;
+
+                // Delete old avatar from Cloudinary if it exists and is not a predefined avatar
+                if (oldAvatarUrl && !oldAvatarUrl.startsWith('/assets/')) {
+                    const oldPublicId = extractPublicIdFromUrl(oldAvatarUrl);
+                    if (oldPublicId) {
+                        try {
+                            await deleteFromCloudinary(oldPublicId);
+                        } catch (deleteError) {
+                            console.warn('Failed to delete old avatar:', deleteError);
+                            // Continue execution even if deletion fails
+                        }
+                    }
+                }
+            } catch (uploadError) {
+                console.error('Avatar upload error:', uploadError);
+                return throwError({ message: "Failed to upload avatar image.", res, status: 500 });
+            }
+        } 
+        // Check if there's a predefined avatar path in the request body
+        else if (avatarPath && avatarPath !== user.avatar) {
+            // This handles predefined avatars like '/assets/images/avatars/...'
+            avatarUrl = avatarPath;
+            console.log("Using predefined user avatar:", avatarPath);
+
+            // Delete old Cloudinary avatar if switching to predefined avatar
+            if (oldAvatarUrl && !oldAvatarUrl.startsWith('/assets/')) {
+                const oldPublicId = extractPublicIdFromUrl(oldAvatarUrl);
+                if (oldPublicId) {
+                    try {
+                        await deleteFromCloudinary(oldPublicId);
+                    } catch (deleteError) {
+                        console.warn('Failed to delete old avatar:', deleteError);
+                        // Continue execution even if deletion fails
+                    }
+                }
+            }
+        }
+
+        // Update user fields
         if (name) user.name = name;
         if (birthday) user.birthday = birthday;
         if (gender) user.gender = gender;
-        if (avatar) user.avatar = avatar;
+        if (avatarImage || (avatarPath && avatarPath !== user.avatar)) {
+            user.avatar = avatarUrl;
+            console.log("Updated user avatar to:", avatarUrl);
+        }
         if (role) user.role = role; 
 
         await user.save();
@@ -245,6 +357,7 @@ export const editUserProfile = async(req: CustomRequest, res: Response):Promise<
         return throwError({ message: "Failed to update. An unknown error occurred.", res, status: 500 });
     }
 }
+
 
 // API to delete user
 export const deleteUser = async(req: CustomRequest, res:Response):Promise<void> => {
@@ -276,13 +389,25 @@ export const deleteUser = async(req: CustomRequest, res:Response):Promise<void> 
             user = req.user;
         }
 
-
         // Prevent deleting the last parent in a family
         const family = await Family.findById(user.familyId);
         if (family) {
             const parentsCount = await User.countDocuments({ familyId: family._id, role: 'parent' });
             if (user.role === 'parent' && parentsCount <= 1) {
                 return throwError({ message: "Cannot delete the last parent in the family", res, status: 400 });
+            }
+        }
+
+        // Delete avatar from Cloudinary if it's not a predefined avatar
+        if (user.avatar && !user.avatar.startsWith('/assets/')) {
+            const publicId = extractPublicIdFromUrl(user.avatar);
+            if (publicId) {
+                try {
+                    await deleteFromCloudinary(publicId);
+                } catch (deleteError) {
+                    console.warn('Failed to delete user avatar from Cloudinary:', deleteError);
+                    // Continue with user deletion even if avatar deletion fails
+                }
             }
         }
 
@@ -293,7 +418,7 @@ export const deleteUser = async(req: CustomRequest, res:Response):Promise<void> 
     }catch(error){
         return throwError({ message: "Failed to delete. An unknown error occurred.", res, status: 500 });
     }
-} 
+}
 
 // API to update password
 export const updatePassword = async (req: CustomRequest, res: Response): Promise<void> => {
@@ -593,11 +718,36 @@ export const completeChallenge = async (req: CustomRequest, res: Response): Prom
         }
 
         const user = req.user;
-        const adventureProgress = user.adventures.find(
+        
+        // Check if adventure exists in user's profile
+        let adventureProgress = user.adventures.find(
             (adventure) => adventure.adventureId.equals(adventureId)
         );
+
+        // If adventure not found in user's profile, automatically start it
         if (!adventureProgress) {
-            return throwError({ message: "Adventure not found in user's profile", res, status: 404 });
+            // Find the adventure by adventureId
+            const adventure = await Adventure.findById(adventureId);
+            if (!adventure) {
+                return throwError({ message: "Adventure not found", res, status: 404 });
+            }
+
+            // Create new adventure progress
+            const newAdventureProgress: IAdventureProgress = {
+                adventureId: adventureId,
+                challenges: adventure.challenges.map((challenge) => ({
+                    challengeId: challenge._id,
+                    isCompleted: false,  
+                })),
+                status: "in-progress",
+                isAdventureCompleted: false,
+                starsReward: adventure.starsReward,
+                coinsReward: adventure.coinsReward,
+                progress: 0,
+            };
+
+            user.adventures.push(newAdventureProgress);
+            adventureProgress = newAdventureProgress;
         }
 
         const challenge = adventureProgress.challenges.find(
@@ -605,6 +755,11 @@ export const completeChallenge = async (req: CustomRequest, res: Response): Prom
         );
         if (!challenge) {
             return throwError({ message: "Challenge not found in adventure", res, status: 404 });
+        }
+
+        // Check if challenge is already completed
+        if (challenge.isCompleted) {
+            return throwError({ message: "Challenge already completed", res, status: 400 });
         }
 
         // Fetch the full adventure to get challenge rewards
@@ -655,7 +810,11 @@ export const completeChallenge = async (req: CustomRequest, res: Response): Prom
 
         await user.save();
 
-        res.status(200).json({ message: "Challenge completed successfully", adventureProgress });
+        res.status(200).json({ 
+            message: "Challenge completed successfully", 
+            adventureProgress,
+            adventureAutoStarted: !user.adventures.find(adv => adv.adventureId.equals(adventureId)) // This will be true if we auto-started
+        });
 
     } catch (error) {
         return throwError({ message: "An unknown error occurred while completing the challenge.", res, status: 500 });

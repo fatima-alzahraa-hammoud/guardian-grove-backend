@@ -87,7 +87,7 @@ describe('sanitizePublicId Helper Tests', () => {
             const input = 'test[file](name){test}';
             const result = sanitizePublicId(input);
             
-            expect(result).toBe('test_file__name__test_');
+            expect(result).toBe('test_file_name_test_');
         });
 
         it('should replace forward and backward slashes with underscores', () => {
@@ -109,6 +109,29 @@ describe('sanitizePublicId Helper Tests', () => {
             const result = sanitizePublicId(input);
             
             expect(result).toBe('test_file_name_');
+        });
+    });
+
+    describe('Consecutive underscore handling', () => {
+        it('should collapse multiple consecutive underscores to single underscore', () => {
+            const input = 'test___file___name';
+            const result = sanitizePublicId(input);
+            
+            expect(result).toBe('test_file_name');
+        });
+
+        it('should collapse consecutive underscores from special characters', () => {
+            const input = 'test@@@file###name';
+            const result = sanitizePublicId(input);
+            
+            expect(result).toBe('test_file_name');
+        });
+
+        it('should handle mixed consecutive characters', () => {
+            const input = 'test123@@@file___name---end';
+            const result = sanitizePublicId(input);
+            
+            expect(result).toBe('test123_file_name---end');
         });
     });
 
@@ -148,11 +171,9 @@ describe('sanitizePublicId Helper Tests', () => {
             const input = 'testñfile名前файл';
             const result = sanitizePublicId(input);
             
-            // testñfile名前файл -> test_file______ 
-            // (ñ=1, 名=1, 前=1, ф=1, а=1, й=1, л=1 = 6 underscores total)
-            expect(result).toBe('test_file______');
+            // Each invalid character becomes underscore, then consecutive underscores collapse
+            expect(result).toBe('test_file_');
         });
-
 
         it('should preserve Arabic mixed with valid characters', () => {
             const input = 'test123أبتثfile_name';
@@ -172,14 +193,14 @@ describe('sanitizePublicId Helper Tests', () => {
             const input = 'test中文file';
             const result = sanitizePublicId(input);
             
-            expect(result).toBe('test__file');
+            expect(result).toBe('test_file');
         });
 
         it('should replace emoji with underscores', () => {
             const input = 'test😀😀file🎉name';
             const result = sanitizePublicId(input);
             
-            expect(result).toBe('test____file__name');
+            expect(result).toBe('test_file_name');
         });
     });
 
@@ -205,30 +226,25 @@ describe('sanitizePublicId Helper Tests', () => {
             const longInput = 'a'.repeat(1000) + '@'.repeat(100) + 'b'.repeat(500);
             const result = sanitizePublicId(longInput);
             
-            const expectedLength = 1000 + 100 + 500; // Same length, @ becomes _
+            // @ becomes _ and consecutive underscores collapse to single _
+            const expectedLength = 1000 + 1 + 500; // 1501 characters
             expect(result).toHaveLength(expectedLength);
-            expect(result).toBe('a'.repeat(1000) + '_'.repeat(100) + 'b'.repeat(500));
+            expect(result).toBe('a'.repeat(1000) + '_' + 'b'.repeat(500));
         });
 
         it('should handle string with only invalid characters', () => {
             const input = '@#$%^&*()+=[]{}|;:,.<>?/';
             const result = sanitizePublicId(input);
             
-            expect(result).toBe('_'.repeat(input.length));
+            // All invalid characters become single underscore
+            expect(result).toBe('_');
         });
 
         it('should handle consecutive invalid characters', () => {
             const input = 'test@@@file###name';
             const result = sanitizePublicId(input);
             
-            expect(result).toBe('test___file___name');
-        });
-
-        it('should handle mixed consecutive valid and invalid characters', () => {
-            const input = 'test123@@@file___name---end';
-            const result = sanitizePublicId(input);
-            
-            expect(result).toBe('test123___file___name---end');
+            expect(result).toBe('test_file_name');
         });
     });
 
@@ -245,7 +261,7 @@ describe('sanitizePublicId Helper Tests', () => {
             const expected = [
                 'profile_picture_jpg',
                 'family-photo-2024_png',
-                'vacation_pic__1__jpeg',
+                'vacation_pic_1_jpeg',
                 'صورة_العائلة_jpg',
                 'My_Image_File_PNG'
             ];
@@ -265,10 +281,10 @@ describe('sanitizePublicId Helper Tests', () => {
             ];
             
             const expected = [
-                'Report_2024__Final__pdf',
+                'Report_2024_Final_pdf',
                 'التقرير_السنوي_docx',
                 'Project_1_Draft_txt',
-                'Meeting_Notes__2024-01-15__md'
+                'Meeting_Notes_2024-01-15_md'
             ];
             
             filenames.forEach((filename, index) => {
@@ -288,8 +304,8 @@ describe('sanitizePublicId Helper Tests', () => {
             const expected = [
                 'User_123_upload_jpg',
                 'child_s_drawing_png',
-                'story__The_Adventure__txt',
-                'goal__read_10_books_pdf'
+                'story_The_Adventure_txt',
+                'goal_read_10_books_pdf'
             ];
             
             filenames.forEach((filename, index) => {
@@ -307,7 +323,7 @@ describe('sanitizePublicId Helper Tests', () => {
             
             const expected = [
                 'backup_2024-01-15_14_30_00_sql',
-                'log_2024_01_15_14_30__txt',
+                'log_2024_01_15_14_30_txt',
                 'photo_2024_01_15-14_30_jpg'
             ];
             
@@ -350,7 +366,7 @@ describe('sanitizePublicId Helper Tests', () => {
             
             const expected = [
                 'My_Adventure_Story_txt',
-                'drawing__colored__png',
+                'drawing_colored_png',
                 'قصة_الأطفال_pdf',
                 'story_1_draft_docx'
             ];
@@ -370,8 +386,8 @@ describe('sanitizePublicId Helper Tests', () => {
             ];
             
             const expected = [
-                'achievement__First_Goal_png',
-                'goal_progress__updated__jpg',
+                'achievement_First_Goal_png',
+                'goal_progress_updated_jpg',
                 'family_achievement_jpeg',
                 'إنجاز_العائلة_png'
             ];
@@ -405,7 +421,7 @@ describe('sanitizePublicId Helper Tests', () => {
 
         it('should handle repeated calls consistently', () => {
             const input = 'test@file#name.jpg';
-            const results = [];
+            const results : string[] = [];
             
             for (let i = 0; i < 100; i++) {
                 results.push(sanitizePublicId(input));
@@ -468,7 +484,7 @@ describe('sanitizePublicId Helper Tests', () => {
     });
 
     describe('Regex pattern verification', () => {
-        it('should only allow characters matching the pattern [a-zA-Z0-9-_أ-ي]', () => {
+        it('should only allow characters matching the pattern [a-zA-Z0-9-_\\u0600-\\u06FF]', () => {
             // Test each category of allowed characters
             const allowedChars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_أبتثجحخدذرزسشصضطظعغفقكلمنهوي';
             
