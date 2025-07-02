@@ -18,6 +18,7 @@ import coloringRoutes from "./routes/coloring.routes";
 import storyRoutes from "./routes/story.routes";
 import journalRoutes from "./routes/journal.routes";
 import bondingActivitiesRoutes from "./routes/bondingActivity.routes";
+import familyChatsRoutes from "./routes/familyMessage.routes";
 import cors from "cors";
 import { OpenAI } from "openai";
 
@@ -65,6 +66,7 @@ app.use("/colorings", coloringRoutes);
 app.use("/stories", storyRoutes);
 app.use("/journal", journalRoutes);
 app.use("/bondingActivities", bondingActivitiesRoutes);
+app.use("/familyChats", familyChatsRoutes);
 
 app.get("/", (req, res) => {
     res.send("Guardian Grove Backend is running ✅");
