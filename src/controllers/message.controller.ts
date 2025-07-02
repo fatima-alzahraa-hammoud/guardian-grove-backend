@@ -267,3 +267,52 @@ export const sendMessage = async (req: CustomRequest, res: Response): Promise<vo
         return throwError({ message: "Error sending message", res, status: 500 });
     }
 };
+
+
+// Mark messages as read
+export const markMessagesAsRead = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+        const { chatId } = req.params;
+
+        if (!req.user) {
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+
+        if (!checkId({ id: chatId, res })) return;
+
+        // Verify user is a member of the chat
+        const chat = await FamilyChat.findOne({
+            _id: chatId,
+            members: req.user._id,
+            familyId: req.user.familyId
+        });
+
+        if (!chat) {
+            return throwError({ message: "Chat not found or access denied", res, status: 404 });
+        }
+
+        // Mark all unread messages as read
+        await FamilyMessage.updateMany(
+            {
+                chatId,
+                'readBy.userId': { $ne: req.user._id },
+                senderId: { $ne: req.user._id },
+                isDeleted: false
+            },
+            {
+                $addToSet: {
+                    readBy: {
+                        userId: req.user._id,
+                        readAt: new Date()
+                    }
+                }
+            }
+        );
+
+        res.status(200).json({
+            message: "Messages marked as read successfully"
+        });
+    } catch (error) {
+        return throwError({ message: "Error marking messages as read", res, status: 500 });
+    }
+};
