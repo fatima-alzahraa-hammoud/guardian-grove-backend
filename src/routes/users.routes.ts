@@ -10,7 +10,12 @@ import {
   getUserAdventures,
   getUserPurchasedItems,
   getUserAvatar,
-  saveFcmToken
+  saveFcmToken,
+  // Add the new admin functions
+  getAllUsers,
+  updateUserStatus,
+  updateUserRole,
+  createUserByAdmin
 } from "../controllers/user.controller";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { adminMiddleware } from "../middlewares/admin.middleware";
@@ -19,7 +24,14 @@ import { imageUploadMiddleware } from "../middlewares/imageUploadMiddleware";
 
 const router = express.Router();
 
-router.get("/", authMiddleware, adminMiddleware, getUsers); 
+// Admin routes for user management
+router.get("/", authMiddleware, adminMiddleware, getAllUsers); // Use the new function
+router.get("/all", authMiddleware, adminMiddleware, getAllUsers); // Alternative endpoint
+router.post("/admin/create", authMiddleware, adminMiddleware, imageUploadMiddleware, createUserByAdmin);
+router.put("/admin/status", authMiddleware, adminMiddleware, updateUserStatus);
+router.put("/admin/role", authMiddleware, adminMiddleware, updateUserRole);
+
+// Regular user routes
 router.get("/user", authMiddleware, getUserById); 
 router.post("/", authMiddleware, imageUploadMiddleware, createUser); 
 router.put("/", authMiddleware, imageUploadMiddleware, editUserProfile);
@@ -41,7 +53,6 @@ router.put("/location", authMiddleware, updateLocation);
 
 // Routes for managing user's rank 
 router.get("/rank", authMiddleware, getUserRank); 
-//router.put("/rank", authMiddleware, updateUserRank); 
 
 // Routes for user's interests 
 router.get("/interests", authMiddleware, getUserInterests); 
@@ -50,7 +61,6 @@ router.get("/interests", authMiddleware, getUserInterests);
 router.post("/adventure", authMiddleware, startAdventure); 
 router.post("/adventure/challenge", authMiddleware, completeChallenge); 
 router.get("/adventures", authMiddleware, getUserAdventures); 
-
 
 // Routes for user's purchased items 
 router.get("/purchasedItems", authMiddleware, getUserPurchasedItems); 

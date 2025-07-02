@@ -903,3 +903,278 @@ export const saveFcmToken = async (req: Request, res: Response): Promise<void> =
         return throwError({ message: "Internal server error", res, status: 500});
     }
 };
+
+// API to get all users with proper admin access
+export const getAllUsers = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+        if (!req.user || req.user.role !== 'admin') {
+            return throwError({ message: "Unauthorized - Admin access required", res, status: 401 });
+        }
+
+        const users = await User.find()
+            .select('_id name email type role status achievements progress stars coins')
+            .populate('familyId', 'familyName')
+            .sort({ createdAt: -1 });
+
+        if (!users || users.length === 0) {
+            res.status(200).json({ message: "No users found", users: [] });
+            return;
+        }
+
+        // Transform data to match your frontend interface
+        const transformedUsers = users.map(user => ({
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            type: user.role === 'child' ? 'child' : 'parent', // Map role to type
+            role: user.role,
+            status: user.status || 'active', // Default to active if not set
+            achievements: user.achievements?.length || 0,
+            progress: Math.round((user.stars / 1000) * 100), // Calculate progress based on stars
+            stars: user.stars,
+            coins: user.coins
+        }));
+
+        res.status(200).json({ 
+            message: "Users retrieved successfully", 
+            users: transformedUsers 
+        });
+    } catch (error) {
+        console.error("Error in getAllUsers:", error);
+        return throwError({ message: "Error retrieving users", res, status: 500 });
+    }
+};
+
+// API to ban/unban user (Admin only)
+export const updateUserStatus = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+        if (!req.user || req.user.role !== 'admin') {
+            return throwError({ message: "Unauthorized - Admin access required", res, status: 401 });
+        }
+
+        const { userId, status } = req.body;
+
+        if (!checkId({ id: userId, res })) return;
+
+        if (!['active', 'banned'].includes(status)) {
+            return throwError({ message: "Invalid status. Must be 'active' or 'banned'", res, status: 400 });
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return throwError({ message: "User not found", res, status: 404 });
+        }
+
+        // Prevent admin from banning themselves
+        if (user._id.toString() === req.user._id.toString()) {
+            return throwError({ message: "Cannot change your own status", res, status: 400 });
+        }
+
+        user.status = status;
+        await user.save();
+
+        res.status(200).json({ 
+            message: `User ${status === 'banned' ? 'banned' : 'activated'} successfully`, 
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                status: user.status
+            }
+        });
+    } catch (error) {
+        console.error("Error in updateUserStatus:", error);
+        return throwError({ message: "Error updating user status", res, status: 500 });
+    }
+};
+
+// API to update user role (Admin only)
+export const updateUserRole = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+        if (!req.user || req.user.role !== 'admin') {
+            return throwError({ message: "Unauthorized - Admin access required", res, status: 401 });
+        }
+
+        const { userId, role } = req.body;
+
+        if (!checkId({ id: userId, res })) return;
+
+        const validRoles = ['user', 'admin', 'parent', 'child'];
+        if (!validRoles.includes(role)) {
+            return throwError({ message: "Invalid role", res, status: 400 });
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return throwError({ message: "User not found", res, status: 404 });
+        }
+
+        // Prevent admin from demoting themselves
+        if (user._id.toString() === req.user._id.toString() && role !== 'admin') {
+            return throwError({ message: "Cannot change your own admin role", res, status: 400 });
+        }
+
+        user.role = role;
+        await user.save();
+
+        res.status(200).json({ 
+            message: "User role updated successfully", 
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                role: user.role
+            }
+        });
+    } catch (error) {
+        console.error("Error in updateUserRole:", error);
+        return throwError({ message: "Error updating user role", res, status: 500 });
+    }
+};
+
+// API to create user by admin
+export const createUserByAdmin = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+        if (!req.user || req.user.role !== 'admin') {
+            return throwError({ message: "Unauthorized - Admin access required", res, status: 401 });
+        }
+
+        const { name, email, birthday, gender, role, interests, familyId, avatarPath } = req.body;
+
+        // Validate required fields
+        if (!name || !email || !birthday || !gender || !role) {
+            return throwError({ message: "All required fields must be filled.", res, status: 400 });
+        }
+
+        // Check if user already exists
+        const existingUser = await User.findOne({ email, name });
+        if (existingUser) {
+            return throwError({ message: "User with this email and name already exists.", res, status: 409 });
+        }
+
+        // Validate family exists if familyId is provided
+        let family = null;
+        if (familyId) {
+            if (!checkId({ id: familyId, res })) return;
+            family = await Family.findById(familyId);
+            if (!family) {
+                return throwError({ message: "Family not found.", res, status: 404 });
+            }
+        }
+
+        // Handle avatar upload/selection
+        const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+        const avatarImage = files?.avatar?.[0];
+        let avatarUrl;
+
+        if (avatarImage) {
+            try {
+                const avatarResult = await uploadUserAvatar(avatarImage.buffer, avatarImage.originalname);
+                avatarUrl = avatarResult.secure_url;
+            } catch (uploadError) {
+                console.error('Avatar upload error:', uploadError);
+                return throwError({ message: "Failed to upload avatar image.", res, status: 500 });
+            }
+        } else if (avatarPath && avatarPath.startsWith('/assets/images/avatars/')) {
+            avatarUrl = avatarPath;
+        } else {
+            return throwError({ message: "Avatar is required.", res, status: 400 });
+        }
+
+        // Generate secure password
+        const generatedPassword = generateSecurePassword();
+        const hashedPassword = await bcrypt.hash(generatedPassword, 12);
+
+        // Parse interests if it's a string
+        let parsedInterests = interests;
+        if (typeof interests === 'string') {
+            try {
+                parsedInterests = JSON.parse(interests);
+            } catch (parseError) {
+                return throwError({ message: "Invalid interests format.", res, status: 400 });
+            }
+        }
+
+        // Create user
+        const user = await User.create({
+            name,
+            email,
+            birthday,
+            gender,
+            role,
+            interests: parsedInterests || [],
+            avatar: avatarUrl,
+            password: hashedPassword,
+            isTempPassword: true,
+            familyId: family?._id,
+            status: 'active'
+        });
+
+        // Send email with credentials
+        const from = `"Guardian Grove" <${process.env.EMAIL_USERNAME}>`;
+        const subject = `Welcome to Guardian Grove - Your Account Details`;
+        const html = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+                <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px;">
+                    <h2 style="color: #2c3e50;">Welcome to Guardian Grove!</h2>
+                    <p>Hello ${name},</p>
+                    
+                    <div style="background-color: white; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #3498db;">
+                        <p>An administrator has created an account for you.</p>
+                        <p>Here are your login details:</p>
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <tr>
+                                <td style="padding: 8px; border-bottom: 1px solid #ddd; width: 120px;"><strong>Email:</strong></td>
+                                <td style="padding: 8px; border-bottom: 1px solid #ddd;">${email}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Username:</strong></td>
+                                <td style="padding: 8px; border-bottom: 1px solid #ddd;">${name}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px;"><strong>Temporary Password:</strong></td>
+                                <td style="padding: 8px;">${generatedPassword}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    
+                    <p style="color: #e74c3c; font-weight: bold;">Please change this password after first login.</p>
+                    
+                    <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
+                        <p>Best regards,</p>
+                        <p><strong>The Guardian Grove Team</strong></p>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        try {
+            await sendMail(from, email, subject, html);
+        } catch (emailError) {
+            console.error('Email sending failed:', emailError);
+            // Don't fail user creation if email fails
+        }
+
+        res.status(201).json({ 
+            message: "User created successfully by admin", 
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                status: user.status || 'active'
+            }
+        });
+
+    } catch (error) {
+        console.error("Error in createUserByAdmin:", error);
+        if ((error as any).code === 11000) {
+            return throwError({ 
+                message: "A user with this email and name already exists.", 
+                res, 
+                status: 409 
+            });
+        }
+        return throwError({ message: "Failed to create user", res, status: 500 });
+    }
+};
