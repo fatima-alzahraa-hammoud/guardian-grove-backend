@@ -420,6 +420,9 @@ export const addReaction = async (req: CustomRequest, res: Response): Promise<vo
         if (!emoji) {
             return throwError({ message: "Emoji is required", res, status: 400 });
         }
+        if (!emoji || typeof emoji !== 'string' || emoji.length > 5) {
+            return throwError({ message: "Invalid emoji", res, status: 400 });
+        }
 
         const message = await FamilyMessage.findOne({
             _id: messageId,
