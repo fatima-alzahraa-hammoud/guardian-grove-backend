@@ -316,3 +316,46 @@ export const markMessagesAsRead = async (req: CustomRequest, res: Response): Pro
         return throwError({ message: "Error marking messages as read", res, status: 500 });
     }
 };
+
+
+// Edit a message
+export const editMessage = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+        const { messageId } = req.params;
+        const { content } = req.body;
+
+        if (!req.user) {
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+
+        if (!checkId({ id: messageId, res })) return;
+
+        if (!content || content.trim() === '') {
+            return throwError({ message: "Message content is required", res, status: 400 });
+        }
+
+        // Find the message and verify ownership
+        const message = await FamilyMessage.findOne({
+            _id: messageId,
+            senderId: req.user._id,
+            isDeleted: false
+        });
+
+        if (!message) {
+            return throwError({ message: "Message not found or access denied", res, status: 404 });
+        }
+
+        // Update the message
+        message.content = content.trim();
+        message.edited = true;
+        message.editedAt = new Date();
+        await message.save();
+
+        res.status(200).json({
+            message: "Message edited successfully",
+            messageData: message
+        });
+    } catch (error) {
+        return throwError({ message: "Error editing message", res, status: 500 });
+    }
+};
