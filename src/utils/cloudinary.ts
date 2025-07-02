@@ -151,3 +151,43 @@ export const extractPublicIdFromUrl = (cloudinaryUrl: string): string => {
         return '';
     }
 };
+
+// Upload message files (images, documents, etc.)
+export const uploadMessageFile = async (buffer: Buffer, originalName: string) => {
+    const sanitizedName = sanitizePublicId(originalName);
+    const timestamp = Date.now();
+    
+    return new Promise((resolve, reject) => {
+        const resourceType = isImageFile(originalName) ? 'image' : 'raw';
+        
+        cloudinary.uploader.upload_stream(
+            {
+                resource_type: resourceType,
+                public_id: `messages/${timestamp}_${sanitizedName}`,
+                folder: 'guardian_grove/messages',
+                // For images, enable transformations
+                ...(resourceType === 'image' && {
+                    transformation: [
+                        { quality: 'auto', fetch_format: 'auto' },
+                        { width: 1200, height: 1200, crop: 'limit' }
+                    ]
+                })
+            },
+            (error, result) => {
+                if (error) {
+                    console.error('Cloudinary upload error:', error);
+                    reject(error);
+                } else {
+                    resolve(result);
+                }
+            }
+        ).end(buffer);
+    });
+};
+
+// Helper function to check if file is an image
+const isImageFile = (filename: string): boolean => {
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg'];
+    const extension = filename.toLowerCase().substring(filename.lastIndexOf('.'));
+    return imageExtensions.includes(extension);
+};
