@@ -62,7 +62,7 @@ class SocketManager {
 
     private setupSocketEvents() {
         this.io.on('connection', (socket) => {
-            console.log(`User ${socket.data.userName} connected`);
+            console.log(`User ${socket.data.userName} connected with socket ${socket.id}`);
             
             // Add user to connected users
             this.addConnectedUser(socket);
@@ -70,12 +70,18 @@ class SocketManager {
             // Join user to their family room
             socket.join(`family_${socket.data.familyId}`);
             
+            // Send current online users to the newly connected user
+            const onlineUsers = this.getOnlineUsersInFamily(socket.data.familyId);
+            socket.emit('online_users', onlineUsers);
+            
             // Notify family members that user is online
             this.broadcastUserStatus(socket.data.familyId, socket.data.userId, true);
 
             // Handle joining specific chat rooms
             socket.on('join_chat', async (chatId: string) => {
                 try {
+                    console.log(`User ${socket.data.userName} attempting to join chat ${chatId}`);
+                    
                     // Verify user is member of this chat
                     const chat = await FamilyChat.findOne({
                         _id: chatId,
@@ -85,10 +91,14 @@ class SocketManager {
 
                     if (chat) {
                         socket.join(`chat_${chatId}`);
-                        console.log(`User ${socket.data.userName} joined chat ${chatId}`);
+                        console.log(`✅ User ${socket.data.userName} joined chat ${chatId}`);
+                    } else {
+                        console.log(`❌ User ${socket.data.userName} denied access to chat ${chatId}`);
+                        socket.emit('error', { message: 'Access denied to chat' });
                     }
                 } catch (error) {
                     console.error('Error joining chat:', error);
+                    socket.emit('error', { message: 'Failed to join chat' });
                 }
             });
 
@@ -102,6 +112,8 @@ class SocketManager {
             socket.on('send_message', async (data) => {
                 try {
                     const { chatId, content, type = 'text', replyTo } = data;
+                    
+                    console.log(`📤 Received message from ${socket.data.userName}: ${content}`);
                     
                     // Verify user is member of this chat
                     const chat = await FamilyChat.findOne({
@@ -139,14 +151,18 @@ class SocketManager {
                             senderName: message.senderName,
                             timestamp: message.timestamp,
                             type: message.type
-                        }
+                        },
+                        updatedAt: new Date()
                     });
 
+                    // Populate reply-to message if exists
                     const populatedMessage = await FamilyMessage.findById(message._id)
                         .populate('replyTo', 'content senderName type')
                         .lean();
 
-                    // Broadcast to all members of the chat
+                    console.log(`📨 Broadcasting message to chat_${chatId}:`, populatedMessage);
+
+                    // Broadcast to all members of the chat (including sender for confirmation)
                     this.io.to(`chat_${chatId}`).emit('new_message', populatedMessage);
                     
                     // Send push notifications to offline users
@@ -160,6 +176,7 @@ class SocketManager {
 
             // Handle typing indicators
             socket.on('typing_start', (chatId: string) => {
+                console.log(`⌨️ ${socket.data.userName} started typing in chat ${chatId}`);
                 socket.to(`chat_${chatId}`).emit('user_typing', {
                     userId: socket.data.userId,
                     userName: socket.data.userName,
@@ -168,6 +185,7 @@ class SocketManager {
             });
 
             socket.on('typing_stop', (chatId: string) => {
+                console.log(`⌨️ ${socket.data.userName} stopped typing in chat ${chatId}`);
                 socket.to(`chat_${chatId}`).emit('user_stop_typing', {
                     userId: socket.data.userId,
                     chatId
@@ -179,8 +197,13 @@ class SocketManager {
                 try {
                     const { messageId, emoji } = data;
                     
+                    console.log(`😊 ${socket.data.userName} reacting with ${emoji} to message ${messageId}`);
+                    
                     const message = await FamilyMessage.findById(messageId);
-                    if (!message) return;
+                    if (!message) {
+                        socket.emit('error', { message: 'Message not found' });
+                        return;
+                    }
 
                     // Check if user already reacted with this emoji
                     const existingReaction = message.reactions.find(
@@ -192,6 +215,7 @@ class SocketManager {
                         message.reactions = message.reactions.filter(
                             reaction => !(reaction.userId.toString() === socket.data.userId && reaction.emoji === emoji)
                         );
+                        console.log(`❌ Removed reaction ${emoji} from ${socket.data.userName}`);
                     } else {
                         // Add the reaction
                         message.reactions.push({
@@ -199,6 +223,7 @@ class SocketManager {
                             emoji,
                             timestamp: new Date()
                         });
+                        console.log(`✅ Added reaction ${emoji} from ${socket.data.userName}`);
                     }
 
                     await message.save();
@@ -211,12 +236,15 @@ class SocketManager {
 
                 } catch (error) {
                     console.error('Error adding reaction:', error);
+                    socket.emit('error', { message: 'Failed to add reaction' });
                 }
             });
 
             // Handle marking messages as read
             socket.on('mark_messages_read', async (chatId: string) => {
                 try {
+                    console.log(`📖 ${socket.data.userName} marking messages as read in chat ${chatId}`);
+                    
                     await FamilyMessage.updateMany(
                         {
                             chatId,
@@ -247,16 +275,22 @@ class SocketManager {
             });
 
             // Handle disconnection
-            socket.on('disconnect', () => {
-                console.log(`User ${socket.data.userName} disconnected`);
+            socket.on('disconnect', (reason) => {
+                console.log(`User ${socket.data.userName} disconnected: ${reason}`);
                 this.removeConnectedUser(socket);
                 
                 // Check if user has other active connections
                 const userConnections = this.userSockets.get(socket.data.userId) || [];
                 if (userConnections.length === 0) {
                     // User is completely offline
+                    console.log(`User ${socket.data.userName} is now completely offline`);
                     this.broadcastUserStatus(socket.data.familyId, socket.data.userId, false);
                 }
+            });
+
+            // Handle connection errors
+            socket.on('error', (error) => {
+                console.error(`Socket error for user ${socket.data.userName}:`, error);
             });
         });
     }
@@ -276,6 +310,8 @@ class SocketManager {
         const userConnections = this.userSockets.get(socket.data.userId) || [];
         userConnections.push(socket.id);
         this.userSockets.set(socket.data.userId, userConnections);
+        
+        console.log(`Added user ${socket.data.userName}, total connections: ${userConnections.length}`);
     }
 
     private removeConnectedUser(socket: any) {
@@ -290,14 +326,23 @@ class SocketManager {
         } else {
             this.userSockets.set(socket.data.userId, updatedConnections);
         }
+        
+        console.log(`Removed user ${socket.data.userName}, remaining connections: ${updatedConnections.length}`);
     }
 
     private broadcastUserStatus(familyId: string, userId: string, isOnline: boolean) {
+        console.log(`📡 Broadcasting user status: ${userId} is ${isOnline ? 'online' : 'offline'}`);
+        
+        // Broadcast to family room
         this.io.to(`family_${familyId}`).emit('user_status_changed', {
             userId,
             isOnline,
             timestamp: new Date()
         });
+
+        // Send updated online users list to family
+        const onlineUsers = this.getOnlineUsersInFamily(familyId);
+        this.io.to(`family_${familyId}`).emit('online_users', onlineUsers);
     }
 
     private async sendPushNotifications(members: any[], senderId: string, message: any) {
@@ -313,7 +358,7 @@ class SocketManager {
             // Implementation depends on your push notification service (FCM, etc.)
             for (const member of offlineMembers) {
                 // Send push notification logic here
-                console.log(`Would send push notification to ${member.name} for message: ${message.content}`);
+                console.log(`📱 Would send push notification to ${member.name} for message: ${message.content}`);
             }
         } catch (error) {
             console.error('Error sending push notifications:', error);
@@ -324,16 +369,31 @@ class SocketManager {
     public getOnlineUsersInFamily(familyId: string): string[] {
         const onlineUsers: string[] = [];
         this.connectedUsers.forEach((userSocket) => {
-            if (userSocket.familyId === familyId) {
+            if (userSocket.familyId === familyId && !onlineUsers.includes(userSocket.userId)) {
                 onlineUsers.push(userSocket.userId);
             }
         });
-        return [...new Set(onlineUsers)]; // Remove duplicates
+        return onlineUsers;
     }
 
     // Public method to check if user is online
     public isUserOnline(userId: string): boolean {
         return this.userSockets.has(userId);
+    }
+
+    // Public method to get socket instance (for external use)
+    public getIO() {
+        return this.io;
+    }
+
+    // Public method to broadcast to specific chat
+    public broadcastToChat(chatId: string, event: string, data: any) {
+        this.io.to(`chat_${chatId}`).emit(event, data);
+    }
+
+    // Public method to broadcast to family
+    public broadcastToFamily(familyId: string, event: string, data: any) {
+        this.io.to(`family_${familyId}`).emit(event, data);
     }
 }
 
