@@ -718,11 +718,36 @@ export const completeChallenge = async (req: CustomRequest, res: Response): Prom
         }
 
         const user = req.user;
-        const adventureProgress = user.adventures.find(
+        
+        // Check if adventure exists in user's profile
+        let adventureProgress = user.adventures.find(
             (adventure) => adventure.adventureId.equals(adventureId)
         );
+
+        // If adventure not found in user's profile, automatically start it
         if (!adventureProgress) {
-            return throwError({ message: "Adventure not found in user's profile", res, status: 404 });
+            // Find the adventure by adventureId
+            const adventure = await Adventure.findById(adventureId);
+            if (!adventure) {
+                return throwError({ message: "Adventure not found", res, status: 404 });
+            }
+
+            // Create new adventure progress
+            const newAdventureProgress: IAdventureProgress = {
+                adventureId: adventureId,
+                challenges: adventure.challenges.map((challenge) => ({
+                    challengeId: challenge._id,
+                    isCompleted: false,  
+                })),
+                status: "in-progress",
+                isAdventureCompleted: false,
+                starsReward: adventure.starsReward,
+                coinsReward: adventure.coinsReward,
+                progress: 0,
+            };
+
+            user.adventures.push(newAdventureProgress);
+            adventureProgress = newAdventureProgress;
         }
 
         const challenge = adventureProgress.challenges.find(
@@ -730,6 +755,11 @@ export const completeChallenge = async (req: CustomRequest, res: Response): Prom
         );
         if (!challenge) {
             return throwError({ message: "Challenge not found in adventure", res, status: 404 });
+        }
+
+        // Check if challenge is already completed
+        if (challenge.isCompleted) {
+            return throwError({ message: "Challenge already completed", res, status: 400 });
         }
 
         // Fetch the full adventure to get challenge rewards
@@ -780,7 +810,11 @@ export const completeChallenge = async (req: CustomRequest, res: Response): Prom
 
         await user.save();
 
-        res.status(200).json({ message: "Challenge completed successfully", adventureProgress });
+        res.status(200).json({ 
+            message: "Challenge completed successfully", 
+            adventureProgress,
+            adventureAutoStarted: !user.adventures.find(adv => adv.adventureId.equals(adventureId)) // This will be true if we auto-started
+        });
 
     } catch (error) {
         return throwError({ message: "An unknown error occurred while completing the challenge.", res, status: 500 });
