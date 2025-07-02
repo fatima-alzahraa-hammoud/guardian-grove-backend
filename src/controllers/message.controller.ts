@@ -3,6 +3,8 @@ import { throwError } from '../utils/error';
 import { CustomRequest } from '../interfaces/customRequest';
 import { FamilyMessage } from '../models/FamilyMessage.model';
 import { FamilyChat } from '../models/FamilyChat.model';
+import { checkId } from '../utils/checkId';
+import { User } from '../models/user.model';
 
 // Get all chats for the current user's family
 export const getFamilyChats = async (req: CustomRequest, res: Response): Promise<void> => {
@@ -63,5 +65,63 @@ export const getFamilyChats = async (req: CustomRequest, res: Response): Promise
         });
     } catch (error) {
         return throwError({ message: "Error retrieving family chats", res, status: 500 });
+    }
+};
+
+// Create a new group chat
+export const createGroupChat = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+        const { name, members, description } = req.body;
+
+        if (!req.user) {
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+
+        if (!req.user.familyId) {
+            return throwError({ message: "User is not part of a family", res, status: 400 });
+        }
+
+        if (!name || !members || !Array.isArray(members) || members.length === 0) {
+            return throwError({ message: "Name and members are required", res, status: 400 });
+        }
+
+        // Validate all member IDs
+        for (const memberId of members) {
+            if (!checkId({ id: memberId, res })) return;
+        }
+
+        // Verify all members belong to the same family
+        const familyMembers = await User.find({
+            _id: { $in: [...members, req.user._id] },
+            familyId: req.user.familyId
+        });
+
+        if (familyMembers.length !== members.length + 1) {
+            return throwError({ message: "All members must belong to the same family", res, status: 400 });
+        }
+
+        // Create the group chat
+        const chat = await FamilyChat.create({
+            name,
+            type: 'group',
+            members: [...members, req.user._id],
+            familyId: req.user.familyId,
+            description,
+            createdBy: req.user._id
+        });
+
+        const populatedChat = await FamilyChat.findById(chat._id)
+            .populate('members', 'name avatar role')
+            .lean();
+
+        res.status(201).json({
+            message: "Group chat created successfully",
+            chat: {
+                ...populatedChat,
+                unreadCount: 0
+            }
+        });
+    } catch (error) {
+        return throwError({ message: "Error creating group chat", res, status: 500 });
     }
 };
