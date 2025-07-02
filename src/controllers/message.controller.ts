@@ -459,3 +459,63 @@ export const addReaction = async (req: CustomRequest, res: Response): Promise<vo
         return throwError({ message: "Error updating reaction", res, status: 500 });
     }
 };
+
+// Create or get direct chat with another family member
+export const createOrGetDirectChat = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+        const { memberId } = req.body;
+
+        if (!req.user) {
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+
+        if (!checkId({ id: memberId, res })) return;
+
+        if (memberId === req.user._id.toString()) {
+            return throwError({ message: "Cannot create chat with yourself", res, status: 400 });
+        }
+
+        // Verify the other member belongs to the same family
+        const otherMember = await User.findOne({
+            _id: memberId,
+            familyId: req.user.familyId
+        });
+
+        if (!otherMember) {
+            return throwError({ message: "Member not found in your family", res, status: 404 });
+        }
+
+        // Check if direct chat already exists
+        let chat = await FamilyChat.findOne({
+            type: 'direct',
+            familyId: req.user.familyId,
+            members: { $all: [req.user._id, memberId], $size: 2 }
+        }).populate('members', 'name avatar role').lean();
+
+        if (!chat) {
+            // Create new direct chat
+            const newChat = await FamilyChat.create({
+                name: `${req.user.name} & ${otherMember.name}`,
+                type: 'direct',
+                members: [req.user._id, memberId],
+                familyId: req.user.familyId,
+                createdBy: req.user._id
+            });
+
+            chat = await FamilyChat.findById(newChat._id)
+                .populate('members', 'name avatar role')
+                .lean();
+        }
+
+        res.status(200).json({
+            message: "Direct chat retrieved successfully",
+            chat: {
+                ...chat,
+                unreadCount: 0,
+                isOnline: Math.random() > 0.5 // Simulate online status
+            }
+        });
+    } catch (error) {
+        return throwError({ message: "Error creating/retrieving direct chat", res, status: 500 });
+    }
+};
