@@ -5,6 +5,7 @@ import { FamilyMessage } from '../models/FamilyMessage.model';
 import { FamilyChat } from '../models/FamilyChat.model';
 import { checkId } from '../utils/checkId';
 import { User } from '../models/user.model';
+import { uploadMessageFile } from '../utils/cloudinary';
 
 // Get all chats for the current user's family
 export const getFamilyChats = async (req: CustomRequest, res: Response): Promise<void> => {
@@ -177,5 +178,92 @@ export const getChatMessages = async (req: CustomRequest, res: Response): Promis
         });
     } catch (error) {
         return throwError({ message: "Error retrieving chat messages", res, status: 500 });
+    }
+};
+
+
+// Send a new message
+export const sendMessage = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+        const { chatId, content, type = 'text', replyTo } = req.body;
+
+        if (!req.user) {
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+
+        if (!checkId({ id: chatId, res })) return;
+
+        if (!content || content.trim() === '') {
+            return throwError({ message: "Message content is required", res, status: 400 });
+        }
+
+        // Verify user is a member of the chat
+        const chat = await FamilyChat.findOne({
+            _id: chatId,
+            members: req.user._id,
+            familyId: req.user.familyId
+        });
+
+        if (!chat) {
+            return throwError({ message: "Chat not found or access denied", res, status: 404 });
+        }
+
+        // Handle file upload if present
+        let fileUrl, fileName, fileSize;
+        const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+        const messageFile = files?.messageFile?.[0];
+
+        if (messageFile) {
+            try {
+                const uploadResult = await uploadMessageFile(messageFile.buffer, messageFile.originalname) as { secure_url: string };
+                fileUrl = uploadResult.secure_url;
+                fileName = messageFile.originalname;
+                fileSize = messageFile.size;
+            } catch (uploadError) {
+                console.error('File upload error:', uploadError);
+                return throwError({ message: "Failed to upload file", res, status: 500 });
+            }
+        }
+
+        // Create the message
+        const message = await FamilyMessage.create({
+            chatId,
+            senderId: req.user._id,
+            senderName: req.user.name,
+            senderAvatar: req.user.avatar,
+            content: content.trim(),
+            type,
+            replyTo: replyTo || undefined,
+            fileUrl,
+            fileName,
+            fileSize,
+            readBy: [{
+                userId: req.user._id,
+                readAt: new Date()
+            }]
+        });
+
+        // Update chat's last message
+        await FamilyChat.findByIdAndUpdate(chatId, {
+            lastMessage: {
+                messageId: message._id,
+                content: message.content,
+                senderId: message.senderId,
+                senderName: message.senderName,
+                timestamp: message.timestamp,
+                type: message.type
+            }
+        });
+
+        const populatedMessage = await FamilyMessage.findById(message._id)
+            .populate('replyTo', 'content senderName type')
+            .lean();
+
+        res.status(201).json({
+            message: "Message sent successfully",
+            messageData: populatedMessage
+        });
+    } catch (error) {
+        return throwError({ message: "Error sending message", res, status: 500 });
     }
 };
