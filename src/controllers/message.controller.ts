@@ -403,3 +403,59 @@ export const deleteMessage = async (req: CustomRequest, res: Response): Promise<
         return throwError({ message: "Error deleting message", res, status: 500 });
     }
 };
+
+
+// Add reaction to a message
+export const addReaction = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+        const { messageId } = req.params;
+        const { emoji } = req.body;
+
+        if (!req.user) {
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+
+        if (!checkId({ id: messageId, res })) return;
+
+        if (!emoji) {
+            return throwError({ message: "Emoji is required", res, status: 400 });
+        }
+
+        const message = await FamilyMessage.findOne({
+            _id: messageId,
+            isDeleted: false
+        });
+
+        if (!message) {
+            return throwError({ message: "Message not found", res, status: 404 });
+        }
+
+        // Check if user already reacted with this emoji
+        const existingReaction = message.reactions.find(
+            reaction => reaction.userId.equals(req.user!._id) && reaction.emoji === emoji
+        );
+
+        if (existingReaction) {
+            // Remove the reaction
+            message.reactions = message.reactions.filter(
+                reaction => !(reaction.userId.equals(req.user!._id) && reaction.emoji === emoji)
+            );
+        } else {
+            // Add the reaction
+            message.reactions.push({
+                userId: req.user._id,
+                emoji,
+                timestamp: new Date()
+            });
+        }
+
+        await message.save();
+
+        res.status(200).json({
+            message: "Reaction updated successfully",
+            reactions: message.reactions
+        });
+    } catch (error) {
+        return throwError({ message: "Error updating reaction", res, status: 500 });
+    }
+};
