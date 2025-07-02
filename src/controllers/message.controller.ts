@@ -125,3 +125,57 @@ export const createGroupChat = async (req: CustomRequest, res: Response): Promis
         return throwError({ message: "Error creating group chat", res, status: 500 });
     }
 };
+
+
+// Get messages for a specific chat
+export const getChatMessages = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+        const { chatId } = req.params;
+        const { page = 1, limit = 50 } = req.query;
+
+        if (!req.user) {
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+
+        if (!checkId({ id: chatId, res })) return;
+
+        // Verify user is a member of the chat
+        const chat = await FamilyChat.findOne({
+            _id: chatId,
+            members: req.user._id,
+            familyId: req.user.familyId
+        });
+
+        if (!chat) {
+            return throwError({ message: "Chat not found or access denied", res, status: 404 });
+        }
+
+        const skip = (Number(page) - 1) * Number(limit);
+
+        // Get messages with pagination
+        const messages = await FamilyMessage.find({
+            chatId,
+            isDeleted: false
+        })
+        .populate('replyTo', 'content senderName type')
+        .sort({ timestamp: -1 })
+        .skip(skip)
+        .limit(Number(limit))
+        .lean();
+
+        // Reverse to get chronological order
+        messages.reverse();
+
+        res.status(200).json({
+            message: "Chat messages retrieved successfully",
+            messages,
+            pagination: {
+                page: Number(page),
+                limit: Number(limit),
+                hasMore: messages.length === Number(limit)
+            }
+        });
+    } catch (error) {
+        return throwError({ message: "Error retrieving chat messages", res, status: 500 });
+    }
+};
