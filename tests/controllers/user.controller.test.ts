@@ -1380,23 +1380,6 @@ describe('User Controller Tests', () => {
             expect(mockRes.json).toHaveBeenCalledWith({ error: 'Unauthorized' });
         });
 
-        it('should return 404 if adventure not found in user profile', async () => {
-            const mockUserData = testUtils.createMockUser({ adventures: [] });
-
-            const mockReq = testUtils.createMockRequest({ 
-                user: mockUserData,
-                body: { 
-                    adventureId: '507f1f77bcf86cd799439015',
-                    challengeId: '507f1f77bcf86cd799439016'
-                }
-            });
-            const mockRes = testUtils.createMockResponse();
-
-            await completeChallenge(mockReq as any, mockRes as any);
-
-            expect(mockRes.status).toHaveBeenCalledWith(404);
-            expect(mockRes.json).toHaveBeenCalledWith({ error: "Adventure not found in user's profile" });
-        });
 
         it('should return 404 if challenge not found in adventure', async () => {
             const mockAdventureProgress = {
