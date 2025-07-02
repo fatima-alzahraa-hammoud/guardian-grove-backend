@@ -54,4 +54,4 @@ chatSchema.index({ members: 1 });
 chatSchema.index({ type: 1, familyId: 1 });
 chatSchema.index({ 'lastMessage.timestamp': -1 });
 
-export const FamilyChat = model<IFamilyChat>("Chat", chatSchema);
+export const FamilyChat = model<IFamilyChat>("FamilyChat", chatSchema);
