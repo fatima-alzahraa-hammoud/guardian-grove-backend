@@ -62,6 +62,7 @@ const userSchema = new Schema<IUser>({
     password: {type: String, required: true},
     birthday:{type: Date, required: true},
     dailyMessage: {type: String, required: true, default: "You are shining💫!"},
+    status: { type: String, enum: ['active', 'inactive', 'banned'], default: 'active' },
     gender:{type: String, enum: ['female', 'male'], required: true},
     role: {type: String, enum: ['parent', 'child', 'admin'], required: true},
     avatar: {type: String, required: true, default:"/assets/images/avatars/parent/avatar1.png"},

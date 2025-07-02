@@ -1,14 +1,36 @@
 import express from "express";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { adminMiddleware } from "../middlewares/admin.middleware";
-import { completeFamilyTask, createFamilyTasks, deleteFamily, deleteFamilyGoal, deleteFamilyTask, getAllFamilies, getFamily, getFamilyGoals, getFamilyLeaderboard, getFamilyMembers, getFamilyNameNbMembersStars, getFamilyProgressStats, getFamilyTaskById, getLeaderboard, updateAllFamilyMembersStars, updateFamily, updateFamilyGoal, updateFamilyTask } from "../controllers/family.controller";
+import { 
+    completeFamilyTask, 
+    createFamilyTasks, 
+    deleteFamily, 
+    deleteFamilyGoal, 
+    deleteFamilyTask, 
+    getAllFamilies, 
+    getFamily, 
+    getFamilyGoals, 
+    getFamilyLeaderboard, 
+    getFamilyMembers, 
+    getFamilyNameNbMembersStars, 
+    getFamilyProgressStats, 
+    getFamilyTaskById, 
+    getLeaderboard, 
+    updateAllFamilyMembersStars, 
+    updateFamily, 
+    updateFamilyGoal, 
+    updateFamilyTask 
+} from "../controllers/family.controller";
 import { imageUploadMiddleware } from "../middlewares/imageUploadMiddleware";
 
-const router =  express.Router();
+const router = express.Router();
 
+// Admin routes
 router.get("/", authMiddleware, adminMiddleware, getAllFamilies);
+
+// Family management routes
 router.post("/getFamily", authMiddleware, getFamily);
-router.get("/FamilyMembers", authMiddleware, getFamilyMembers);
+router.post("/FamilyMembers", authMiddleware, getFamilyMembers); // Change to POST to accept body
 router.get("/someFamilydetails", authMiddleware, getFamilyNameNbMembersStars);
 router.put("/", authMiddleware, imageUploadMiddleware, updateFamily);
 router.delete("/", authMiddleware, deleteFamily);
@@ -28,7 +50,6 @@ router.put("/goal/completeTask", authMiddleware, completeFamilyTask);
 //routes for families leaderboard
 router.get("/leaderboard/:familyId?", authMiddleware, getLeaderboard);
 router.get("/familyLeaderboard", authMiddleware, getFamilyLeaderboard);
-
 
 //routes for family stars
 router.put("/stars", authMiddleware, updateAllFamilyMembersStars);

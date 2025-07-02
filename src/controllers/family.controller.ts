@@ -12,17 +12,57 @@ import path from "path";
 import { v2 as cloudinary } from 'cloudinary';
 import { deleteFromCloudinary, extractPublicIdFromUrl, uploadFamilyAvatar } from "../utils/cloudinary";
 
-//API get all families
-export const getAllFamilies = async (req: Request, res: Response): Promise<void> => {
+//API get all families (Fixed for admin access)
+export const getAllFamilies = async (req: CustomRequest, res: Response): Promise<void> => {
     try {
-        const families = await Family.find();
-        
-        if (!families || families.length === 0) {
-            return throwError({ message: "Family not found.", res, status: 404 });
+        // Check if user is authenticated and is admin
+        if (!req.user) {
+            return throwError({ message: "Unauthorized", res, status: 401 });
         }
 
-        res.status(200).send({ message:"Retrieving all families successfully", families });
+        if (req.user.role !== 'admin') {
+            return throwError({ message: "Forbidden - Admin access required", res, status: 403 });
+        }
+
+        console.log("Fetching families for admin:", req.user.email);
+
+        const families = await Family.find()
+            .populate({
+                path: 'members',
+                select: 'name email role stars'
+            })
+            .select('_id familyName email familyAvatar totalStars achievements members')
+            .lean(); // Use lean() for better performance
+
+        console.log("Found families:", families.length);
+
+        if (!families || families.length === 0) {
+            res.status(200).json({ 
+                message: "No families found", 
+                families: [] 
+            });
+            return;
+        }
+
+        // Transform the data to ensure all required fields are present
+        const transformedFamilies = families.map(family => ({
+            _id: family._id,
+            familyName: family.familyName,
+            email: family.email,
+            familyAvatar: family.familyAvatar || null,
+            totalStars: family.totalStars || 0,
+            achievements: family.achievements || [],
+            members: family.members || []
+        }));
+
+        console.log("Transformed families:", transformedFamilies.length);
+
+        res.status(200).json({ 
+            message: "Retrieving all families successfully", 
+            families: transformedFamilies 
+        });
     } catch (error) {
+        console.error("Error in getAllFamilies:", error);
         return throwError({ message: "Failed to retrieve all families.", res, status: 500 });
     }
 };
@@ -55,8 +95,14 @@ export const getFamilyMembers = async (req: Request, res: Response): Promise<voi
     try {
         const { familyId } = req.body;
 
+        if (!familyId) {
+            return throwError({ message: "Family ID is required", res, status: 400 });
+        }
+
         if (!checkId({ id: familyId, res })) return;
         
+        console.log("Fetching family members for family:", familyId);
+
         const family = await Family.findById(familyId).populate({
             path: 'members',
             select: 'name email birthday role avatar gender stars coins interests nbOfTasksCompleted rankInFamily memberSince'
@@ -66,18 +112,30 @@ export const getFamilyMembers = async (req: Request, res: Response): Promise<voi
             return throwError({ message: "Family not found.", res, status: 404 });
         }
 
+        console.log("Found family:", family.familyName, "with", family.members?.length || 0, "members");
+
         if (!family.members || family.members.length === 0) {
-            return throwError({ message: "No family members found.", res, status: 404 });
+            res.status(200).json({ 
+                message: "No family members found", 
+                familyWithMembers: {
+                    ...family.toObject(),
+                    members: []
+                }
+            });
+            return;
         }
 
-        res.status(200).json({ message:"Retrieving family members successfully", familyWithMembers: family});
+        res.status(200).json({ 
+            message: "Retrieving family members successfully", 
+            familyWithMembers: family
+        });
 
     } catch (error) {
+        console.error("Error in getFamilyMembers:", error);
         return throwError({ message: "Failed to retrieve family members.", res, status: 500 });
     }
 };
 
-// Update Family Details
 // Update Family Details
 export const updateFamily = async (req: CustomRequest, res: Response): Promise<void> => {
     try {

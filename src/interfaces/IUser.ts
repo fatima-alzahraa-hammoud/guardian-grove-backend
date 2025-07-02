@@ -20,6 +20,7 @@ export interface IUser extends Document{
     birthday: Date;
     dailyMessage: string;
     gender: string;
+    status: 'active' | 'inactive' | 'banned'; 
     role: string;
     avatar: string; 
     interests: string[];
