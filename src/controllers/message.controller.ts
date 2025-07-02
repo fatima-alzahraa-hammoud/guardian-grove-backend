@@ -359,3 +359,47 @@ export const editMessage = async (req: CustomRequest, res: Response): Promise<vo
         return throwError({ message: "Error editing message", res, status: 500 });
     }
 };
+
+
+// Delete a message
+export const deleteMessage = async (req: CustomRequest, res: Response): Promise<void> => {
+    try {
+        const { messageId } = req.params;
+
+        if (!req.user) {
+            return throwError({ message: "Unauthorized", res, status: 401 });
+        }
+
+        if (!checkId({ id: messageId, res })) return;
+
+        // Find the message and verify ownership or admin rights
+        const message = await FamilyMessage.findOne({
+            _id: messageId,
+            isDeleted: false
+        });
+
+        if (!message) {
+            return throwError({ message: "Message not found", res, status: 404 });
+        }
+
+        // Check if user can delete (owner or admin/parent)
+        const canDelete = message.senderId.equals(req.user._id) || 
+                         ['admin', 'parent'].includes(req.user.role);
+
+        if (!canDelete) {
+            return throwError({ message: "Access denied", res, status: 403 });
+        }
+
+        // Soft delete the message
+        message.isDeleted = true;
+        message.deletedAt = new Date();
+        message.content = "This message was deleted";
+        await message.save();
+
+        res.status(200).json({
+            message: "Message deleted successfully"
+        });
+    } catch (error) {
+        return throwError({ message: "Error deleting message", res, status: 500 });
+    }
+};
