@@ -39,4 +39,4 @@ messageSchema.index({ chatId: 1, timestamp: -1 });
 messageSchema.index({ senderId: 1 });
 messageSchema.index({ isDeleted: 1 });
 
-export const Message = model<IFamilyMessage>("Message", messageSchema);
+export const FamilyMessage = model<IFamilyMessage>("Message", messageSchema);
