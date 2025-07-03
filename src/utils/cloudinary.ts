@@ -191,3 +191,160 @@ const isImageFile = (filename: string): boolean => {
     const extension = filename.toLowerCase().substring(filename.lastIndexOf('.'));
     return imageExtensions.includes(extension);
 };
+
+export const uploadAudioFile = async (
+    fileBuffer: Buffer,
+    fileName: string,
+    options?: {
+        folder?: string;
+        publicIdPrefix?: string;
+        transformation?: any;
+    }
+): Promise<CloudinaryUploadResult> => {
+    const {
+        folder = 'guardian grove project/audio',
+        publicIdPrefix = '',
+        transformation
+    } = options || {};
+
+    // Create sanitized public ID
+    const timestamp = Date.now();
+    const baseName = path.basename(fileName, path.extname(fileName));
+    const sanitizedBaseName = sanitizePublicId(baseName);
+    const publicId = publicIdPrefix 
+        ? `${publicIdPrefix}/${timestamp}-${sanitizedBaseName}`
+        : `${timestamp}-${sanitizedBaseName}`;
+
+    return new Promise((resolve, reject) => {
+        const uploadOptions: any = {
+            resource_type: 'video', // Audio files use 'video' resource type in Cloudinary
+            public_id: publicId,
+            folder: folder
+        };
+
+        if (transformation) {
+            uploadOptions.transformation = transformation;
+        }
+
+        const stream = cloudinary.uploader.upload_stream(
+            uploadOptions,
+            (error, result) => {
+                if (error) {
+                    reject(new Error(`Cloudinary audio upload failed: ${error.message}`));
+                } else if (result) {
+                    resolve({
+                        secure_url: result.secure_url,
+                        public_id: result.public_id,
+                        format: result.format,
+                        resource_type: result.resource_type
+                    });
+                } else {
+                    reject(new Error('Cloudinary audio upload failed: No result returned'));
+                }
+            }
+        );
+
+        stream.end(fileBuffer);
+    });
+};
+
+// Upload AI response audio files
+export const uploadAIResponseAudio = async (
+    fileBuffer: Buffer,
+    fileName: string,
+    chatId?: string
+): Promise<CloudinaryUploadResult> => {
+    return uploadAudioFile(fileBuffer, fileName, {
+        folder: 'guardian grove project/ai-responses',
+        publicIdPrefix: chatId ? `chat-${chatId}` : '',
+        transformation: {
+            quality: 'auto',
+            format: 'mp3' // Ensure consistent format
+        }
+    });
+};
+
+// Upload message audio files (voice messages from users)
+export const uploadMessageAudio = async (
+    fileBuffer: Buffer,
+    fileName: string,
+    userId?: string
+): Promise<CloudinaryUploadResult> => {
+    return uploadAudioFile(fileBuffer, fileName, {
+        folder: 'guardian grove project/voice-messages',
+        publicIdPrefix: userId ? `user-${userId}` : '',
+        transformation: {
+            quality: 'auto',
+            format: 'mp3'
+        }
+    });
+};
+
+// Helper function to check if file is an audio file
+const isAudioFile = (filename: string): boolean => {
+    const audioExtensions = ['.mp3', '.wav', '.m4a', '.aac', '.ogg', '.flac', '.wma'];
+    const extension = filename.toLowerCase().substring(filename.lastIndexOf('.'));
+    return audioExtensions.includes(extension);
+};
+
+// Updated uploadMessageFile function to handle audio files
+export const uploadMessageFileWithAudio = async (buffer: Buffer, originalName: string) => {
+    const sanitizedName = sanitizePublicId(originalName);
+    const timestamp = Date.now();
+    
+    return new Promise((resolve, reject) => {
+        let resourceType: 'image' | 'video' | 'raw';
+        
+        if (isImageFile(originalName)) {
+            resourceType = 'image';
+        } else if (isAudioFile(originalName)) {
+            resourceType = 'video'; // Audio files use 'video' resource type
+        } else {
+            resourceType = 'raw';
+        }
+        
+        cloudinary.uploader.upload_stream(
+            {
+                resource_type: resourceType,
+                public_id: `messages/${timestamp}_${sanitizedName}`,
+                folder: 'guardian_grove/messages',
+                // For images, enable transformations
+                ...(resourceType === 'image' && {
+                    transformation: [
+                        { quality: 'auto', fetch_format: 'auto' },
+                        { width: 1200, height: 1200, crop: 'limit' }
+                    ]
+                }),
+                // For audio files, enable transformations
+                ...(resourceType === 'video' && isAudioFile(originalName) && {
+                    transformation: [
+                        { quality: 'auto', format: 'mp3' }
+                    ]
+                })
+            },
+            (error, result) => {
+                if (error) {
+                    console.error('Cloudinary upload error:', error);
+                    reject(error);
+                } else {
+                    resolve(result);
+                }
+            }
+        ).end(buffer);
+    });
+};
+
+// Delete audio files from Cloudinary
+export const deleteAudioFromCloudinary = async (publicId: string): Promise<any> => {
+    return new Promise((resolve, reject) => {
+        cloudinary.uploader.destroy(publicId, {
+            resource_type: 'video' // Use 'video' for audio files
+        }, (error, result) => {
+            if (error) {
+                reject(new Error(`Cloudinary audio delete failed: ${error.message}`));
+            } else {
+                resolve(result);
+            }
+        });
+    });
+};
