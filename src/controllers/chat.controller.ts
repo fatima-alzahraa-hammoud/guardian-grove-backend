@@ -7,19 +7,17 @@ import { IMessage } from "../interfaces/IMessage";
 import { openai } from "..";
 import { ChatCompletionMessageParam } from "openai/resources";
 import { generateChatTitle } from "../utils/generateChatTitle";
-import { audioFileToBase64, TextToSpeech } from "../utils/AIHelperMethods/textToSpeech";
+import { TextToSpeechBuffer } from "../utils/AIHelperMethods/textToSpeech";
+import { uploadAIResponseAudio } from "../utils/cloudinary";
 
 //API to send messages and save (and create new chat if no chat exists)
-
 export const handleChat = async (req: CustomRequest, res: Response) => {
-
     try{
         if(!req.user){
             return throwError({ message: "Unauthorized", res, status: 401 });
         }
     
         const userId = req.user._id;
-
         const { chatId, message, sender, image, isCall } = req.body;
     
         if (!sender || (!message && !image)) {
@@ -64,6 +62,7 @@ export const handleChat = async (req: CustomRequest, res: Response) => {
             res.status(200).send({ message: 'Message sent', chat: chat, sendedMessage});
             return;
         }
+
         // Add instructions and conversation context to the prompt
         const aiPrompt : ChatCompletionMessageParam[] = [
             {
@@ -73,8 +72,8 @@ export const handleChat = async (req: CustomRequest, res: Response) => {
                     You are the Guardian Grove AI, a family companion designed to help and support both parents and children. As an AI friend for the entire family, your role is to:
 
                     - Assist with real-time support, answering any questions that parents or children have.
-                    - Offer parenting tips and advice based on the child’s age, interests, and behavior.
-                    - Track the child’s routine, mood, and location, alerting parents when necessary.
+                    - Offer parenting tips and advice based on the child's age, interests, and behavior.
+                    - Track the child's routine, mood, and location, alerting parents when necessary.
                     - Suggest fun and educational activities like reading, sports, and learning new skills for the child.
                     - Encourage collaboration by setting tasks that parents and children can do together, rewarding achievements with stars and coins.
                     - Provide step-by-step guidance on completing tasks or solving problems.
@@ -102,9 +101,9 @@ export const handleChat = async (req: CustomRequest, res: Response) => {
         // Add AI response to chat
         if (aiMessage) {
             chat.messages.push({
-            sender: "bot",
-            message: aiMessage,
-            timestamp: new Date(),
+                sender: "bot",
+                message: aiMessage,
+                timestamp: new Date(),
             } as IMessage);
         }
 
@@ -112,24 +111,44 @@ export const handleChat = async (req: CustomRequest, res: Response) => {
 
         const sendedMessage = {sender, message};
 
-        if (isCall){
-            const outputFilePath = `./audio-responses/message_${chatId}_${new Date().getTime()}.mp3`;
-            await TextToSpeech(aiMessage || "no message found", outputFilePath); // Save audio
+        if (isCall && aiMessage) {
+            try {
+                // Generate audio buffer directly (no file saving)
+                const audioBuffer = await TextToSpeechBuffer(aiMessage);
 
-            const audio = await audioFileToBase64(outputFilePath);
+                // Upload directly to Cloudinary
+                const cloudinaryResult = await uploadAIResponseAudio(
+                    audioBuffer,
+                    `ai_response_${chatId}_${Date.now()}.mp3`,
+                    chatId
+                );
 
-            res.status(200).send({
-                message: 'Message sent',
-                chat: chat,
-                sendedMessage,
-                aiResponse: response.choices[0].message,
-                audio
-            });   
-            return; 
+                res.status(200).send({
+                    message: 'Message sent',
+                    chat: chat,
+                    sendedMessage,
+                    aiResponse: response.choices[0].message,
+                    audioUrl: cloudinaryResult.secure_url,
+                    audioPublicId: cloudinaryResult.public_id
+                });
+                return;
+
+            } catch (audioError) {
+                console.error('Audio processing error:', audioError);
+                
+                // If audio processing fails, still send the text response
+                res.status(200).send({
+                    message: 'Message sent',
+                    chat: chat,
+                    sendedMessage,
+                    aiResponse: response.choices[0].message,
+                    audioError: 'Audio generation failed'
+                });
+                return;
+            }
         }
 
         // Respond with AI message without the audio file
-
         res.status(200).send({
             message: 'Message sent',
             chat: chat,
@@ -138,9 +157,11 @@ export const handleChat = async (req: CustomRequest, res: Response) => {
         });            
         
     }catch(error){
+        console.error('Chat handler error:', error);
         return throwError({ message: "Error occured while sending message or creating chat", res, status: 500 });
     }
 };
+
 
 // Create a new chat
 export const startNewChat = async (req: CustomRequest, res: Response) => {

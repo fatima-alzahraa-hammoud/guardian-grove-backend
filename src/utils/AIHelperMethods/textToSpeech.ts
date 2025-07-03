@@ -1,22 +1,18 @@
-
-import * as fs from "fs";
-import { Readable } from "stream";
 import dotenv from "dotenv";
 dotenv.config();
 
 const elevenLabsApiKey = process.env.ELEVEN_LABS_API_KEY;
 const voiceId = process.env.VOICE_ID;
 
-export const TextToSpeech = async(text : string, outputFilePath : string) => {
+// Updated function to return Buffer instead of saving to file
+export const TextToSpeechBuffer = async (text: string): Promise<Buffer> => {
     try {
         if (!elevenLabsApiKey) {
             throw new Error("ELEVEN_LABS_API_KEY is not defined");
         }
 
-        const path = './audio-responses';
-        if (!fs.existsSync(path)) {
-            console.log(`Directory does not exist, creating: ${path}`);
-            fs.mkdirSync(path, { recursive: true });
+        if (!voiceId) {
+            throw new Error("VOICE_ID is not defined");
         }
 
         const response = await fetch(
@@ -44,35 +40,40 @@ export const TextToSpeech = async(text : string, outputFilePath : string) => {
             throw new Error(`Failed to fetch: ${response.statusText}`);
         }
 
-        const fileWriter = fs.createWriteStream(outputFilePath);      
+        // Convert response to buffer
+        const arrayBuffer = await response.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
 
-        const readableStream = Readable.fromWeb(response.body as any);
-        readableStream.pipe(fileWriter);
-        
-        return new Promise<string>((resolve, reject) => {
-            fileWriter.on("finish", () => {
-                console.log("Audio file saved successfully:", outputFilePath);
-                resolve(outputFilePath);
-            });
-            fileWriter.on("error", (err) => {
-                console.error("Error writing audio file:", err);
-                reject(err);
-            });
-        });
+        console.log("Audio buffer generated successfully");
+        return buffer;
     } catch (error) {
-        console.log("Error generating text-to-speech")
+        console.error("Error generating text-to-speech:", error);
+        throw error;
     }
-}
+};
 
-export const audioFileToBase64 = async (filePath: string): Promise<string> => {
+// Keep the original function for backward compatibility (if needed elsewhere)
+export const TextToSpeech = async (text: string, outputFilePath: string): Promise<string> => {
     try {
+        const buffer = await TextToSpeechBuffer(text);
+        
+        // Import fs only when needed for file operations
+        const fs = await import("fs");
+        
+        // Ensure directory exists
+        const path = './audio-responses';
+        if (!fs.existsSync(path)) {
+            console.log(`Directory does not exist, creating: ${path}`);
+            fs.mkdirSync(path, { recursive: true });
+        }
 
-        const data = await fs.promises.readFile(filePath);
-        const base64 = data.toString("base64");
-
-        return base64;
+        // Write buffer to file
+        await fs.promises.writeFile(outputFilePath, buffer);
+        
+        console.log("Audio file saved successfully:", outputFilePath);
+        return outputFilePath;
     } catch (error) {
-        console.error("Error reading or converting audio file to base64:", error);
+        console.error("Error generating text-to-speech:", error);
         throw error;
     }
 };
