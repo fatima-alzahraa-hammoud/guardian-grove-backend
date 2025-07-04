@@ -130,7 +130,6 @@ export const createGoal = async (req: Request, res: Response): Promise<void> => 
         }
         
     } catch (err) {
-        console.error("Error creating goal:", err);
         return throwError({message: "An unknown error occurred while creating goal", res, status: 500});
     }
 }

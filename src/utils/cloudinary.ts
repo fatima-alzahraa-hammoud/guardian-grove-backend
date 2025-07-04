@@ -114,16 +114,13 @@ export const deleteFromCloudinary = async (publicId: string): Promise<any> => {
 
 export const extractPublicIdFromUrl = (cloudinaryUrl: string): string => {
     try {
-        console.log('Original URL:', cloudinaryUrl);
         
         // Decode URL first to handle encoded characters like %20
         const decodedUrl = decodeURIComponent(cloudinaryUrl);
-        console.log('Decoded URL:', decodedUrl);
         
         const urlParts = decodedUrl.split('/');
         const uploadIndex = urlParts.findIndex(part => part === 'upload');
         if (uploadIndex === -1) {
-            console.log('Upload index not found');
             return '';
         }
         
@@ -144,10 +141,8 @@ export const extractPublicIdFromUrl = (cloudinaryUrl: string): string => {
         publicIdParts[publicIdParts.length - 1] = lastPartWithoutExt;
         
         const result = publicIdParts.join('/');
-        console.log('Extracted public ID:', result);
         return result;
     } catch (error) {
-        console.error('Error extracting public ID:', error);
         return '';
     }
 };
@@ -175,7 +170,6 @@ export const uploadMessageFile = async (buffer: Buffer, originalName: string) =>
             },
             (error, result) => {
                 if (error) {
-                    console.error('Cloudinary upload error:', error);
                     reject(error);
                 } else {
                     resolve(result);
@@ -324,7 +318,6 @@ export const uploadMessageFileWithAudio = async (buffer: Buffer, originalName: s
             },
             (error, result) => {
                 if (error) {
-                    console.error('Cloudinary upload error:', error);
                     reject(error);
                 } else {
                     resolve(result);

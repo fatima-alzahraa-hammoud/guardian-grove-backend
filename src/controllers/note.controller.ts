@@ -58,7 +58,6 @@ export const createNote = async (req: CustomRequest, res: Response): Promise<voi
         const createdNote = updatedUser.notes[updatedUser.notes.length - 1];
         res.status(201).json({ message: "Note created", note: createdNote });
     } catch (error) {
-        console.error(error);
         return throwError({ message: "Error creating note", res, status: 500 });
     }
 };
@@ -84,7 +83,6 @@ export const getNotes = async (req: CustomRequest, res: Response): Promise<void>
 
         res.status(200).json({ notes: sortedNotes });
     } catch (error) {
-        console.error(error);
         return throwError({ message: "Error retrieving notes", res, status: 500 });
     }
 };
@@ -138,7 +136,6 @@ export const updateNote = async (req: CustomRequest, res: Response): Promise<voi
 
         res.status(200).json({ message: "Note updated", note: updatedNote });
     } catch (error) {
-        console.error(error);
         return throwError({ message: "Error updating note", res, status: 500 });
     }
 };
@@ -168,7 +165,6 @@ export const deleteNote = async (req: CustomRequest, res: Response): Promise<voi
 
         res.status(200).json({ message: 'Note deleted successfully', note: deletedNote });
     } catch (error) {
-        console.error(error);
         return throwError({message: "Error deleting note", res, status: 500});
     }
 };

@@ -41,7 +41,6 @@ export const createBondingActivity = async (req: CustomRequest, res: Response) =
         });
 
     } catch (error) {
-        console.error('Error creating bonding activity:', error);
         return throwError({ message: "Failed to create bonding activity", res, status: 500 });
     }
 };
@@ -70,7 +69,6 @@ export const getBondingActivities = async (req: CustomRequest, res: Response) =>
         });
 
     } catch (error) {
-        console.error('Error fetching bonding activities:', error);
         return throwError({ message: "Failed to fetch bonding activities", res, status: 500 });
     }
 };
@@ -110,7 +108,6 @@ export const updateBondingActivity = async (req: CustomRequest, res: Response) =
         });
 
     } catch (error) {
-        console.error('Error updating bonding activity:', error);
         return throwError({ message: "Failed to update bonding activity", res, status: 500 });
     }
 };
@@ -144,7 +141,6 @@ export const deleteBondingActivity = async (req: CustomRequest, res: Response) =
         });
 
     } catch (error) {
-        console.error('Error deleting bonding activity:', error);
         return throwError({ message: "Failed to delete bonding activity", res, status: 500 });
     }
 };
@@ -176,7 +172,6 @@ export const incrementDownloads = async (req: CustomRequest, res: Response) => {
         });
 
     } catch (error) {
-        console.error('Error incrementing downloads:', error);
         return throwError({ message: "Failed to increment downloads", res, status: 500 });
     }
 };

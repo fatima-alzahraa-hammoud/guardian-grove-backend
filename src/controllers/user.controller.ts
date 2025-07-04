@@ -71,19 +71,11 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
         }
         if(req.user.role === "child"){
             return throwError({ message: "Forbidden", res, status: 403 });
-        }
-
-        // Debug logs
-        console.log("req.files:", req.files);
-        console.log("req.body:", req.body);
-        
+        }        
 
         // Get uploaded avatar file
         const files = req.files as { [fieldname: string]: Express.Multer.File[] };
         const avatarImage = files.avatar?.[0];
-
-        console.log("Avatar image:", avatarImage);
-        console.log("Avatar path:", avatarPath);
 
         // Parse interests FIRST, before validation
         let parsedInterests = interests;
@@ -91,7 +83,6 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
             try {
                 parsedInterests = JSON.parse(interests);
             } catch (parseError) {
-                console.error('Error parsing interests:', parseError);
                 return throwError({ message: "Invalid interests format.", res, status: 400 });
             }
         }
@@ -156,14 +147,12 @@ export const createUser = async (req: CustomRequest, res: Response): Promise<voi
                 const avatarResult = await uploadUserAvatar(avatarImage.buffer, avatarImage.originalname);
                 avatarUrl = avatarResult.secure_url;
             } catch (uploadError) {
-                console.error('Avatar upload error:', uploadError);
                 return throwError({ message: "Failed to upload avatar image.", res, status: 500 });
             }
         } else if (avatarPath) {
             // Use predefined avatar path
             if (avatarPath.startsWith('/assets/images/avatars/')) {
                 avatarUrl = avatarPath;
-                console.log("Using predefined user avatar:", avatarPath);
             } else {
                 return throwError({ message: "Invalid avatar path. Only predefined avatars are allowed.", res, status: 400 });
             }
@@ -292,9 +281,6 @@ export const editUserProfile = async(req: CustomRequest, res: Response):Promise<
 
         const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
         const avatarImage = files?.avatar?.[0];
-        
-        console.log("Avatar image:", avatarImage);
-        console.log("Avatar path:", avatarPath);
 
         // Check if there's a new file upload
         if (avatarImage) {
@@ -316,7 +302,6 @@ export const editUserProfile = async(req: CustomRequest, res: Response):Promise<
                     }
                 }
             } catch (uploadError) {
-                console.error('Avatar upload error:', uploadError);
                 return throwError({ message: "Failed to upload avatar image.", res, status: 500 });
             }
         } 
@@ -324,7 +309,6 @@ export const editUserProfile = async(req: CustomRequest, res: Response):Promise<
         else if (avatarPath && avatarPath !== user.avatar) {
             // This handles predefined avatars like '/assets/images/avatars/...'
             avatarUrl = avatarPath;
-            console.log("Using predefined user avatar:", avatarPath);
 
             // Delete old Cloudinary avatar if switching to predefined avatar
             if (oldAvatarUrl && !oldAvatarUrl.startsWith('/assets/')) {
@@ -346,7 +330,6 @@ export const editUserProfile = async(req: CustomRequest, res: Response):Promise<
         if (gender) user.gender = gender;
         if (avatarImage || (avatarPath && avatarPath !== user.avatar)) {
             user.avatar = avatarUrl;
-            console.log("Updated user avatar to:", avatarUrl);
         }
         if (role) user.role = role; 
 
@@ -940,7 +923,6 @@ export const getAllUsers = async (req: CustomRequest, res: Response): Promise<vo
             users: transformedUsers 
         });
     } catch (error) {
-        console.error("Error in getAllUsers:", error);
         return throwError({ message: "Error retrieving users", res, status: 500 });
     }
 };
@@ -983,7 +965,6 @@ export const updateUserStatus = async (req: CustomRequest, res: Response): Promi
             }
         });
     } catch (error) {
-        console.error("Error in updateUserStatus:", error);
         return throwError({ message: "Error updating user status", res, status: 500 });
     }
 };
@@ -1027,7 +1008,6 @@ export const updateUserRole = async (req: CustomRequest, res: Response): Promise
             }
         });
     } catch (error) {
-        console.error("Error in updateUserRole:", error);
         return throwError({ message: "Error updating user role", res, status: 500 });
     }
 };
@@ -1072,7 +1052,6 @@ export const createUserByAdmin = async (req: CustomRequest, res: Response): Prom
                 const avatarResult = await uploadUserAvatar(avatarImage.buffer, avatarImage.originalname);
                 avatarUrl = avatarResult.secure_url;
             } catch (uploadError) {
-                console.error('Avatar upload error:', uploadError);
                 return throwError({ message: "Failed to upload avatar image.", res, status: 500 });
             }
         } else if (avatarPath && avatarPath.startsWith('/assets/images/avatars/')) {
@@ -1151,7 +1130,6 @@ export const createUserByAdmin = async (req: CustomRequest, res: Response): Prom
         try {
             await sendMail(from, email, subject, html);
         } catch (emailError) {
-            console.error('Email sending failed:', emailError);
             // Don't fail user creation if email fails
         }
 
@@ -1167,7 +1145,6 @@ export const createUserByAdmin = async (req: CustomRequest, res: Response): Prom
         });
 
     } catch (error) {
-        console.error("Error in createUserByAdmin:", error);
         if ((error as any).code === 11000) {
             return throwError({ 
                 message: "A user with this email and name already exists.", 

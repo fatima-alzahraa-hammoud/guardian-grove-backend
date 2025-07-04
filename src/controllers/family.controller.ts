@@ -24,7 +24,6 @@ export const getAllFamilies = async (req: CustomRequest, res: Response): Promise
             return throwError({ message: "Forbidden - Admin access required", res, status: 403 });
         }
 
-        console.log("Fetching families for admin:", req.user.email);
 
         const families = await Family.find()
             .populate({
@@ -34,7 +33,6 @@ export const getAllFamilies = async (req: CustomRequest, res: Response): Promise
             .select('_id familyName email familyAvatar totalStars achievements members')
             .lean(); // Use lean() for better performance
 
-        console.log("Found families:", families.length);
 
         if (!families || families.length === 0) {
             res.status(200).json({ 
@@ -55,14 +53,12 @@ export const getAllFamilies = async (req: CustomRequest, res: Response): Promise
             members: family.members || []
         }));
 
-        console.log("Transformed families:", transformedFamilies.length);
 
         res.status(200).json({ 
             message: "Retrieving all families successfully", 
             families: transformedFamilies 
         });
     } catch (error) {
-        console.error("Error in getAllFamilies:", error);
         return throwError({ message: "Failed to retrieve all families.", res, status: 500 });
     }
 };
@@ -101,7 +97,6 @@ export const getFamilyMembers = async (req: Request, res: Response): Promise<voi
 
         if (!checkId({ id: familyId, res })) return;
         
-        console.log("Fetching family members for family:", familyId);
 
         const family = await Family.findById(familyId).populate({
             path: 'members',
@@ -112,7 +107,6 @@ export const getFamilyMembers = async (req: Request, res: Response): Promise<voi
             return throwError({ message: "Family not found.", res, status: 404 });
         }
 
-        console.log("Found family:", family.familyName, "with", family.members?.length || 0, "members");
 
         if (!family.members || family.members.length === 0) {
             res.status(200).json({ 
@@ -131,7 +125,6 @@ export const getFamilyMembers = async (req: Request, res: Response): Promise<voi
         });
 
     } catch (error) {
-        console.error("Error in getFamilyMembers:", error);
         return throwError({ message: "Failed to retrieve family members.", res, status: 500 });
     }
 };
@@ -188,8 +181,6 @@ export const updateFamily = async (req: CustomRequest, res: Response): Promise<v
         const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
         const familyAvatarImage = files?.familyAvatar?.[0];
 
-        console.log("Family avatar image:", familyAvatarImage);
-        console.log("Family avatar path:", familyAvatarPath);
 
         // Check if there's a new file upload
         if (familyAvatarImage) {
@@ -205,13 +196,11 @@ export const updateFamily = async (req: CustomRequest, res: Response): Promise<v
                         try {
                             await deleteFromCloudinary(oldPublicId);
                         } catch (deleteError) {
-                            console.warn('Failed to delete old family avatar:', deleteError);
                             // Continue execution even if deletion fails
                         }
                     }
                 }
             } catch (uploadError) {
-                console.error('Family avatar upload error:', uploadError);
                 return throwError({ message: "Failed to upload family avatar image.", res, status: 500 });
             }
         } 
@@ -228,7 +217,6 @@ export const updateFamily = async (req: CustomRequest, res: Response): Promise<v
                         try {
                             await deleteFromCloudinary(oldPublicId);
                         } catch (deleteError) {
-                            console.warn('Failed to delete old family avatar:', deleteError);
                             // Continue execution even if deletion fails
                         }
                     }
@@ -254,9 +242,7 @@ export const updateFamily = async (req: CustomRequest, res: Response): Promise<v
                     { familyId: targetFamilyId }, 
                     { $set: { email: email } }
                 );
-                console.log(`Updated ${updateResult.modifiedCount} family members' emails`);
             } catch (updateError) {
-                console.error('Failed to update family members emails:', updateError);
                 // Don't fail the whole operation, just log the error
             }
         }
@@ -265,7 +251,6 @@ export const updateFamily = async (req: CustomRequest, res: Response): Promise<v
 
         res.status(200).send({ message: "Family updated successfully.", family: family });
     } catch (error) {
-        console.error('Update family error:', error);
         return throwError({ message: "Failed to update family.", res, status: 500 });
     }
 };
@@ -301,9 +286,7 @@ export const deleteFamily = async (req: CustomRequest, res: Response): Promise<v
             if (publicId) {
                 try {
                     await deleteFromCloudinary(publicId);
-                    console.log('Family avatar deleted from Cloudinary:', publicId);
                 } catch (deleteError) {
-                    console.warn('Failed to delete family avatar from Cloudinary:', deleteError);
                     // Continue with family deletion even if avatar deletion fails
                 }
             }
@@ -319,9 +302,7 @@ export const deleteFamily = async (req: CustomRequest, res: Response): Promise<v
                 if (publicId) {
                     try {
                         await deleteFromCloudinary(publicId);
-                        console.log(`User avatar deleted from Cloudinary for user ${member._id}:`, publicId);
                     } catch (deleteError) {
-                        console.warn(`Failed to delete user avatar from Cloudinary for user ${member._id}:`, deleteError);
                         // Continue with deletion even if individual avatar deletion fails
                     }
                 }
@@ -336,7 +317,6 @@ export const deleteFamily = async (req: CustomRequest, res: Response): Promise<v
 
         res.status(200).send({ message: "Family and all associated members deleted successfully." });
     } catch (error) {
-        console.error('Delete family error:', error);
         return throwError({ message: "Failed to delete family.", res, status: 500 });
     }
 };

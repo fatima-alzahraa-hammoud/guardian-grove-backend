@@ -56,7 +56,26 @@ describe('Goal Controller Tests', () => {
 
         it('should create personal goal successfully', async () => {
             const mockUserData = testUtils.createMockUser();
-            const mockUpdatedUser = { ...mockUserData, goals: [expect.any(Object)] };
+            
+            // Create a new goal that would be added to the user
+            const newGoalWithId = {
+                _id: testUtils.ids.goal,
+                title: 'Test Goal',
+                description: 'Test goal description',
+                type: 'personal',
+                dueDate: new Date('2024-12-31'),
+                rewards: { stars: 50, coins: 25 },
+                tasks: [],
+                createdAt: expect.any(Date),
+                isCompleted: false,
+                progress: 0,
+                nbOfTasksCompleted: 0
+            };
+            
+            const mockUpdatedUser = { 
+                ...mockUserData, 
+                goals: [newGoalWithId] 
+            };
             
             mockUser.findById.mockResolvedValue(mockUserData as any);
             mockUser.findOneAndUpdate.mockResolvedValue(mockUpdatedUser as any);
@@ -67,11 +86,20 @@ describe('Goal Controller Tests', () => {
             await createGoal(mockReq as any, mockRes as any);
 
             expect(mockUser.findById).toHaveBeenCalledWith(testUtils.ids.user);
-            expect(mockUser.findOneAndUpdate).toHaveBeenCalled();
+            expect(mockUser.findOneAndUpdate).toHaveBeenCalledWith(
+                { _id: testUtils.ids.user },
+                { $push: { goals: expect.objectContaining({
+                    title: 'Test Goal',
+                    description: 'Test goal description',
+                    type: 'personal'
+                }) }},
+                { new: true }
+            );
             expect(mockRes.status).toHaveBeenCalledWith(201);
             expect(mockRes.json).toHaveBeenCalledWith({
                 message: 'Goal created successfully',
                 goal: expect.objectContaining({
+                    _id: testUtils.ids.goal,
                     title: 'Test Goal',
                     description: 'Test goal description',
                     type: 'personal'
@@ -102,8 +130,28 @@ describe('Goal Controller Tests', () => {
             delete (goalDataWithoutType as any).type;
             
             const mockUserData = testUtils.createMockUser();
+            
+            const newGoalWithId = {
+                _id: testUtils.ids.goal,
+                title: 'Test Goal',
+                description: 'Test goal description',
+                type: 'personal', // Should default to personal
+                dueDate: expect.any(Date),
+                rewards: { stars: 50, coins: 25 },
+                tasks: [],
+                createdAt: expect.any(Date),
+                isCompleted: false,
+                progress: 0,
+                nbOfTasksCompleted: 0
+            };
+            
+            const mockUpdatedUser = { 
+                ...mockUserData, 
+                goals: [newGoalWithId] 
+            };
+            
             mockUser.findById.mockResolvedValue(mockUserData as any);
-            mockUser.findOneAndUpdate.mockResolvedValue(mockUserData as any);
+            mockUser.findOneAndUpdate.mockResolvedValue(mockUpdatedUser as any);
 
             const mockReq = testUtils.createMockRequest({ body: goalDataWithoutType });
             const mockRes = testUtils.createMockResponse();
@@ -113,7 +161,10 @@ describe('Goal Controller Tests', () => {
             expect(mockRes.status).toHaveBeenCalledWith(201);
             expect(mockRes.json).toHaveBeenCalledWith({
                 message: 'Goal created successfully',
-                goal: expect.objectContaining({ type: 'personal' })
+                goal: expect.objectContaining({ 
+                    type: 'personal',
+                    _id: testUtils.ids.goal
+                })
             });
         });
 
