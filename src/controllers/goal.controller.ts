@@ -12,9 +12,10 @@ import { recalculateFamilyMemberRanks } from "../utils/recalculateFamilyMemberRa
 import { getTimePeriod } from "../utils/getTimePeriod";
 
 //API to create goal
+//API to create goal - UPDATED VERSION
 export const createGoal = async (req: Request, res: Response): Promise<void> => {
     try {
-        let {familyId, userId, title, description, type, dueDate, rewards } = req.body;
+        let {familyId, userId, title, description, type, dueDate, rewards, tasks } = req.body;
 
         if (!title || !description) {
             return throwError({ message: "All required fields must be filled.", res, status: 400});
@@ -22,6 +23,14 @@ export const createGoal = async (req: Request, res: Response): Promise<void> => 
 
         if(!type){
             type = 'personal';
+        }
+
+        // Set default rewards if not provided
+        if (!rewards) {
+            rewards = {
+                stars: 0,
+                coins: 0
+            };
         }
 
         if (rewards?.achievementId) {
@@ -32,14 +41,47 @@ export const createGoal = async (req: Request, res: Response): Promise<void> => 
             rewards.achievementName = achievement.title;
         }
         
+        // Process tasks if they are provided (for goals created with generated tasks)
+        interface ProcessedTask {
+            title: string;
+            description: string;
+            type: string;
+            rewards: {
+            stars: number;
+            coins: number;
+            };
+            createdAt: Date;
+            isCompleted: boolean;
+        }
+        let processedTasks: ProcessedTask[] = [];
+        if (tasks && Array.isArray(tasks)) {
+            processedTasks = tasks.map((task: any) => ({
+                title: task.title,
+                description: task.description,
+                type: type, // Use the same type as the goal
+                rewards: task.rewards || { stars: 5, coins: 10 },
+                createdAt: new Date(),
+                isCompleted: false
+            }));
+        }
+        
+        // Set dueDate to one week from now if not provided
+        if (!dueDate) {
+            const now = new Date();
+            dueDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
+        }
+
         const newGoal = ({
             title,
             description,
             type,
             dueDate,
             rewards,
-            tasks: [],
-            createdAt: new Date()
+            tasks: processedTasks, // Include the processed tasks
+            createdAt: new Date(),
+            isCompleted: false,
+            progress: 0,
+            nbOfTasksCompleted: 0
         });
 
         if (type === "personal"){
@@ -58,6 +100,11 @@ export const createGoal = async (req: Request, res: Response): Promise<void> => 
             if (!updatedUser) {
                 return throwError({ message: "Failed to update user goals.", res, status: 500 });
             }
+
+            // Get the newly created goal with its generated _id
+            const createdGoal = updatedUser.goals[updatedUser.goals.length - 1];
+            
+            res.status(201).json({ message: 'Goal created successfully', goal: createdGoal});
         }
         else{
             if(!checkId({id: familyId, res})) return;
@@ -75,9 +122,13 @@ export const createGoal = async (req: Request, res: Response): Promise<void> => 
             if (!updatedFamily) {
                 return throwError({ message: "Failed to update family goals.", res, status: 500 });
             }
+
+            // Get the newly created goal with its generated _id
+            const createdGoal = updatedFamily.goals[updatedFamily.goals.length - 1];
+            
+            res.status(201).json({ message: 'Goal created successfully', goal: createdGoal});
         }
         
-        res.status(201).json({ message: 'Goal created successfully', goal: newGoal});
     } catch (err) {
         return throwError({message: "An unknown error occurred while creating goal", res, status: 500});
     }

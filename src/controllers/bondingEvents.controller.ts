@@ -83,7 +83,6 @@ export const generateBondingEvents = async (req: CustomRequest, res: Response): 
             const cleanedContent = content.replace(/```json/g, '').replace(/```/g, '').trim();
             events = JSON.parse(cleanedContent);
         } catch (parseError) {
-            console.error("Error parsing AI response:", parseError);
             throwError({ message: "Failed to generate events", res, status: 500 });
             return;
         }
@@ -135,7 +134,6 @@ export const generateBondingEvents = async (req: CustomRequest, res: Response): 
         });
 
     } catch (error) {
-        console.error("Error generating bonding events:", error);
         throwError({ message: "Failed to generate bonding events", res, status: 500 });
     }
 };
@@ -209,7 +207,6 @@ export const reviewBondingEvent = async (req: CustomRequest, res: Response): Pro
         });
 
     } catch (error) {
-        console.error("Error reviewing bonding event:", error);
         throwError({ message: "Failed to review event", res, status: 500 });
     }
 };
@@ -249,7 +246,6 @@ export const getFamilyBondingEvents = async (req: CustomRequest, res: Response):
         });
 
     } catch (error) {
-        console.error("Error getting bonding events:", error);
         throwError({ message: "Failed to get bonding events", res, status: 500 });
     }
 };

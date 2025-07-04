@@ -19,7 +19,7 @@ import {
 } from "../controllers/user.controller";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { adminMiddleware } from "../middlewares/admin.middleware";
-import { checkQuestionCompletion, generateDailyAdventureRoute, generateGrowthPlans, generateLearningZone, generateQuickTips, generateStory, generateTaskCompletionQuestion, generateTrackDay, generateViewTasks, regenerateGoalsAndTasksRoute } from "../controllers/ai.controller";
+import { checkQuestionCompletion, generateDailyAdventureRoute, generateGrowthPlans, generateLearningZone, generateQuickTips, generateStory, generateTaskCompletionQuestion, generateTasksForGoal, generateTrackDay, generateViewTasks, regenerateGoalsAndTasksRoute } from "../controllers/ai.controller";
 import { imageUploadMiddleware } from "../middlewares/imageUploadMiddleware";
 
 const router = express.Router();
@@ -79,5 +79,6 @@ router.post("/generateQuickTip", generateQuickTips);
 router.post("/generateQusetion", generateTaskCompletionQuestion);
 router.post("/checkAnswer", checkQuestionCompletion);
 router.post("/generateAdventure", generateDailyAdventureRoute);
+router.post('/generateTasksForGoal', generateTasksForGoal);
 
 export default router;

@@ -75,7 +75,6 @@ export const register = async (req: Request, res: Response) : Promise<void> => {
             try {
                 parsedInterests = JSON.parse(interests);
             } catch (parseError) {
-                console.error('Error parsing interests:', parseError);
                 return throwError({ message: "Invalid interests format.", res, status: 400 });
             }
         }
@@ -147,7 +146,6 @@ export const register = async (req: Request, res: Response) : Promise<void> => {
                 const avatarResult = await uploadUserAvatar(avatarImage.buffer, avatarImage.originalname);
                 userAvatarUrl = avatarResult.secure_url;
             } catch (uploadError) {
-                console.error('User avatar upload error:', uploadError);
                 return throwError({ message: "Failed to upload user avatar image.", res, status: 500 });
             }
         }else if (avatarPath) {
@@ -166,7 +164,6 @@ export const register = async (req: Request, res: Response) : Promise<void> => {
                 const familyAvatarResult = await uploadFamilyAvatar(familyAvatarImage.buffer, familyAvatarImage.originalname);
                 familyAvatarUrl = familyAvatarResult.secure_url;
             } catch (uploadError) {
-                console.error('Family avatar upload error:', uploadError);
                 return throwError({ message: "Failed to upload family avatar image.", res, status: 500 });
             }
         } else if (familyAvatarPath) {
