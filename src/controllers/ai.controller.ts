@@ -663,6 +663,162 @@ export const checkQuestionCompletion = async (req: Request, res: Response) => {
     }
 };
 
+export const generateTasksForGoal = async (req: Request, res: Response) => {
+    try {
+        const { userId, title, description } = req.body;
+
+        // Validate required fields
+        if (!userId || !title || !description) {
+            return throwError({ message: "User ID, title, and description are required", res, status: 400 });
+        }
+
+        // Validate user exists
+        if (!checkId({ id: userId, res })) return;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return throwError({ message: "User not found", res, status: 404 });
+        }
+
+        // Calculate user's age for age-appropriate tasks
+        const currentYear = new Date().getFullYear();
+        const birthYear = new Date(user.birthday).getFullYear();
+        const age = currentYear - birthYear;
+
+        // Create AI prompt to generate tasks
+        const aiPrompt = `
+            You are an AI assistant that generates personalized tasks for user goals. 
+            Create 5-7 specific, actionable tasks that will help achieve the following goal:
+
+            Goal Title: ${title}
+            Goal Description: ${description}
+            
+            User Information:
+            - Age: ${age}
+            - Interests: ${user.interests ? user.interests.join(", ") : "General interests"}
+            
+            Requirements for each task:
+            - Make tasks specific, measurable, and achievable
+            - Ensure tasks are age-appropriate for a ${age}-year-old
+            - Include variety: some quick wins (easy tasks) and some challenging ones
+            - Consider the user's interests when possible
+            - Tasks should logically build toward the goal
+            - Each task should be completable within a reasonable timeframe
+            
+            Return the response as a JSON array with this exact structure:
+            [
+                {
+                    "title": "Task title (concise, action-oriented)",
+                    "description": "Detailed description of what needs to be done",
+                    "rewards": {
+                        "stars": 10,
+                        "coins": 20
+                    }
+                }
+            ]
+            
+            IMPORTANT: 
+            - Return ONLY valid JSON array, no additional text
+            - Ensure proper JSON syntax with all quotes and brackets
+            - Do not include markdown code blocks
+            - Make sure all fields are present for each task
+            - Stars should be between 5-15, coins between 10-30
+        `;
+
+        // Call OpenAI API
+        const response = await openai.chat.completions.create({
+            model: "deepseek-chat",
+            messages: [{ role: "system", content: aiPrompt }],
+            temperature: 0.8,
+            max_tokens: 1000,
+        });
+
+        const generatedContent = response?.choices[0]?.message?.content;
+
+        if (!generatedContent) {
+            return throwError({ message: "Failed to generate tasks - no content received from AI", res, status: 500 });
+        }
+
+        let tasks;
+        try {
+            // Clean the response
+            let cleanedContent = generatedContent.trim();
+            
+            // Remove markdown code blocks if present
+            if (cleanedContent.startsWith('```json')) {
+                cleanedContent = cleanedContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+            } else if (cleanedContent.startsWith('```')) {
+                cleanedContent = cleanedContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
+            }
+            
+            // Parse the JSON
+            tasks = JSON.parse(cleanedContent);
+            
+            // Validate the structure
+            if (!Array.isArray(tasks)) {
+                throw new Error("Response is not an array");
+            }
+            
+            // Validate each task has required fields
+            tasks.forEach((task, index) => {
+                if (!task.title || !task.description || !task.rewards) {
+                    return throwError({ message: `Task ${index + 1} is missing required fields`, res, status: 400 });
+                }
+                if (typeof task.rewards.stars !== 'number' || typeof task.rewards.coins !== 'number') {
+                    throw new Error(`Task ${index + 1} has invalid reward values`);
+                }
+            });
+            
+        } catch (parseError) {
+            console.error("Failed to parse AI response:", parseError);
+            console.error("Raw response:", generatedContent);
+            
+            // Fallback: create default tasks
+            tasks = generateFallbackTasks(title, description);
+        }
+
+        res.status(200).json({
+            message: "Tasks generated successfully",
+            tasks: tasks
+        });
+
+    } catch (error) {
+        console.error("Error generating tasks for goal:", error);
+        return throwError({ message: "Internal server error", res, status: 500 });
+    }
+};
+
+// Helper function to generate fallback tasks if AI parsing fails
+const generateFallbackTasks = (title: string, description: string) => {
+    return [
+        {
+            title: `Research about ${title}`,
+            description: `Spend 30 minutes researching and learning more about ${title} to better understand what's needed.`,
+            rewards: { stars: 8, coins: 15 }
+        },
+        {
+            title: `Create an action plan`,
+            description: `Write down a step-by-step plan for achieving your goal: ${description}`,
+            rewards: { stars: 10, coins: 20 }
+        },
+        {
+            title: `Take the first step`,
+            description: `Complete the very first action item from your plan to get started on ${title}.`,
+            rewards: { stars: 12, coins: 25 }
+        },
+        {
+            title: `Track your progress`,
+            description: `Document your progress and reflect on what's working well and what needs adjustment.`,
+            rewards: { stars: 8, coins: 15 }
+        },
+        {
+            title: `Celebrate a milestone`,
+            description: `Acknowledge and celebrate reaching an important milestone toward ${title}.`,
+            rewards: { stars: 15, coins: 30 }
+        }
+    ];
+};
+
 // API to generate a daily adventure with challenges
 export const generateDailyAdventure = async () => {
     try {

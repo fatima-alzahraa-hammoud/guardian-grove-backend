@@ -10,11 +10,12 @@ export const generateGoalsAndTasks = async (userId: string, lastChats: any[], co
     }
 
     const prompt = `
-        Generate a goal for the user with multiple tasks based on the following information:
+        Generate a goal for the user with multiple tasks, you can benefit from  following information:
         - Last 3 chats: ${JSON.stringify(lastChats)}
-        - Completed tasks: ${JSON.stringify(completedTasks)}
+        - Completed tasks: ${JSON.stringify(completedTasks)}, please generate some new tasks that are not in this list
         - User interests: ${JSON.stringify(interests)}
         - User birthday: ${JSON.stringify(user.birthday)}
+        the tasks must be able to be done by the user
 
         IMPORTANT: Return ONLY a valid JSON object in this exact format. Do not include any other text, explanations, markdown formatting, or code blocks:
 
